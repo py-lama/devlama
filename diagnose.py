@@ -1,0 +1,161 @@
+#!/usr/bin/env python3
+
+"""
+PyLama Diagnostic Tool
+
+This script runs PyLama in diagnose mode, where all examples are executed and tested.
+It helps verify that the code generation and execution pipeline is working correctly.
+"""
+
+import os
+import sys
+import logging
+from pathlib import Path
+
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)7s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger("pylama-diagnose")
+
+# Ensure we can import from pybox
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
+# Import PyLama functionality
+from pylama.pylama import generate_code
+from pylama.OllamaRunner import OllamaRunner
+
+# Import PyBox directly
+try:
+    from pybox.pybox import PythonSandbox
+    logger.info("Successfully imported PyBox")
+except ImportError:
+    logger.error("Failed to import PyBox directly. Trying alternative import method...")
+    try:
+        from pylama.pybox_wrapper import PythonSandbox
+        logger.info("Successfully imported PyBox through wrapper")
+    except ImportError:
+        logger.error("Failed to import PyBox through wrapper. Using fallback implementation.")
+        
+        # Fallback implementation if PyBox is not available
+        class PythonSandbox:
+            """Fallback implementation of PythonSandbox."""
+            def __init__(self):
+                pass
+            
+            def run(self, code):
+                """Run Python code in a sandbox."""
+                return {
+                    "output": "Error: PythonSandbox not available.",
+                    "error": "Module not found"
+                }
+
+
+def get_example_files():
+    """Get all example files from the examples directory."""
+    examples_dir = Path(__file__).parent / "pylama" / "examples"
+    return list(examples_dir.glob("*.py"))
+
+
+def get_example_prompt(example_name):
+    """Generate a prompt based on the example name."""
+    prompts = {
+        "api_request": "create a program that fetches data from a REST API and include all necessary imports",
+        "database": "create a program that connects to a SQLite database and performs CRUD operations, include all necessary imports",
+        "default": "create a simple hello world program",
+        "file_io": "create a program that reads and writes to files, include all necessary imports",
+        "web_server": "create a simple web server with HTTP server, include import for http.server and BaseHTTPRequestHandler"
+    }
+    
+    base_name = example_name.stem
+    return prompts.get(base_name, f"create a {base_name.replace('_', ' ')} program")
+
+
+def execute_code_with_pybox(code):
+    """Execute code using PyBox sandbox."""
+    # Create a Python sandbox instance
+    sandbox = PythonSandbox()
+    
+    # Execute the code in the sandbox using run_code method
+    result = sandbox.run_code(code)
+    
+    # Convert PyBox result format to match PyLama's execute_code format
+    return {
+        "output": result.get("stdout", ""),
+        "error": result.get("stderr", "") if not result.get("success", True) else None
+    }
+
+
+def run_diagnostic():
+    """Run diagnostic tests on all examples."""
+    print("\n===== PyLama Diagnostic Mode =====\n")
+    print("Testing all examples to ensure they generate and execute correctly\n")
+    
+    examples = get_example_files()
+    results = []
+    
+    for i, example_file in enumerate(examples, 1):
+        example_name = example_file.stem
+        prompt = get_example_prompt(example_file)
+        
+        print(f"\n[{i}/{len(examples)}] Testing example: {example_name}")
+        print(f"Prompt: {prompt}")
+        
+        try:
+            # Generate code
+            print("Generating code...")
+            code = generate_code(prompt, template_type="basic")
+            
+            if not code or code.strip() == "":
+                print("\u274c Failed: No code was generated")
+                results.append((example_name, False, "No code generated"))
+                continue
+            
+            # Execute code using PyBox
+            print("Executing code with PyBox...")
+            execution_result = execute_code_with_pybox(code)
+            
+            if execution_result.get("error"):
+                print(f"\u274c Failed: Execution error: {execution_result['error']}")
+                results.append((example_name, False, f"Execution error: {execution_result['error']}"))
+            else:
+                print("\u2705 Success: Code generated and executed without errors")
+                print(f"Output: {execution_result.get('output', 'No output')}")
+                results.append((example_name, True, "Success"))
+                
+        except Exception as e:
+            print(f"\u274c Failed: Exception occurred: {str(e)}")
+            results.append((example_name, False, f"Exception: {str(e)}"))
+    
+    # Print summary
+    print("\n===== Diagnostic Results =====\n")
+    success_count = sum(1 for _, success, _ in results if success)
+    print(f"Total examples: {len(examples)}")
+    print(f"Successful: {success_count}")
+    print(f"Failed: {len(examples) - success_count}\n")
+    
+    for example_name, success, message in results:
+        status = "✅ Success" if success else "❌ Failed"
+        print(f"{status}: {example_name} - {message}")
+    
+    return 0 if success_count == len(examples) else 1
+
+
+def main():
+    """Main entry point for the diagnostic tool."""
+    try:
+        return run_diagnostic()
+    except KeyboardInterrupt:
+        print("\nDiagnostic interrupted by user")
+        return 130
+    except Exception as e:
+        logger.error(f"Unexpected error: {str(e)}")
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -58,12 +58,12 @@ class OllamaRunner:
         self.fallback_models = os.getenv('OLLAMA_FALLBACK_MODELS', '').split(',')
         self.ollama_process = None
 
-        # Aktualizacja do prawidłowych endpointów API Ollama
+        # Update to the correct Ollama API endpoints
         self.generate_api_url = "http://localhost:11434/api/generate"
         self.chat_api_url = "http://localhost:11434/api/chat"
         self.version_api_url = "http://localhost:11434/api/version"
 
-        # Konfiguracja Docker
+        # Docker configuration
         self.use_docker = USE_DOCKER
         self.docker_sandbox = None
         if self.use_docker:
@@ -79,70 +79,70 @@ class OllamaRunner:
             return
 
         try:
-            # Sprawdź czy Ollama już działa poprzez zapytanie o wersję
+            # Check if Ollama is already running by querying the version
             response = requests.get(self.version_api_url)
             logger.info(f"Ollama is running (version: {response.json().get('version', 'unknown')})")
             return
 
         except requests.exceptions.ConnectionError:
-            logger.info("Uruchamianie serwera Ollama...")
-            # Uruchom Ollama w tle
+            logger.info("Starting Ollama server...")
+            # Run Ollama in the background
             self.ollama_process = subprocess.Popen(
                 [self.ollama_path, "serve"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE
             )
-            # Poczekaj na uruchomienie serwera
+            # Wait for the server to start
             time.sleep(5)
 
-            # Sprawdź czy serwer faktycznie się uruchomił
+            # Check if the server actually started
             try:
                 response = requests.get(self.version_api_url)
-                logger.info(f"Serwer Ollama uruchomiony (version: {response.json().get('version', 'unknown')})")
+                logger.info(f"Ollama server started (version: {response.json().get('version', 'unknown')})")
             except requests.exceptions.ConnectionError:
-                logger.error("BŁĄD: Nie udało się uruchomić serwera Ollama.")
+                logger.error("ERROR: Failed to start Ollama server.")
                 if self.ollama_process:
-                    logger.error("Szczegóły błędu:")
+                    logger.error("Error details:")
                     out, err = self.ollama_process.communicate(timeout=1)
                     logger.error(f"STDOUT: {out.decode('utf-8', errors='ignore')}")
                     logger.error(f"STDERR: {err.decode('utf-8', errors='ignore')}")
-                raise RuntimeError("Nie udało się uruchomić serwera Ollama")
+                raise RuntimeError("Failed to start Ollama server")
 
     def stop_ollama(self) -> None:
-        """Zatrzymaj serwer Ollama jeśli został uruchomiony przez ten skrypt."""
+        """Stop the Ollama server if it was started by this script."""
         if self.use_docker:
             if self.docker_sandbox:
                 self.docker_sandbox.stop_container()
             return
 
         if self.ollama_process:
-            logger.info("Zatrzymywanie serwera Ollama...")
+            logger.info("Stopping Ollama server...")
             self.ollama_process.terminate()
             self.ollama_process.wait()
-            logger.info("Serwer Ollama zatrzymany")
+            logger.info("Ollama server stopped")
 
     def query_ollama(self, prompt: str, template_type: str = None, **template_args) -> str:
         """
-        Wyślij zapytanie do API Ollama i zwróć odpowiedź.
+        Send a query to the Ollama API and return the response.
         
         This is a mock implementation that returns a simple example for the requested task
         without requiring an actual Ollama server.
         
         Args:
-            prompt: Podstawowe zapytanie lub zadanie do wykonania
-            template_type: Typ szablonu do użycia (opcjonalnie)
-            **template_args: Dodatkowe argumenty dla szablonu
+            prompt: Basic query or task to perform
+            template_type: Type of template to use (optional)
+            **template_args: Additional arguments for the template
         
         Returns:
-            Odpowiedź od modelu LLM
+            Response from the LLM model
         """
         # Log that we're using a mock implementation
         logger.info("Using mock code generation (Ollama not required)")
         
-        # Jeśli podano typ szablonu, użyj go do sformatowania zapytania
+        # If a template type is provided, use it to format the query
         if template_type:
             formatted_prompt = get_template(prompt, template_type, **template_args)
-            logger.debug(f"Użyto szablonu {template_type} dla zapytania")
+            logger.debug(f"Used template {template_type} for the query")
         else:
             formatted_prompt = prompt
         
@@ -187,16 +187,19 @@ class OllamaRunner:
             return content
         except Exception as e:
             logger.error(f"Error loading example from {example_path}: {e}")
-            return f"# Error loading example: {str(e)}
+            # Create a fallback example in case of error
+            fallback_code = f"""# Error loading example: {str(e)}
 
 # Here's a simple example instead:
 
 def main():
-    print(\"Hello, World!\")
-    return \"Success\"
+    print("Hello, World!")
+    return "Success"
 
 if __name__ == '__main__':
-    main()"
+    main()
+"""
+            return fallback_code
             
     # The old example methods have been replaced by the _load_example_from_file method
     
@@ -205,40 +208,41 @@ if __name__ == '__main__':
     def try_chat_api(self, formatted_prompt):
         """Try using the chat API as an alternative."""
         try:
-            # Spróbuj użyć /api/chat jako alternatywnego API
-                logger.info("Próba użycia API chat...")
-                chat_data = {
-                    "model": self.model,
-                    "messages": [{"role": "user", "content": formatted_prompt}],
-                    "stream": False
-                }
+            # Try using /api/chat as an alternative API
+            logger.info("Trying to use chat API...")
+            chat_data = {
+                "model": self.model,
+                "messages": [{"role": "user", "content": formatted_prompt}],
+                "stream": False
+            }
 
-                chat_response = requests.post(self.chat_api_url, json=chat_data)
-                chat_response.raise_for_status()
-                chat_json = chat_response.json()
+            chat_response = requests.post(self.chat_api_url, json=chat_data)
+            chat_response.raise_for_status()
+            chat_json = chat_response.json()
 
-                # Zapisz surową odpowiedź do pliku dla debugowania
-                if os.getenv('SAVE_RAW_RESPONSES', 'False').lower() in ('true', '1', 't'):
-                    debug_file = os.path.join(PACKAGE_DIR, "ollama_raw_chat_response.json")
-                    with open(debug_file, "w", encoding="utf-8") as f:
-                        json.dump(chat_json, f, indent=2)
-                    logger.debug(f'Zapisano surową odpowiedź czatu do {debug_file}')
+            # Save raw response to a file for debugging
+            if os.getenv('SAVE_RAW_RESPONSES', 'False').lower() in ('true', '1', 't'):
+                debug_file = os.path.join(PACKAGE_DIR, "ollama_chat_response.json")
+                with open(debug_file, "w", encoding="utf-8") as f:
+                    json.dump(chat_json, f, indent=2)
+                logger.debug(f'Saved raw response to {debug_file}')
 
-                # Ekstrakcja odpowiedzi z innego formatu
-                if "message" in chat_json and "content" in chat_json["message"]:
-                    return chat_json["message"]["content"]
-                return ""
-            except Exception as chat_e:
-                logger.error(f"Błąd podczas komunikacji z API chat: {chat_e}")
-                return ""
+            # Extract response from a different format
+            if "message" in chat_json and "content" in chat_json["message"]:
+                return chat_json["message"]["content"]
+            return ""
+        except Exception as chat_e:
+            logger.error(f"Error communicating with chat API: {chat_e}")
+            return ""
 
     def extract_python_code(self, text: str) -> str:
-        """Wyodrębnij kod Python z odpowiedzi."""
-        # Sprawdź różne możliwe formaty kodu w odpowiedzi
+        """Extract Python code from the response."""
+
+        # Check different possible code formats in the response
         patterns = [
             r"```python\s*(.*?)\s*```",  # Markdown code block
             r"```\s*(.*?)\s*```",  # Generic code block
-            r"import .*?\n(.*?)(?:\n\n|$)"  # Kod zaczynający się od import
+            r"import .*?\n(.*?)(?:\n\n|$)"  # Code starting with import
         ]
 
         for pattern in patterns:
@@ -263,7 +267,7 @@ if __name__ == '__main__':
         if code_lines:
             return '\n'.join(code_lines)
 
-        # Jeśli wszystko inne zawiedzie, wypisz odpowiedź do pliku debug
+        # If all else fails, write the response to a debug file
         debug_dir = os.path.join(PACKAGE_DIR, 'debug')
         os.makedirs(debug_dir, exist_ok=True)
 
@@ -273,7 +277,7 @@ if __name__ == '__main__':
         with open(debug_file, "w", encoding="utf-8") as f:
             f.write(text)
 
-        logger.info(f"DEBUG: Zapisano pełną odpowiedź do pliku '{debug_file}'")
+        logger.info(f"DEBUG: Full response saved to file '{debug_file}'")
         return ""
 
     def save_code_to_file(self, code: str, filename: str = None) -> str:
@@ -302,9 +306,9 @@ if __name__ == '__main__':
                 stderr=subprocess.PIPE
             )
 
-            # Poczekaj na zakończenie procesu z limitem czasu
+            # Wait for the process to complete with a timeout
             try:
-                stdout, stderr = process.communicate(timeout=30)  # 30 sekund limitu
+                stdout, stderr = process.communicate(timeout=30)  # 30 seconds timeout
                 stdout = stdout.decode('utf-8', errors='ignore')
                 stderr = stderr.decode('utf-8', errors='ignore')
 

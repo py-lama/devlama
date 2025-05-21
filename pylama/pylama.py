@@ -142,7 +142,15 @@ def generate_code(prompt: str, template_type: str = "platform_aware", dependenci
     Generate Python code based on the given prompt and template.
     """
     # Get the appropriate template
-    template = get_template(prompt, template_type, dependencies=dependencies)
+    # Add platform and OS detection for platform_aware template
+    template_kwargs = {"dependencies": dependencies}
+    
+    if template_type == "platform_aware":
+        import platform as plt
+        template_kwargs["platform"] = plt.platform()
+        template_kwargs["os"] = plt.system()
+    
+    template = get_template(prompt, template_type, **template_kwargs)
     logger.info(f"Using template: {template_type}")
     
     # Use the specified model or get the default one
@@ -151,12 +159,12 @@ def generate_code(prompt: str, template_type: str = "platform_aware", dependenci
     
     # Generate code using Ollama
     logger.info(f"Sending query to model {model}...")
-    ollama = OllamaRunner(model)
-    response = ollama.generate(template)
+    ollama = OllamaRunner(model=model)
+    response = ollama.query_ollama(template)
     
     # Extract Python code from the response
     print("\nResponse received from Ollama. Extracting Python code...")
-    code = ollama.extract_code(response)
+    code = ollama.extract_python_code(response)
     
     if not code:
         logger.warning("No Python code found in the response")
