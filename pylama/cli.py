@@ -5,6 +5,7 @@ import logging
 import sys
 from pathlib import Path
 import questionary
+import difflib
 
 # Set up logging
 logging.basicConfig(
@@ -87,23 +88,28 @@ def interactive_mode():
     
     while True:
         try:
-            user_input = input("\nud83eudd99 PyLama> ")
-            
+            user_input = input("\nud83eudd99 PyLama> ").strip()
+
+            # Known commands for help and fuzzy matching
+            known_commands = [
+                "exit", "quit", "help", "models", "list", "set model", "set template", "templates"
+            ]
+
             if user_input.lower() in ["exit", "quit"]:
                 print("Exiting PyLama. Goodbye!")
                 break
-                
+
             elif user_input.lower() == "help":
                 print("\nAvailable commands:")
                 print("  exit, quit - Exit PyLama")
-                print("  models - List available models and select one interactively")
+                print("  models, list - List available models and select one interactively")
                 print("  set model - Select a model interactively")
                 print("  set model <name> - Change the current model by name")
                 print("  set template <name> - Change the current template")
                 print("  templates - List available templates")
                 print("  Any other input will be treated as a code generation prompt\n")
-                
-            elif user_input.lower() == "models":
+
+            elif user_input.lower() in ["models", "list"]:
                 models = get_models()
                 print("\nAvailable models:")
                 for m in models:
@@ -134,15 +140,7 @@ def interactive_mode():
                     print(f"Model changed to: {model}")
                 else:
                     print(f"Model '{new_model}' not found. Use 'models' to see available models.")
-                    
-            elif user_input.lower() == "templates":
-                print("\nAvailable templates:")
-                templates = ["basic", "platform_aware", "dependency_aware", "testable", "secure", "performance", "pep8"]
-                for t in templates:
-                    star = "*" if t == template else " "
-                    print(f"  {star} {t}")
-                print(f"\nCurrent template: {template}")
-                
+
             elif user_input.lower().startswith("set template "):
                 new_template = user_input[13:].strip()
                 templates = ["basic", "platform_aware", "dependency_aware", "testable", "secure", "performance", "pep8"]
@@ -151,34 +149,24 @@ def interactive_mode():
                     print(f"Template changed to: {template}")
                 else:
                     print(f"Template '{new_template}' not found. Use 'templates' to see available templates.")
-                    
-            elif user_input.strip():
-                # Treat as a code generation prompt
-                print(f"\nGenerating code using model: {model}, template: {template}...")
-                code = generate_code(user_input, template_type=template, model=model)
-                print("\nGenerated code:")
-                print("----------------------------------------")
-                print(code)
-                print("----------------------------------------")
-                
-                save = input("\nSave code to file? (y/n): ").lower()
-                if save == "y":
-                    filepath = save_code_to_file(code)
-                    print(f"\nCode saved to file: {filepath}")
-                
-                run = input("\nRun the generated code? (y/n): ").lower()
-                if run == "y":
-                    print("\nRunning generated code...")
-                    result = execute_code(code)
-                    print("\nCode execution result:")
-                    print(result.get("output", "No output"))
-                    
-                    if result.get("error"):
-                        print("\nError occurred:")
-                        print(result["error"])
-                    else:
-                        print("\nCode executed successfully!")
-                        
+
+            elif user_input.lower() == "templates":
+                print("\nAvailable templates:")
+                templates = ["basic", "platform_aware", "dependency_aware", "testable", "secure", "performance", "pep8"]
+                for t in templates:
+                    star = "*" if t == template else " "
+                    print(f"  {star} {t}")
+                print(f"\nCurrent template: {template}")
+
+            elif user_input:
+                # Check for mistyped command (fuzzy match)
+                command_word = user_input.split()[0].lower()
+                close_matches = difflib.get_close_matches(command_word, known_commands, n=1, cutoff=0.75)
+                if close_matches:
+                    print(f"Unrecognized command '{user_input}'. Did you mean '{close_matches[0]}'?")
+                else:
+                    print(f"Unrecognized command '{user_input}'. Type 'help' to see available commands.")
+
         except KeyboardInterrupt:
             print("\nExiting PyLama. Goodbye!")
             break
