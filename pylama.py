@@ -281,7 +281,7 @@ class OllamaRunner:
             print(f"Błąd podczas uruchamiania kodu: {e}")
             return False
 
-            def debug_and_regenerate_code(self, original_prompt: str, error_message: str, code: str) -> str:
+    def debug_and_regenerate_code(self, original_prompt: str, error_message: str, code: str) -> str:
         """Debuguje błędy w wygenerowanym kodzie i prosi o poprawkę."""
         print(f"\nWykryto błąd w wygenerowanym kodzie. Próbuję naprawić...")
 
@@ -312,7 +312,7 @@ Proszę napraw ten kod, aby działał prawidłowo. Zwróć tylko kod Python, bez
                 return debug_response
             return ""
 
-        return debugged_code  # !/usr/bin/env python3
+        return debugged_code
 
 
 class DependencyManager:

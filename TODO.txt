@@ -2,3 +2,7 @@
 - testowanie kodu i naprawianie w trakcie, bez pytania usera
 - zbieranie danych diagnostycznych i kodu w osobnym folderze
 - uzywanie kodu i danych diagnostycznych
+- sandbox do wyboru: lokalne venv, docker jako srodowisko testowe, zdalny SSH VPS
+- zabezpiecz sandbox, aby nie psuł całej aplikacji, ale by uruchamiał w docker i tam zmienial, i mial dostep do logs
+- wygeneruj .env jesli nie istnieje z przykladowymi wartosicami dla zmiennych okreslaajcych srodowisko, punkt startowy, model, python-
+- porzykladowe testowy prompt,

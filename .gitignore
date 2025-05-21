@@ -1,3 +1,6 @@
+fixed_script.py
+generated_script.py
+ollama_raw_response.json
 .idea
 venv
 models.txt
