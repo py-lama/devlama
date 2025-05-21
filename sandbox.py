@@ -13,33 +13,84 @@ from pathlib import Path
 from typing import Optional, Dict, List, Tuple, Any, Union
 from dotenv import load_dotenv
 
+# Initialize logger
+logger = logging.getLogger(__name__)
+
 # Common imports that will be added to the sandbox environment
 COMMON_IMPORTS = """
 # Standard library imports
 import sys
 import traceback
+import importlib.util
+from typing import Dict, Any, Optional, Tuple, List, Union
 
-# Web automation imports
-try:
-    from selenium import webdriver
-    from selenium.webdriver.chrome.service import Service
-    from selenium.webdriver.chrome.options import Options
-    from selenium.webdriver.common.by import By
-    from selenium.webdriver.support.ui import WebDriverWait
-    from selenium.webdriver.support import expected_conditions as EC
-    from webdriver_manager.chrome import ChromeDriverManager
-    HAS_SELENIUM = True
-except ImportError:
-    HAS_SELENIUM = False
+# Dependency mapping from import name to PyPI package name
+DEPENDENCY_MAP = {
+    # Web and Browser Automation
+    'selenium': 'selenium',
+    'selenium.webdriver': 'selenium',
+    'webdriver_manager': 'webdriver-manager',
+    'pyautogui': 'pyautogui',
+    'playwright': 'playwright',
+    
+    # Data Analysis
+    'numpy': 'numpy',
+    'pandas': 'pandas',
+    'matplotlib': 'matplotlib',
+    'seaborn': 'seaborn',
+    'scipy': 'scipy',
+    'sklearn': 'scikit-learn',
+    'tensorflow': 'tensorflow',
+    'torch': 'torch',
+    'keras': 'keras',
+    
+    # Web Development
+    'flask': 'flask',
+    'django': 'django',
+    'fastapi': 'fastapi',
+    'requests': 'requests',
+    'aiohttp': 'aiohttp',
+    'bs4': 'beautifulsoup4',
+    'lxml': 'lxml',
+    
+    # Utilities
+    'dotenv': 'python-dotenv',
+    'PIL': 'pillow',
+    'yaml': 'pyyaml',
+    'dateutil': 'python-dateutil',
+    'pytz': 'pytz',
+    'tqdm': 'tqdm',
+}
 
-try:
-    import pyautogui
-    HAS_PYAUTOGUI = True
-except ImportError:
-    HAS_PYAUTOGUI = False
+# Initialize package availability dictionary
+PACKAGE_AVAILABILITY = {}
 
-# Configure Chrome options
-def get_chrome_options(headless=True):
+# Try to import common packages and check their availability
+for pkg in DEPENDENCY_MAP.keys():
+    try:
+        # Convert package name to main module name (e.g., bs4.BeautifulSoup -> bs4)
+        main_pkg = pkg.split('.')[0]
+        if main_pkg not in PACKAGE_AVAILABILITY:
+            importlib.import_module(main_pkg)
+            PACKAGE_AVAILABILITY[main_pkg] = True
+    except ImportError:
+        PACKAGE_AVAILABILITY[main_pkg] = False
+
+# Add HAS_* flags for commonly used packages
+for pkg in ['selenium', 'pyautogui', 'pandas', 'numpy', 'tensorflow', 'torch']:
+    has_pkg = PACKAGE_AVAILABILITY.get(pkg, False)
+    globals()['HAS_' + pkg.upper()] = has_pkg
+
+
+def get_chrome_options(headless: bool = True):
+    """Configure Chrome options for Selenium.
+
+    Args:
+        headless (bool): Whether to run Chrome in headless mode
+
+    Returns:
+        Options: Configured Chrome options
+    """
     options = Options()
     if headless:
         options.add_argument('--headless')
@@ -51,27 +102,143 @@ def get_chrome_options(headless=True):
     options.add_experimental_option('useAutomationExtension', False)
     return options
 
-# Initialize WebDriver
-def init_webdriver(headless=True):
-    if not HAS_SELENIUM:
-        raise ImportError("Selenium is not installed. Please install it with: pip install selenium webdriver-manager")
+
+def install_package(package_name: str) -> bool:
+    """Install a Python package using pip.
+
+    Args:
+        package_name (str): Name of the package to install
+
+    Returns:
+        bool: True if installation was successful, False otherwise
+    """
+    try:
+        import subprocess
+        import sys
+        subprocess.check_call([sys.executable, "-m", "pip", "install", package_name])
+        return True
+    except Exception as e:
+        print("Failed to install " + package_name + ": " + str(e), file=sys.stderr)
+        return False
+
+def ensure_dependencies(import_names: Union[str, list]) -> bool:
+    """Ensure that the specified packages are available, installing them if necessary.
+
+    Args:
+        import_names (Union[str, list]): Single import name or list of import names
+
+    Returns:
+        bool: True if all dependencies are available or successfully installed
+    """
+
+    if isinstance(import_names, str):
+        import_names = [import_names]
+    
+    all_available = True
+    
+    for import_name in import_names:
+        main_pkg = import_name.split('.')[0]
+        
+        # Check if already available
+        if PACKAGE_AVAILABILITY.get(main_pkg, False):
+            continue
+            
+        # Try to import to verify
+        try:
+            importlib.import_module(main_pkg)
+            PACKAGE_AVAILABILITY[main_pkg] = True
+            continue
+        except ImportError:
+            pass
+            
+        # Try to install the package
+        pypi_name = DEPENDENCY_MAP.get(import_name)
+        if not pypi_name:
+            pypi_name = DEPENDENCY_MAP.get(main_pkg, main_pkg)
+            
+        print(f"Installing required package: {pypi_name}")
+        if install_package(pypi_name):
+            try:
+                importlib.import_module(main_pkg)
+                PACKAGE_AVAILABILITY[main_pkg] = True
+                print(f"Successfully installed and imported {main_pkg}")
+            except ImportError:
+                print(
+                    f"Failed to import {main_pkg} after installation",
+                    file=sys.stderr
+                )
+                all_available = False
+        else:
+            all_available = False
+    
+    return all_available
+
+# Web automation utilities
+if PACKAGE_AVAILABILITY.get('selenium', False):
+    from selenium import webdriver
+    from selenium.webdriver.chrome.service import Service
+    from selenium.webdriver.chrome.options import Options
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
+    
+    if PACKAGE_AVAILABILITY.get('webdriver_manager', False):
+        from webdriver_manager.chrome import ChromeDriverManager
+    
+    def get_chrome_options(headless: bool = True) -> Options:
+    """Configure Chrome options for Selenium.
+    
+    Args:
+        headless (bool): Whether to run Chrome in headless mode
+        
+    Returns:
+        Options: Configured Chrome options
+    """
+    options = Options()
+    if headless:
+        options.add_argument('--headless')
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
+        options.add_argument('--disable-gpu')
+        options.add_argument('--window-size=1920,1080')
+    options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    options.add_experimental_option('useAutomationExtension', False)
+    return options
+
+def init_webdriver(headless: bool = True):
+    """Initialize and return a WebDriver instance.
+    
+    Args:
+        headless (bool): Whether to run the browser in headless mode
+        
+    Returns:
+        WebDriver: Initialized WebDriver instance
+        
+    Raises:
+        ImportError: If Selenium cannot be imported
+        Exception: If WebDriver initialization fails
+    """
+    if not ensure_dependencies(['selenium']):
+        raise ImportError("Selenium is required but could not be installed.")
     
     options = get_chrome_options(headless)
     
-    try:
-        # Try to use webdriver-manager to handle the driver
-        service = Service(ChromeDriverManager().install())
-        driver = webdriver.Chrome(service=service, options=options)
-        return driver
-    except Exception as e:
-        print(f"Error initializing WebDriver: {e}")
-        # Fallback to system ChromeDriver if available
+    # Try to use webdriver-manager if available
+    if PACKAGE_AVAILABILITY.get('webdriver_manager', False):
         try:
-            driver = webdriver.Chrome(options=options)
+            service = Service(ChromeDriverManager().install())
+            driver = webdriver.Chrome(service=service, options=options)
             return driver
         except Exception as e:
-            print(f"Fallback WebDriver initialization failed: {e}")
-            raise
+            print("Warning: webdriver-manager failed: " + str(e))
+    
+    # Fallback to system ChromeDriver
+    try:
+        driver = webdriver.Chrome(options=options)
+        return driver
+    except Exception as e:
+        print("Error initializing WebDriver: " + str(e))
+        raise
 """
 
 # Konfiguracja logowania

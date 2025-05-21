@@ -126,7 +126,7 @@ def main():
         ollama.start_ollama()
 
         # Zapytanie takie samo jak w przykładzie
-        prompt = "create the sentence as python code: Create screenshot on browser"
+        prompt = os.environ.get("TEST_PROMPT_1")
 
         # Wyślij zapytanie do Ollama
         response = ollama.query_ollama(prompt)
