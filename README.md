@@ -119,7 +119,7 @@ The easiest way to run the entire PyLama ecosystem is using Docker Compose, whic
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/py-lama.git
+   git clone https://github.com/py-lama/pylama.git
    cd py-lama
    ```
 
@@ -148,7 +148,7 @@ For development purposes, you can set up each component individually.
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/py-lama.git
+   git clone https://github.com/py-lama/pylama.git
    cd py-lama
    ```
 
