@@ -1,24 +1,91 @@
-# pylama
+# PyLama - Python Code Generation with Ollama
 
+PyLama is a Python tool that leverages Ollama's language models to generate and execute Python code. It simplifies the process of writing and running Python scripts by handling dependency management and code execution automatically.
 
-# Uniwersalny Serwer Ollama
+## Features
 
-https://ollama.com/search?c=vision
-https://ollama.com/search?o=newest
+- 🚀 **AI-Powered Code Generation** - Generate Python code using Ollama's language models
+- 🔄 **Automatic Dependency Management** - Automatically detects and installs required Python packages
+- 🛠 **Code Execution** - Run generated code in a controlled environment
+- 🔍 **Error Handling** - Automatic error detection and debugging suggestions
+- 📦 **Modular Architecture** - Separated components for better maintainability
 
-![GUI.png](GUI.png)
+## Prerequisites
 
-Kompletne, uniwersalne rozwiązanie do uruchamiania i zarządzania lokalnym serwerem modeli językowych poprzez Ollama. Działa na wszystkich dystrybucjach Linuxa oraz macOS.
+- Python 3.8+
+- [Ollama](https://ollama.com/) installed and running locally
+- At least one Ollama model (e.g., llama3, llama2, mistral)
 
-## Funkcje
+## Installation
 
-- 🚀 **Uniwersalność** - działa na wszystkich dystrybucjach Linux oraz macOS
-- 🔄 **Automatyczna konfiguracja** - automatyczna instalacja wymaganych pakietów
-- 📝 **Interfejs webowy** - do testowania modeli w przeglądarce
-- ⚙️ **Łatwa konfiguracja** - przez plik .env lub parametry wiersza poleceń
-- 🌐 **Proste API REST** - do integracji z aplikacjami
-- 🔄 **Obsługa wielu modeli** - z możliwością łatwego przełączania
-- 📊 **Zaawansowane zarządzanie parametrami** - temperatura, max_tokens, itp.
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/py-lama.git
+   cd py-lama/pylama
+   ```
+
+2. Install the required Python packages:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. Ensure Ollama is running:
+   ```bash
+   ollama serve
+   ```
+
+## Usage
+
+### Basic Usage
+
+```bash
+python pylama.py
+```
+
+### Command Line Options
+
+- `--model`: Specify which Ollama model to use (default: llama3)
+- `--debug`: Enable debug logging
+- `--output`: Specify output file for generated code
+
+### Example
+
+```bash
+python pylama.py --model llama3 --output my_script.py
+```
+
+## Project Structure
+
+- `pylama.py`: Main script
+- `OllamaRunner.py`: Handles communication with Ollama API
+- `dependency_manager.py`: Manages Python package dependencies
+- `sandbox.py`: Provides a safe environment for code execution
+- `models.sh`: Script to manage Ollama models
+
+## How It Works
+
+1. The tool analyzes your prompt and generates Python code using the specified Ollama model
+2. It extracts import statements to identify required dependencies
+3. It checks for and installs any missing dependencies
+4. The generated code is executed in a controlled environment
+5. Any errors are caught and can be used to regenerate the code
+
+## Configuration
+
+Create a `.env` file in the project root to customize behavior:
+
+```env
+OLLAMA_MODEL=llama3
+LOG_LEVEL=INFO
+```
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Wymagania
 
