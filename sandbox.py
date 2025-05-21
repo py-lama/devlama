@@ -185,61 +185,304 @@ if PACKAGE_AVAILABILITY.get('selenium', False):
     if PACKAGE_AVAILABILITY.get('webdriver_manager', False):
         from webdriver_manager.chrome import ChromeDriverManager
     
-    def get_chrome_options(headless: bool = True) -> Options:
-    """Configure Chrome options for Selenium.
-    
-    Args:
-        headless (bool): Whether to run Chrome in headless mode
+    def init_webdriver(headless: bool = True, max_retries: int = 3) -> webdriver.Chrome:
+        """Initialize and return a Selenium WebDriver instance with retry logic.
         
-    Returns:
-        Options: Configured Chrome options
-    """
-    options = Options()
-    if headless:
-        options.add_argument('--headless')
-        options.add_argument('--no-sandbox')
-        options.add_argument('--disable-dev-shm-usage')
-        options.add_argument('--disable-gpu')
-        options.add_argument('--window-size=1920,1080')
-    options.add_experimental_option("excludeSwitches", ["enable-automation"])
-    options.add_experimental_option('useAutomationExtension', False)
-    return options
-
-def init_webdriver(headless: bool = True):
-    """Initialize and return a WebDriver instance.
-    
-    Args:
-        headless (bool): Whether to run the browser in headless mode
+        Args:
+            headless: Whether to run the browser in headless mode
+            max_retries: Maximum number of retry attempts
         
-    Returns:
-        WebDriver: Initialized WebDriver instance
+        Returns:
+            WebDriver: Configured WebDriver instance
+        
+        Raises:
+            RuntimeError: If WebDriver initialization fails after all retries
+        """
+        if not ensure_dependencies(['selenium']):
+            raise ImportError("Selenium is required but could not be installed.")
+        
+        options = get_chrome_options(headless)
+        last_error = None
+        
+        for attempt in range(1, max_retries + 1):
+            try:
+                logger.info(f'Initializing WebDriver (attempt {attempt}/{max_retries})')
+                
+                if PACKAGE_AVAILABILITY.get('webdriver_manager', False):
+                    service = Service(ChromeDriverManager().install())
+                    driver = webdriver.Chrome(service=service, options=options)
+                else:
+                    driver = webdriver.Chrome(options=options)
+                
+                # Set reasonable timeouts
+                driver.set_page_load_timeout(30)
+                driver.set_script_timeout(30)
+                driver.implicitly_wait(10)
+                
+                logger.info('WebDriver initialized successfully')
+                return driver
+                
+            except Exception as e:
+                last_error = e
+                logger.warning(f'WebDriver initialization attempt {attempt} failed: {str(e)}')
+                if attempt < max_retries:
+                    time.sleep(2 ** attempt)  # Exponential backoff
+        
+        error_msg = f'Failed to initialize WebDriver after {max_retries} attempts: {str(last_error)}'
+        logger.error(error_msg)
+        raise RuntimeError(error_msg) from last_error
+    
+    def take_screenshot(driver: webdriver.Chrome, path: Optional[str] = None) -> str:
+        """Take a screenshot of the current browser window.
+        
+        Args:
+            driver: Selenium WebDriver instance
+            path: Path to save the screenshot. If None, saves to a timestamped file in ~/.pylama/screenshots
+            
+        Returns:
+            str: Absolute path where the screenshot was saved
+            
+        Raises:
+            ValueError: If the provided path has an invalid extension
+            RuntimeError: If the screenshot cannot be saved
+        """
+        try:
+            if path:
+                # Ensure the path has a .png extension
+                if not path.lower().endswith('.png'):
+                    raise ValueError("Screenshot path must have a .png extension")
+                
+                # Convert to absolute path and create directories
+                abs_path = os.path.abspath(path)
+                os.makedirs(os.path.dirname(abs_path), exist_ok=True)
+            else:
+                # Use default directory in user's home folder
+                screenshot_dir = os.path.expanduser('~/.pylama/screenshots')
+                os.makedirs(screenshot_dir, exist_ok=True)
+                
+                # Generate filename with timestamp and random string for uniqueness
+                timestamp = time.strftime('%Y%m%d_%H%M%S')
+                random_str = ''.join(random.choices('abcdefghijklmnopqrstuvwxyz0123456789', k=6))
+                filename = f'screenshot_{timestamp}_{random_str}.png'
+                abs_path = os.path.join(screenshot_dir, filename)
+            
+            logger.debug(f'Attempting to save screenshot to: {abs_path}')
+            
+            # Take the screenshot
+            driver.save_screenshot(abs_path)
+            
+            # Verify the screenshot was saved
+            if not os.path.exists(abs_path):
+                raise RuntimeError(f'Screenshot file was not created at {abs_path}')
+                
+            file_size = os.path.getsize(abs_path)
+            if file_size == 0:
+                os.remove(abs_path)  # Clean up empty file
+                raise RuntimeError('Screenshot file is empty')
+                
+            logger.info(f'Screenshot saved successfully: {abs_path} ({file_size} bytes)')
+            return abs_path
+            
+        except Exception as e:
+            error_msg = f'Error taking screenshot: {str(e)}'
+            logger.error(error_msg, exc_info=True)
+            raise RuntimeError(error_msg) from e
+    
+    def capture_webpage_screenshot(url: str, output_path: Optional[str] = None, 
+                                   wait_time: int = 5, max_retries: int = 2) -> str:
+        """Capture a screenshot of a webpage with retry logic.
+        
+        Args:
+            url: URL of the webpage to capture
+            output_path: Path to save the screenshot. If None, a default path is used
+            wait_time: Seconds to wait for the page to load before taking the screenshot
+            max_retries: Maximum number of retry attempts
+            
+        Returns:
+            str: Absolute path where the screenshot was saved
+            
+        Raises:
+            ValueError: If the URL is invalid
+            RuntimeError: If the screenshot cannot be captured after all retries
+        """
+        if not url or not isinstance(url, str) or not url.startswith(('http://', 'https://')):
+            raise ValueError(f'Invalid URL: {url}')
+        
+        driver = None
+        last_error = None
+        
+        for attempt in range(1, max_retries + 1):
+            try:
+                logger.info(f'Capture attempt {attempt}/{max_retries} for {url}')
+                
+                # Initialize WebDriver
+                driver = init_webdriver()
+                
+                # Navigate to the URL
+                logger.debug(f'Loading URL: {url}')
+                driver.get(url)
+                
+                # Wait for the page to load
+                logger.debug(f'Waiting {wait_time} seconds for page to load')
+                time.sleep(wait_time)
+                
+                # Take the screenshot
+                screenshot_path = take_screenshot(driver, output_path)
+                logger.info(f'Successfully captured screenshot: {screenshot_path}')
+                return screenshot_path
+                
+            except Exception as e:
+                last_error = e
+                logger.warning(f'Attempt {attempt} failed: {str(e)}')
+                
+                # Clean up failed attempt
+                if driver:
+                    try:
+                        driver.quit()
+                    except:
+                        pass
+                    driver = None
+                    
+                if attempt < max_retries:
+                    retry_delay = wait_time * 2  # Exponential backoff
+                    logger.info(f'Retrying in {retry_delay} seconds...')
+                    time.sleep(retry_delay)
+                    
+        # If we get here, all attempts failed
+        error_msg = f'Failed to capture screenshot after {max_retries} attempts: {str(last_error)}'
+        logger.error(error_msg)
+        raise RuntimeError(error_msg) from last_error
+        
+        finally:
+            # Ensure driver is always closed
+            if driver:
+                try:
+                    driver.quit()
+                except Exception as e:
+                    logger.warning(f'Error closing WebDriver: {str(e)}')
+            raise ImportError("Selenium is required but could not be installed.")
+        
+        options = get_chrome_options(headless)
+        last_error = None
         
     Raises:
-        ImportError: If Selenium cannot be imported
-        Exception: If WebDriver initialization fails
+        ValueError: If the provided path has an invalid extension
+        RuntimeError: If the screenshot cannot be saved
     """
-    if not ensure_dependencies(['selenium']):
-        raise ImportError("Selenium is required but could not be installed.")
-    
-    options = get_chrome_options(headless)
-    
-    # Try to use webdriver-manager if available
-    if PACKAGE_AVAILABILITY.get('webdriver_manager', False):
-        try:
-            service = Service(ChromeDriverManager().install())
-            driver = webdriver.Chrome(service=service, options=options)
-            return driver
-        except Exception as e:
-            print("Warning: webdriver-manager failed: " + str(e))
-    
-    # Fallback to system ChromeDriver
     try:
-        driver = webdriver.Chrome(options=options)
-        return driver
+        if path:
+            # Ensure the path has a .png extension
+            if not path.lower().endswith('.png'):
+                raise ValueError("Screenshot path must have a .png extension")
+            
+            # Convert to absolute path and create directories
+            abs_path = os.path.abspath(path)
+            os.makedirs(os.path.dirname(abs_path), exist_ok=True)
+        else:
+            # Use default directory in user's home folder
+            screenshot_dir = os.path.expanduser('~/.pylama/screenshots')
+            os.makedirs(screenshot_dir, exist_ok=True)
+            
+            # Generate filename with timestamp and random string for uniqueness
+            timestamp = time.strftime('%Y%m%d_%H%M%S')
+            random_str = ''.join(random.choices('abcdefghijklmnopqrstuvwxyz0123456789', k=6))
+            filename = f'screenshot_{timestamp}_{random_str}.png'
+            abs_path = os.path.join(screenshot_dir, filename)
+        
+        logger.debug(f'Attempting to save screenshot to: {abs_path}')
+        
+        # Take the screenshot
+        driver.save_screenshot(abs_path)
+        
+        # Verify the screenshot was saved
+        if not os.path.exists(abs_path):
+            raise RuntimeError(f'Screenshot file was not created at {abs_path}')
+            
+        file_size = os.path.getsize(abs_path)
+        if file_size == 0:
+            os.remove(abs_path)  # Clean up empty file
+            raise RuntimeError('Screenshot file is empty')
+            
+        logger.info(f'Screenshot saved successfully: {abs_path} ({file_size} bytes)')
+        return abs_path
+        
     except Exception as e:
-        print("Error initializing WebDriver: " + str(e))
-        raise
-"""
+        error_msg = f'Error taking screenshot: {str(e)}'
+        logger.error(error_msg, exc_info=True)
+        raise RuntimeError(error_msg) from e
+
+def capture_webpage_screenshot(url: str, output_path: Optional[str] = None, 
+                             wait_time: int = 5, max_retries: int = 2) -> str:
+    """Capture a screenshot of a webpage with retry logic.
+    
+    Args:
+        url: URL of the webpage to capture
+        output_path: Path to save the screenshot. If None, a default path is used
+        wait_time: Seconds to wait for the page to load before taking the screenshot
+        max_retries: Maximum number of retry attempts
+        
+    Returns:
+        str: Absolute path where the screenshot was saved
+        
+    Raises:
+        ValueError: If the URL is invalid
+        RuntimeError: If the screenshot cannot be captured after all retries
+    """
+    if not url or not isinstance(url, str) or not url.startswith(('http://', 'https://')):
+        raise ValueError(f'Invalid URL: {url}')
+    
+    driver = None
+    last_error = None
+    
+    for attempt in range(1, max_retries + 1):
+        try:
+            logger.info(f'Capture attempt {attempt}/{max_retries} for {url}')
+            
+            # Initialize WebDriver
+            driver = init_webdriver()
+            
+            # Navigate to the URL
+            logger.debug(f'Loading URL: {url}')
+            driver.get(url)
+            
+            # Wait for the page to load
+            logger.debug(f'Waiting {wait_time} seconds for page to load')
+            time.sleep(wait_time)
+            
+            # Take the screenshot
+            screenshot_path = take_screenshot(driver, output_path)
+            logger.info(f'Successfully captured screenshot: {screenshot_path}')
+            return screenshot_path
+            
+        except Exception as e:
+            last_error = e
+            logger.warning(f'Attempt {attempt} failed: {str(e)}')
+            
+            # Clean up failed attempt
+            if driver:
+                try:
+                    driver.quit()
+                except:
+                    pass
+                driver = None
+                
+            if attempt < max_retries:
+                retry_delay = wait_time * 2  # Exponential backoff
+                logger.info(f'Retrying in {retry_delay} seconds...')
+                time.sleep(retry_delay)
+                
+    # If we get here, all attempts failed
+    error_msg = f'Failed to capture screenshot after {max_retries} attempts: {str(last_error)}'
+    logger.error(error_msg)
+    raise RuntimeError(error_msg) from last_error
+    
+    finally:
+        # Ensure driver is always closed
+        if driver:
+            try:
+                driver.quit()
+            except Exception as e:
+                logger.warning(f'Error closing WebDriver: {str(e)}')
 
 # Konfiguracja logowania
 logging.basicConfig(
