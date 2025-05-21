@@ -1,9 +1,13 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.poetry]
 name = "pylama"
 version = "0.1.0"
 description = "Python code generation and execution using Ollama language models"
 authors = ["Tom Sapletta <info@softreck.dev>"]
-license = "Apache"
+license = "Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/py-lama/pylama"
 documentation = "https://github.com/py-lama/pylama#readme"
@@ -25,9 +29,8 @@ isort = "^5.12.0"
 flake8 = "^6.1.0"
 mypy = "^1.5.1"
 
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+[tool.poetry.scripts]
+pylama = "pylama.cli:main"
 
 [tool.black]
 line-length = 88

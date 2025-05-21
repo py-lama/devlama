@@ -4,6 +4,57 @@
 
 PyLama is a Python tool that leverages Ollama's language models to generate and execute Python code. It simplifies the process of writing and running Python scripts by handling dependency management and code execution automatically. With the new template system, it generates higher quality, platform-aware code that's ready to run.
 
+## Examples
+
+```bash
+# After installation
+pylama "create a simple hello world program"
+
+# Or run directly from the source directory
+python -m pylama.cli "create a simple hello world program"
+```
+
+This will generate a Python script that prints "Hello, World!" and execute it.
+
+### Interactive Mode
+
+```bash
+pylama -i
+```
+
+This launches PyLama in interactive mode, allowing you to:
+- Generate code with different prompts
+- Switch between models
+- Change templates
+- Save and run generated code
+
+### Specifying a Template
+
+```bash
+pylama -t dependency_aware -d "requests,beautifulsoup4" "create a web scraper for news headlines"
+```
+
+This will generate a web scraper using the specified dependencies.
+
+### Additional Options
+
+```bash
+pylama -m "codellama:7b" -t testable -s -r "create a function to calculate fibonacci numbers"
+```
+
+This will:
+- Use the codellama:7b model
+- Generate code with the testable template
+- Save the code to a file (-s)
+- Run the generated code (-r)
+
+- `prompt`: The task description for code generation (can be provided as positional arguments)
+- `-t, --template`: Choose a template type for code generation (default: platform_aware)
+  - Available templates: basic, platform_aware, dependency_aware, testable, secure, performance, pep8
+- `-d, --dependencies`: Specify allowed dependencies (for dependency_aware template)
+- `-m, --model`: Specify which Ollama model to use (default: llama3)
+
+
 ## Features
 
 - **AI-Powered Code Generation** - Generate Python code using Ollama's language models
@@ -22,26 +73,40 @@ PyLama is a Python tool that leverages Ollama's language models to generate and 
 
 ## Installation
 
+### Prerequisites
+
+- Python 3.8 or higher
+- [Ollama](https://ollama.ai/) installed and running
+
+### Installation Steps
+
 1. Clone the repository:
    ```bash
    git clone https://github.com/py-lama/pylama.git
    cd pylama
    ```
 
-2. Install the PyLama application and its package dependencies:
+2. Install the packages in development mode:
    ```bash
-   # Install the main PyLama application
-   cd pylama
-   pip install -e .
-   
    # Install the PyBox package
-   cd ../pybox
+   cd pybox
    pip install -e .
    
    # Install the Pyllm package
    cd ../pyllm
    pip install -e .
+   
+   # Install the main PyLama application
+   cd ../pylama
+   pip install -e .
    ```
+
+   > **Note:** If you encounter issues with Poetry, you can install directly with pip:
+   > ```bash
+   > pip install -e ../pybox
+   > pip install -e ../pyllm
+   > pip install -e .
+   > ```
 
 3. Ensure Ollama is running:
    ```bash
@@ -55,36 +120,37 @@ PyLama is a Python tool that leverages Ollama's language models to generate and 
    ollama pull phi:2.7b
    ```
 
+### Workflow Diagram
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant PyLama
+    participant Pyllm
+    participant Ollama
+    participant PyBox
+    
+    User->>PyLama: Enter prompt
+    PyLama->>Pyllm: Request code generation
+    Pyllm->>Ollama: Send prompt with template
+    Ollama->>Pyllm: Return generated code
+    Pyllm->>PyLama: Return processed code
+    PyLama->>User: Display generated code
+    User->>PyLama: Request code execution
+    PyLama->>PyBox: Send code for execution
+    PyBox->>PyBox: Check dependencies
+    PyBox->>PyBox: Create sandbox environment
+    PyBox->>PyBox: Execute code safely
+    PyBox->>PyLama: Return execution results
+    PyLama->>User: Display results
+```
+
 ## Usage
 
 ### Basic Usage
 
 ```bash
 python pylama.py
-```
-
-### Command Line Options
-
-- `prompt`: The task description for code generation (can be provided as positional arguments)
-- `-t, --template`: Choose a template type for code generation (default: platform_aware)
-  - Available templates: basic, platform_aware, dependency_aware, testable, secure, performance, pep8
-- `-d, --dependencies`: Specify allowed dependencies (for dependency_aware template)
-- `-m, --model`: Specify which Ollama model to use (default: llama3)
-
-### Examples
-
-```bash
-# Basic usage with a prompt
-python pylama.py "create a function to calculate factorial"
-
-# Use a specific template
-python pylama.py -t secure "create a web server"
-
-# Specify allowed dependencies
-python pylama.py -t dependency_aware -d "numpy,pandas,matplotlib" "create a data visualization"
-
-# Use a specific model
-python pylama.py -m phi3 "create a simple game"
 ```
 
 ## Model Management (models.py)
@@ -135,11 +201,63 @@ python pylama.py -m phi3 "create a simple game"
 
 PyLama has been restructured into a modular architecture with three main components:
 
+### Architecture Overview
+
+```mermaid
+graph TD
+    User[User] -->|Prompt| PyLama[PyLama Core]
+    PyLama -->|Model Management| Pyllm[Pyllm Package]
+    PyLama -->|Code Execution| PyBox[PyBox Package]
+    Pyllm -->|API Calls| Ollama[Ollama API]
+    Ollama -->|Generated Code| Pyllm
+    Pyllm -->|Code| PyLama
+    PyLama -->|Code to Execute| PyBox
+    PyBox -->|Execution Results| PyLama
+    PyLama -->|Results| User
+    
+    subgraph "PyLama Components"
+        PyLama
+        Pyllm
+        PyBox
+    end
+```
+
+### Component Structure
+
+```
+┌─────────────────────────────────┐
+│           PyLama Core           │
+├─────────────────────────────────┤
+│ ┌─────────┐      ┌───────────┐ │
+│ │ CLI     │      │ Templates │ │
+│ └─────────┘      └───────────┘ │
+│ ┌─────────────────────────────┐ │
+│ │      Code Generation        │ │
+│ └─────────────────────────────┘ │
+└───────────────┬─────────────────┘
+                │
+    ┌───────────┴───────────┐
+    │                       │
+┌───▼───────────┐   ┌──────▼─────────┐
+│  Pyllm Package │   │ PyBox Package  │
+├────────────────┤   ├────────────────┤
+│ ┌────────────┐ │   │ ┌────────────┐ │
+│ │ Models     │ │   │ │ Sandboxes  │ │
+│ └────────────┘ │   │ └────────────┘ │
+│ ┌────────────┐ │   │ ┌────────────┐ │
+│ │ API Client │ │   │ │ Analyzers  │ │
+│ └────────────┘ │   │ └────────────┘ │
+└────────────────┘   └────────────────┘
+```
+
+### Components Details
+
 1. **Core PyLama** - The main application
    - `pylama.py`: Main script for the application
    - `DependencyManager.py`: Manages Python package dependencies
    - `OllamaRunner.py`: Handles interaction with the Ollama API
    - `templates.py`: Contains templates for code generation
+   - `cli.py`: Command-line interface for the application
 
 2. **PyBox Package** - Sandbox for safe code execution
    - `code_analyzer.py`: Analyzes Python code and detects dependencies
