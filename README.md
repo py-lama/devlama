@@ -1,15 +1,17 @@
-![obraz](https://github.com/user-attachments/assets/3e1c9667-c299-4121-a8eb-ac5f72006c50)
+![obraz](pylama-logo.png)
 
 # PyLama - Python Code Generation with Ollama
 
-PyLama is a Python tool that leverages Ollama's language models to generate and execute Python code. It simplifies the process of writing and running Python scripts by handling dependency management and code execution automatically.
+PyLama is a Python tool that leverages Ollama's language models to generate and execute Python code. It simplifies the process of writing and running Python scripts by handling dependency management and code execution automatically. With the new template system, it generates higher quality, platform-aware code that's ready to run.
 
 ## Features
 
 - **AI-Powered Code Generation** - Generate Python code using Ollama's language models
+- **Template System** - Use specialized templates for different coding needs (security, performance, testing)
+- **Platform-Aware Code** - Generate code optimized for your specific operating system
 - **Automatic Dependency Management** - Automatically detects and installs required Python packages
 - **Code Execution** - Run generated code in a controlled environment
-- **Error Handling** - Automatic error detection and debugging suggestions
+- **Error Handling** - Automatic error detection and debugging suggestions with specialized templates
 - **Modular Architecture** - Separated components for better maintainability
 
 ## Prerequisites
@@ -46,14 +48,26 @@ python pylama.py
 
 ### Command Line Options
 
-- `--model`: Specify which Ollama model to use (default: llama3)
-- `--debug`: Enable debug logging
-- `--output`: Specify output file for generated code
+- `prompt`: The task description for code generation (can be provided as positional arguments)
+- `-t, --template`: Choose a template type for code generation (default: platform_aware)
+  - Available templates: basic, platform_aware, dependency_aware, testable, secure, performance, pep8
+- `-d, --dependencies`: Specify allowed dependencies (for dependency_aware template)
+- `-m, --model`: Specify which Ollama model to use (default: llama3)
 
-### Example
+### Examples
 
 ```bash
-python pylama.py --model llama3 --output my_script.py
+# Basic usage with a prompt
+python pylama.py "create a function to calculate factorial"
+
+# Use a specific template
+python pylama.py -t secure "create a web server"
+
+# Specify allowed dependencies
+python pylama.py -t dependency_aware -d "numpy,pandas,matplotlib" "create a data visualization"
+
+# Use a specific model
+python pylama.py -m phi3 "create a simple game"
 ```
 
 ## Model Management (models.py)
@@ -86,19 +100,23 @@ python pylama.py --model llama3 --output my_script.py
 
 ## Project Structure
 
-- `pylama.py`: Main script
+- `pylama.py`: Main script with command-line interface
 - `OllamaRunner.py`: Handles communication with Ollama API
-- `dependency_manager.py`: Manages Python package dependencies
+- `templates.py`: Contains specialized templates for different code generation needs
+- `DependencyManager.py`: Manages Python package dependencies
 - `sandbox.py`: Provides a safe environment for code execution
+- `sandbox_improved.py`: Enhanced sandbox with better dependency management
 - `models.sh`: Script to manage Ollama models
 
 ## How It Works
 
-1. The tool analyzes your prompt and generates Python code using the specified Ollama model
-2. It extracts import statements to identify required dependencies
-3. It checks for and installs any missing dependencies
-4. The generated code is executed in a controlled environment
-5. Any errors are caught and can be used to regenerate the code
+1. The tool analyzes your prompt and selects the appropriate template based on your requirements
+2. It enhances your prompt with template-specific instructions for the Ollama model
+3. The template-enhanced prompt is sent to the specified Ollama model to generate Python code
+4. It extracts import statements to identify required dependencies
+5. It checks for and installs any missing dependencies
+6. The generated code is executed in a controlled environment
+7. Any errors are caught and a specialized debug template is used to regenerate improved code
 
 ## Configuration
 
@@ -106,7 +124,9 @@ Create a `.env` file in the project root to customize behavior:
 
 ```env
 OLLAMA_MODEL=llama3
+OLLAMA_FALLBACK_MODELS=phi3,llama2
 LOG_LEVEL=INFO
+USE_DOCKER=False
 ```
 
 ## Contributing
@@ -116,6 +136,24 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Template System
+
+PyLama includes a powerful template system that helps generate better quality code for different scenarios:
+
+### Available Templates
+
+- **basic** - Simple code generation with standard best practices
+- **platform_aware** - Generates code optimized for your specific operating system
+- **dependency_aware** - Creates code using only specified dependencies
+- **testable** - Includes unit tests with the generated code
+- **secure** - Focuses on security best practices and input validation
+- **performance** - Optimizes code for better performance
+- **pep8** - Ensures code follows Python PEP 8 style guidelines
+
+### Debug Template
+
+When errors occur in generated code, PyLama uses a specialized debug template to analyze and fix the issues automatically.
 
 ## Wymagania
 
