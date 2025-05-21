@@ -30,7 +30,22 @@ parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__f
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
-from pyllm import get_models, get_default_model, set_default_model
+# Import directly using importlib to avoid package structure issues
+import importlib.util
+
+# Get the absolute paths to the modules we need
+parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Import models.py from pyllm
+models_path = os.path.join(parent_dir, 'pyllm', 'pyllm', 'models.py')
+spec = importlib.util.spec_from_file_location('models', models_path)
+models = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(models)
+
+# Get the functions we need from models.py
+get_models = models.get_models
+get_default_model = models.get_default_model
+set_default_model = models.set_default_model
 
 
 def interactive_mode():

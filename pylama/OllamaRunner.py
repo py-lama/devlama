@@ -9,7 +9,7 @@ import importlib
 import logging
 import platform
 from typing import List, Dict, Any, Tuple, Optional
-from templates import get_template
+from .templates import get_template
 
 # Create .pylama directory if it doesn't exist
 PACKAGE_DIR = os.path.join(os.path.expanduser('~'), '.pylama')
