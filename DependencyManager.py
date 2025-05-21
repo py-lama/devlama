@@ -11,21 +11,24 @@ import importlib
 from importlib import metadata
 
 # Create .pylama directory if it doesn't exist
-PACKAGE_DIR = os.path.join(os.path.expanduser('.'), '.pylama')
+PACKAGE_DIR = os.path.join(os.path.expanduser('~'), '.pylama')
 os.makedirs(PACKAGE_DIR, exist_ok=True)
 
-# Konfiguracja logowania
-log_file = os.path.join(PACKAGE_DIR, 'pylama_dependency.log')
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler(log_file)
-    ]
-)
+# Configure logger for DependencyManager
 logger = logging.getLogger('pylama.dependency')
-logger.info(f'Logi DependencyManager zapisywane w: {log_file}')
+logger.setLevel(logging.INFO)
+
+# Create file handler for DependencyManager logs
+dep_log_file = os.path.join(PACKAGE_DIR, 'pylama_dependency.log')
+file_handler = logging.FileHandler(dep_log_file)
+file_formatter = logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+file_handler.setFormatter(file_formatter)
+logger.addHandler(file_handler)
+
+logger.debug('DependencyManager initialized')
 
 class DependencyManager:
     """Klasa do zarządzania zależnościami projektu."""
@@ -96,11 +99,11 @@ class DependencyManager:
 
             return installed_packages
         except Exception as e:
-            logger.error(f"Błąd podczas pobierania pakietów: {e}")
-            # Zapisz szczegóły błędów do pliku w katalogu .pylama
+            logger.error(f"Error while fetching packages: {e}")
+            # Save error details to error log file
             error_log = os.path.join(PACKAGE_DIR, 'dependency_errors.log')
             with open(error_log, 'a', encoding='utf-8') as f:
-                f.write(f"Błąd podczas pobierania pakietów: {e}\n")
+                f.write(f"[{datetime.now().isoformat()}] Error fetching packages: {e}\n")
             return {}
 
     @staticmethod

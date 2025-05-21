@@ -13,19 +13,21 @@ from typing import List, Dict, Any, Tuple, Optional
 PACKAGE_DIR = os.path.join(os.path.expanduser('~'), '.pylama')
 os.makedirs(PACKAGE_DIR, exist_ok=True)
 
-# Konfiguracja logowania
-log_file = os.path.join(PACKAGE_DIR, 'pylama_ollama.log')
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler(log_file)
-    ]
-)
-
+# Configure logger for OllamaRunner
 logger = logging.getLogger('pylama.ollama')
-logger.info(f'Logi Ollama zapisywane w: {log_file}')
+logger.setLevel(logging.INFO)
+
+# Create file handler for Ollama-specific logs
+ollama_log_file = os.path.join(PACKAGE_DIR, 'pylama_ollama.log')
+file_handler = logging.FileHandler(ollama_log_file)
+file_formatter = logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+file_handler.setFormatter(file_formatter)
+logger.addHandler(file_handler)
+
+logger.debug('OllamaRunner initialized')
 
 # Użyj importlib.metadata zamiast pkg_resources
 try:
@@ -77,7 +79,9 @@ class OllamaRunner:
         try:
             # Sprawdź czy Ollama już działa poprzez zapytanie o wersję
             response = requests.get(self.version_api_url)
-            logger.info(f"Ollama już działa (wersja: {response.json().get('version', 'nieznana')})")
+            logger.info(f"Ollama is running (version: {response.json().get('version', 'unknown')})")
+            return
+
         except requests.exceptions.ConnectionError:
             logger.info("Uruchamianie serwera Ollama...")
             # Uruchom Ollama w tle
@@ -92,7 +96,7 @@ class OllamaRunner:
             # Sprawdź czy serwer faktycznie się uruchomił
             try:
                 response = requests.get(self.version_api_url)
-                logger.info(f"Serwer Ollama uruchomiony (wersja: {response.json().get('version', 'nieznana')})")
+                logger.info(f"Serwer Ollama uruchomiony (version: {response.json().get('version', 'unknown')})")
             except requests.exceptions.ConnectionError:
                 logger.error("BŁĄD: Nie udało się uruchomić serwera Ollama.")
                 if self.ollama_process:
@@ -126,7 +130,7 @@ class OllamaRunner:
             model_exists = any(m.get("name").split(":")[0] == self.model for m in models)
 
             if not model_exists:
-                logger.info(f"Model '{self.model}' nie jest zainstalowany. Dostępne modele:")
+                logger.warning(f"Model '{self.model}' is not installed. Available models:")
                 for model in models:
                     logger.info(f" - {model.get('name')}")
 

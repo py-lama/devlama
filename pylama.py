@@ -14,19 +14,53 @@ from OllamaRunner import OllamaRunner
 PACKAGE_DIR = os.path.join(os.path.expanduser('~'), '.pylama')
 os.makedirs(PACKAGE_DIR, exist_ok=True)
 
-# Konfiguracja logowania
-log_file = os.path.join(PACKAGE_DIR, 'pylama.log')
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler(log_file)
-    ]
-)
+class ColoredFormatter(logging.Formatter):
+    """Custom formatter that adds colors to log levels"""
+    grey = "\x1b[38;21m"
+    blue = "\x1b[34;21m"
+    yellow = "\x1b[33;21m"
+    red = "\x1b[31;21m"
+    bold_red = "\x1b[31;1m"
+    reset = "\x1b[0m"
+    
+    COLORS = {
+        logging.DEBUG: blue,
+        logging.INFO: grey,
+        logging.WARNING: yellow,
+        logging.ERROR: red,
+        logging.CRITICAL: bold_red
+    }
+    
+    def format(self, record):
+        log_fmt = f"%(asctime)s - %(levelname)8s - %(message)s"
+        if record.levelno in self.COLORS:
+            log_fmt = f"{self.COLORS[record.levelno]}{log_fmt}{self.reset}"
+        formatter = logging.Formatter(log_fmt, datefmt='%Y-%m-%d %H:%M:%S')
+        return formatter.format(record)
 
+# Configure root logger
+log_file = os.path.join(PACKAGE_DIR, 'pylama.log')
 logger = logging.getLogger('pylama')
-logger.info(f'Logi zapisywane w: {log_file}')
+logger.setLevel(logging.INFO)
+
+# Create console handler with colored output
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(ColoredFormatter())
+
+# Create file handler
+file_handler = logging.FileHandler(log_file)
+file_formatter = logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+file_handler.setFormatter(file_formatter)
+
+# Add handlers
+logger.addHandler(console_handler)
+logger.addHandler(file_handler)
+
+logger.info('Application started')
+logger.debug(f'Logs directory: {PACKAGE_DIR}')
 
 # Załaduj zmienne środowiskowe
 load_dotenv()

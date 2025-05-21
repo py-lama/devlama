@@ -1,3 +1,4 @@
+- PACKAGE_DIR i inne sciezki powinny byc pobeirane z .env
 - tworzenie sandbox dla python z dostepem do danych jak do bazy SQL
 - testowanie kodu i naprawianie w trakcie, bez pytania usera, zapisuj kazda probe, uruchamiaj tak dlugo az uruchomisz, ale nie wiecej niz 3 razy, jesli 3 razy nie udalo sie, to napisz program od nowa z poprawkami odnosnie paczek, zaleznosci, itd, stworz folder strategy, dla tego typu problemow w celu stworzenia scenariuszy postepowania jakko zbaza wiedzy na pr zyszlsoc, wypracowane w trakcie lub podane przez usera
 - zbieranie danych diagnostycznych i kodu w osobnym folderze
