@@ -10,6 +10,7 @@ import logging
 import platform
 from typing import List, Dict, Any, Tuple, Optional
 from .templates import get_template
+import threading
 
 # Create .pylama directory if it doesn't exist
 PACKAGE_DIR = os.path.join(os.path.expanduser('~'), '.pylama')
@@ -49,6 +50,41 @@ if USE_DOCKER:
         sys.exit(1)
 
 
+class ProgressSpinner:
+    """A simple progress spinner for console output."""
+    def __init__(self, message="Processing", delay=0.1):
+        self.message = message
+        self.delay = delay
+        self.running = False
+        self.spinner_thread = None
+        self.spinner_chars = ['-', '\\', '|', '/']
+        self.counter = 0
+        self.start_time = 0
+        
+    def spin(self):
+        while self.running:
+            elapsed = time.time() - self.start_time
+            sys.stderr.write(f"\r{self.message} {self.spinner_chars[self.counter % len(self.spinner_chars)]} ({elapsed:.1f}s) ")
+            sys.stderr.flush()
+            time.sleep(self.delay)
+            self.counter += 1
+        # Clear the line when done
+        sys.stderr.write("\r" + " " * (len(self.message) + 20) + "\r")
+        sys.stderr.flush()
+            
+    def start(self):
+        self.running = True
+        self.start_time = time.time()
+        self.spinner_thread = threading.Thread(target=self.spin)
+        self.spinner_thread.daemon = True
+        self.spinner_thread.start()
+        
+    def stop(self):
+        self.running = False
+        if self.spinner_thread:
+            self.spinner_thread.join(timeout=1.0)
+
+
 class OllamaRunner:
     """Class for running Ollama and executing generated code."""
 
@@ -65,6 +101,8 @@ class OllamaRunner:
         self.chat_api_url = f"{self.base_api_url}/chat"
         self.version_api_url = f"{self.base_api_url}/version"
         self.list_api_url = f"{self.base_api_url}/tags"
+        # Track the last error that occurred
+        self.last_error = None
         # Docker configuration
         self.use_docker = USE_DOCKER
         self.docker_sandbox = None
@@ -230,7 +268,45 @@ class OllamaRunner:
         else:
             formatted_prompt = prompt
             
-        # Try chat API first (most reliable in newer Ollama versions)
+        # Start a progress spinner
+        spinner = ProgressSpinner(message=f"Generating code with {self.model}")
+        spinner.start()
+        
+        try:
+            # First try the chat API
+            response_text = self.try_chat_api(formatted_prompt)
+            if response_text:
+                spinner.stop()
+                return self.extract_python_code(response_text)
+            
+            # If chat API fails, try the generate API
+            logger.warning(f"Chat API failed: {self.last_error}, trying generate API...")
+            
+            # Prepare the API request payload
+            payload = {
+                "model": self.model,
+                "prompt": formatted_prompt,
+                "stream": False
+            }
+            
+            # Send the API request
+            response = requests.post(self.generate_api_url, json=payload, timeout=30)
+            response.raise_for_status()
+            response_json = response.json()
+            
+            # Extract the response text
+            response_text = response_json.get("response", "")
+            spinner.stop()
+            return self.extract_python_code(response_text)
+            
+        except Exception as e:
+            self.last_error = str(e)
+            logger.error(f"Both API endpoints failed. Error: {e}")
+            spinner.stop()
+            return f"# Error querying Ollama API: {e}\n\n# Please ensure:\n# 1. Ollama is running (ollama serve)\n# 2. The model '{self.model}' is available (ollama pull {self.model})\n# 3. The Ollama API is accessible at {self.base_api_url}"
+        
+    def try_chat_api(self, formatted_prompt):
+        """Try using the chat API as an alternative."""
         try:
             chat_data = {
                 "model": self.model,
@@ -249,105 +325,28 @@ class OllamaRunner:
                 return chat_json["response"]
             else:
                 logger.warning(f"Unexpected chat API response format: {chat_json}")
+                return None
         except Exception as e:
-            logger.warning(f"Chat API failed: {e}, trying generate API...")
-            
-            # Fallback to generate API
-            try:
-                generate_data = {
-                    "model": self.model,
-                    "prompt": formatted_prompt,
-                    "stream": False
-                }
-                logger.debug(f"Sending generate request to {self.generate_api_url} with model {self.model}")
-                generate_response = requests.post(self.generate_api_url, json=generate_data, timeout=30)  # Reduced timeout
-                generate_response.raise_for_status()
-                generate_json = generate_response.json()
-                
-                if "response" in generate_json:
-                    return generate_json["response"]
-                else:
-                    logger.warning(f"Unexpected generate API response format: {generate_json}")
-            except Exception as e2:
-                logger.error(f"Both API endpoints failed. Error: {e2}")
-                return f"# Error querying Ollama API: {e2}\n\n# Please ensure:\n# 1. Ollama is running (ollama serve)\n# 2. The model '{self.model}' is available (ollama pull {self.model})\n# 3. The Ollama API is accessible at {self.base_api_url}"
-        
-        return "# Error: Could not get a valid response from Ollama"
-
-    def try_chat_api(self, formatted_prompt):
-        """Try using the chat API as an alternative."""
-        try:
-            # Try using /api/chat as an alternative API
-            logger.info("Trying to use chat API...")
-            chat_data = {
-                "model": self.model,
-                "messages": [{"role": "user", "content": formatted_prompt}],
-                "stream": False
-            }
-
-            chat_response = requests.post(self.chat_api_url, json=chat_data)
-            chat_response.raise_for_status()
-            chat_json = chat_response.json()
-
-            # Save raw response to a file for debugging
-            if os.getenv('SAVE_RAW_RESPONSES', 'False').lower() in ('true', '1', 't'):
-                debug_file = os.path.join(PACKAGE_DIR, "ollama_chat_response.json")
-                with open(debug_file, "w", encoding="utf-8") as f:
-                    json.dump(chat_json, f, indent=2)
-                logger.debug(f'Saved raw response to {debug_file}')
-
-            # Extract response from a different format
-            if "message" in chat_json and "content" in chat_json["message"]:
-                return chat_json["message"]["content"]
-            return ""
-        except Exception as chat_e:
-            logger.error(f"Error communicating with chat API: {chat_e}")
-            return ""
+            self.last_error = str(e)
+            return None
 
     def extract_python_code(self, text: str) -> str:
         """Extract Python code from the response."""
-
-        # Check different possible code formats in the response
-        patterns = [
-            r"```python\s*(.*?)\s*```",  # Markdown code block
-            r"```\s*(.*?)\s*```",  # Generic code block
-            r"import .*?\n(.*?)(?:\n\n|$)"  # Code starting with import
-        ]
-
-        for pattern in patterns:
-            matches = re.findall(pattern, text, re.DOTALL)
-            if matches:
-                return matches[0]
-
-        # Jeśli nie znaleziono kodu za pomocą wyrażeń regularnych,
-        # spróbuj znaleźć po linii importu
-        lines = text.split('\n')
-        import_lines = []
-        code_lines = []
-        collecting = False
-
-        for line in lines:
-            if 'import' in line and not collecting:
-                collecting = True
-
-            if collecting:
-                code_lines.append(line)
-
-        if code_lines:
-            return '\n'.join(code_lines)
-
-        # If all else fails, write the response to a debug file
-        debug_dir = os.path.join(PACKAGE_DIR, 'debug')
-        os.makedirs(debug_dir, exist_ok=True)
-
-        timestamp = time.strftime("%Y%m%d-%H%M%S")
-        debug_file = os.path.join(debug_dir, f"ollama_response_debug_{timestamp}.txt")
-
-        with open(debug_file, "w", encoding="utf-8") as f:
-            f.write(text)
-
-        logger.info(f"DEBUG: Full response saved to file '{debug_file}'")
-        return ""
+        # If the response already looks like code (no markdown), return it
+        if text.strip().startswith("import ") or text.strip().startswith("#") or text.strip().startswith("def ") or text.strip().startswith("class "):
+            return text
+            
+        # Look for Python code blocks in markdown
+        import re
+        code_block_pattern = r"```(?:python)?\s*([\s\S]*?)```"
+        matches = re.findall(code_block_pattern, text)
+        
+        if matches:
+            # Return the first code block found
+            return matches[0].strip()
+        
+        # If no code blocks found, return the original text
+        return text
 
     def save_code_to_file(self, code: str, filename: str = None) -> str:
         """Save the generated code to a file and return the path to the file."""

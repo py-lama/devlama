@@ -8,7 +8,8 @@ PyLama is a Python tool that leverages Ollama's language models to generate and 
 
 - **Real Ollama Integration**: Uses real Ollama models to generate high-quality Python code
 - **Mock Mode**: Supports a mock mode for testing without requiring Ollama
-- **Smart Model Selection**: Automatically selects the best available model
+- **Smart Model Selection**: Automatically selects the best available model with fallbacks
+- **Progress Indicator**: Shows real-time progress during code generation
 - **Template System**: Generates code with awareness of platform, dependencies, and more
 - **Interactive Mode**: Provides an interactive CLI for model selection and code generation
 - **Code Execution**: Can execute generated code directly
@@ -66,8 +67,10 @@ pylama -i --mock
 PyLama integrates with Ollama to provide high-quality code generation. By default, it will:
 
 1. Connect to the Ollama server running on `localhost:11434`
-2. Use the best available model for code generation
-3. Fall back to alternative models if the requested one isn't available
+2. Check if the requested model is available
+3. Use the best available model for code generation
+4. Fall back to alternative models if the requested one isn't available
+5. Display a progress spinner with elapsed time during code generation
 
 ### Setting Up Ollama
 
@@ -89,7 +92,7 @@ You can configure PyLama using environment variables:
 
 - `OLLAMA_PATH`: Path to the Ollama executable (default: `ollama`)
 - `OLLAMA_MODEL`: Default model to use (default: `codellama:7b`)
-- `OLLAMA_FALLBACK_MODELS`: Comma-separated list of fallback models
+- `OLLAMA_FALLBACK_MODELS`: Comma-separated list of fallback models (default: `codellama:7b,phi3:latest,tinyllama:latest`)
 
 ## Mock Mode
 
@@ -100,6 +103,42 @@ pylama --mock "print hello world"
 ```
 
 In mock mode, PyLama will return pre-defined code examples based on the prompt.
+
+## Troubleshooting
+
+### Model Not Found
+
+If you see an error like this:
+
+```
+Model 'your-model-name' not found in Ollama. Available models: ['codellama:7b', 'phi3:latest']
+```
+
+You need to pull the model first:
+
+```bash
+ollama pull your-model-name
+```
+
+### Connection Timeout
+
+If you see a timeout error:
+
+```
+Error querying Ollama API: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=30)
+```
+
+Make sure Ollama is running:
+
+```bash
+ollama serve
+```
+
+If Ollama is running but still timing out, the model might be too large for your system. Try using a smaller model:
+
+```bash
+pylama --model tinyllama:latest "your prompt"
+```
 
 ## PyLama Microservices Architecture
 
@@ -1204,3 +1243,5 @@ Poniżej orientacyjne wymagania sprzętowe dla różnych rozmiarów modeli:
   - A: Run `models.py` and press `u` in the menu.
 - **Q: How do I run code with sandbox.py?**
   - A: See the usage example above. Dependencies are managed automatically.
+
+```
