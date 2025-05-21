@@ -34,8 +34,31 @@ if parent_dir not in sys.path:
 
 # Model management functions
 def get_models():
-    """Get a list of available models."""
-    return ["llama2", "codellama", "phi"]
+    """Get a list of available models, including Bielik from SpeakLeash."""
+    return [
+        "llama2",
+        "codellama",
+        "codellama:13b",
+        "codellama:34b",
+        "codellama:70b",
+        "deepseek-coder:6.7b",
+        "deepseek-coder:33b",
+        "starcoder2:15b",
+        "phi",
+        "phi-2",
+        "wizardcoder:15b",
+        "codegemma:2b",
+        "codegemma:7b",
+        "codegemma:7b-it",
+        # Bielik models from SpeakLeash:
+        "SpeakLeash/bielik-7b-instruct-v0.1-gguf",
+        "SpeakLeash/bielik-11b-v2.0-instruct-gguf",
+        "SpeakLeash/bielik-11b-v2.1-instruct-gguf",
+        "SpeakLeash/bielik-11b-v2.2-instruct-gguf",
+        "SpeakLeash/bielik-11b-v2.3-instruct-gguf",
+        "SpeakLeash/bielik-1.5b-v3.0-instruct-gguf",
+        "SpeakLeash/bielik-4.5b-v3.0-instruct-gguf",
+    ]
 
 def get_default_model():
     """Get the default model."""
