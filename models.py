@@ -4,6 +4,7 @@ import os
 
 # --- AUTO ENV & DEPENDENCY SETUP ---
 REQUIRED_PACKAGES = ["requests", "bs4", "python-dotenv"]
+IMPORT_NAMES = ["requests", "bs4", "dotenv"]  # Correct import for python-dotenv is 'dotenv'
 VENV_DIR = os.path.join(os.path.dirname(__file__), ".venv")
 
 # 1. Create venv if missing
@@ -20,9 +21,9 @@ def _venv_python():
 
 # 3. Install missing packages
 missing = []
-for pkg in REQUIRED_PACKAGES:
+for pkg, imp in zip(REQUIRED_PACKAGES, IMPORT_NAMES):
     try:
-        __import__(pkg if pkg != "bs4" else "bs4")
+        __import__(imp)
     except ImportError:
         missing.append(pkg)
 if missing:

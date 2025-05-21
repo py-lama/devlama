@@ -1,352 +1,348 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-PyLama Sandbox - Automatyczne środowisko do uruchamiania dowolnego kodu Python
-
-Ten moduł zapewnia automatyczne środowisko do uruchamiania kodu Python z zarządzaniem
-zależnościami i integracją z Ollama Runner. Pozwala na szybkie tworzenie środowiska
-do dowolnego kodu Python, automatycznie wykrywając i instalując wymagane zależności.
-
-Główne funkcje:
-1. Analiza kodu Python i wykrywanie importów za pomocą modułu ast
-2. Automatyczna instalacja brakujących pakietów
-3. Bezpieczne środowisko wykonawcze oparte na Docker
-"""
-
 import os
 import sys
 import subprocess
-import tempfile
-import shutil
-import logging
-import time
-import traceback
-import random
-import json
-import re
-import importlib
-import importlib.util
-import inspect
 import ast
+import json
+import logging
+import tempfile
 import uuid
-from pathlib import Path
-from typing import Optional, Dict, List, Tuple, Any, Union, Set, Callable
+import shutil
+import importlib
+import importlib.util  # Dodanie importlib.util
+from typing import Dict, List, Any, Optional, Union, Tuple
 
 # Konfiguracja loggera
-logging_level = os.getenv('LOGGING_LEVEL', 'INFO')
 logging.basicConfig(
-    level=getattr(logging, logging_level),
+    level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
+
 logger = logging.getLogger(__name__)
 
-# Próba importu pkg_resources, ale obsługa przypadku, gdy nie jest dostępny
+# Próba importu opcjonalnych modułów
 try:
     import pkg_resources
-
-    HAS_PKG_RESOURCES = True
 except ImportError:
-    HAS_PKG_RESOURCES = False
     logger.warning("Moduł pkg_resources nie jest dostępny. Niektóre funkcje mogą być ograniczone.")
+    pkg_resources = None
 
-# Próba importu dotenv, ale obsługa przypadku, gdy nie jest dostępny
 try:
     from dotenv import load_dotenv
 
-    HAS_DOTENV = True
-    # Załaduj zmienne środowiskowe z pliku .env, jeśli istnieje
     load_dotenv()
 except ImportError:
-    HAS_DOTENV = False
     logger.warning("Moduł python-dotenv nie jest dostępny. Zmienne środowiskowe z pliku .env nie zostaną załadowane.")
-
-# Mapowanie zależności - nazwa importu do nazwy pakietu PyPI
-DEPENDENCY_MAP = {
-    # Web and Browser Automation
-    'selenium': 'selenium',
-    'selenium.webdriver': 'selenium',
-    'webdriver_manager': 'webdriver-manager',
-    'pyautogui': 'pyautogui',
-    'playwright': 'playwright',
-
-    # Data Analysis
-    'numpy': 'numpy',
-    'pandas': 'pandas',
-    'matplotlib': 'matplotlib',
-    'seaborn': 'seaborn',
-    'scipy': 'scipy',
-    'sklearn': 'scikit-learn',
-    'tensorflow': 'tensorflow',
-    'torch': 'torch',
-    'keras': 'keras',
-
-    # Web Development
-    'flask': 'flask',
-    'django': 'django',
-    'fastapi': 'fastapi',
-    'requests': 'requests',
-    'aiohttp': 'aiohttp',
-    'bs4': 'beautifulsoup4',
-    'lxml': 'lxml',
-
-    # Utilities
-    'dotenv': 'python-dotenv',
-    'PIL': 'pillow',
-    'yaml': 'pyyaml',
-    'dateutil': 'python-dateutil',
-    'pytz': 'pytz',
-    'tqdm': 'tqdm',
-}
 
 
 class CodeAnalyzer:
-    """Klasa do analizy kodu Python i wykrywania importowanych modułów."""
+    """Klasa do analizy kodu Python i wykrywania zależności."""
 
     def __init__(self):
-        self.standard_libs = self._get_standard_libs()
-        self.dependency_map = DEPENDENCY_MAP
+        # Standardowe moduły Pythona
+        self.std_lib_modules = set(sys.builtin_module_names)
 
-    def _get_standard_libs(self) -> Set[str]:
-        """Zwraca zbiór nazw modułów biblioteki standardowej Python."""
-        # Lista popularnych modułów biblioteki standardowej
-        return {
-            'abc', 'argparse', 'array', 'ast', 'asyncio', 'base64', 'binascii', 'builtins',
-            'calendar', 'collections', 'concurrent', 'configparser', 'contextlib', 'copy',
-            'csv', 'ctypes', 'datetime', 'decimal', 'difflib', 'dis', 'email', 'enum',
-            'errno', 'fcntl', 'filecmp', 'fnmatch', 'functools', 'gc', 'getopt', 'getpass',
-            'gettext', 'glob', 'gzip', 'hashlib', 'heapq', 'hmac', 'html', 'http',
-            'importlib', 'inspect', 'io', 'ipaddress', 'itertools', 'json', 'keyword',
-            'linecache', 'locale', 'logging', 'lzma', 'math', 'mimetypes', 'mmap',
-            'multiprocessing', 'netrc', 'numbers', 'operator', 'os', 'pathlib', 'pickle',
-            'pkgutil', 'platform', 'pprint', 'pwd', 'pydoc', 'queue', 'random', 're',
-            'reprlib', 'resource', 'select', 'shelve', 'shlex', 'shutil', 'signal',
-            'site', 'smtplib', 'socket', 'socketserver', 'sqlite3', 'ssl', 'stat',
-            'string', 'struct', 'subprocess', 'sys', 'sysconfig', 'tarfile', 'tempfile',
-            'textwrap', 'threading', 'time', 'timeit', 'token', 'tokenize', 'traceback',
-            'types', 'typing', 'unicodedata', 'unittest', 'urllib', 'uuid', 'warnings',
-            'weakref', 'webbrowser', 'xml', 'xmlrpc', 'zipfile', 'zipimport', 'zlib',
-            # Dodane moduły, które często są traktowane jako zewnętrzne, ale są standardowe
-            'datetime', 'email', 'html', 'http', 'logging', 'math', 'multiprocessing',
-            'unittest', 'urllib', 'xml'
-        }
+        # Dodanie innych standardowych modułów
+        for module in sys.modules:
+            if module and '.' not in module:
+                self.std_lib_modules.add(module)
 
-    def analyze_code(self, code: str) -> Dict[str, List[str]]:
-        """
-        Analizuje kod Python i wykrywa importowane moduły.
+        # Dodanie dodatkowych standardowych modułów
+        additional_std_libs = [
+            'os', 'sys', 'math', 'random', 'datetime', 'time', 'json',
+            'csv', 're', 'collections', 'itertools', 'functools', 'typing',
+            'pathlib', 'io', 'tempfile', 'shutil', 'glob', 'argparse',
+            'logging', 'unittest', 'pickle', 'hashlib', 'uuid', 'copy',
+            'subprocess', 'multiprocessing', 'threading', 'queue', 'socket',
+            'email', 'http', 'urllib', 'base64', 'html', 'xml', 'zipfile',
+            'tarfile', 'gzip', 'bz2', 'lzma', 'zlib', 'struct', 'array',
+            'enum', 'statistics', 'decimal', 'fractions', 'numbers',
+            'cmath', 'contextlib', 'abc', 'ast', 'dis', 'inspect',
+            'importlib', 'pkgutil', 'traceback', 'warnings', 'weakref',
+            'types', 'operator', 'string', 'calendar', 'locale', 'gettext',
+            'platform', 'signal', 'gc', 'atexit', 'builtins', 'code',
+            'codecs', 'codeop', 'msvcrt', 'winreg', 'winsound', 'posix',
+            'pwd', 'spwd', 'grp', 'crypt', 'termios', 'tty', 'pty', 'fcntl',
+            'pipes', 'resource', 'nis', 'syslog', 'optparse', 'getopt',
+            'cmd', 'shlex', 'pdb', 'profile', 'pstats', 'timeit',
+            'trace', 'tracemalloc', 'distutils', 'ensurepip', 'venv',
+            'zipapp', 'turtle', 'cmd', 'asyncio', 'concurrent', 'contextvars',
+            'dataclasses', 'graphlib', 'zoneinfo'
+        ]
 
-        Args:
-            code: Kod Python do analizy.
+        self.std_lib_modules.update(additional_std_libs)
 
-        Returns:
-            Słownik z listami modułów podzielonych na kategorie.
-        """
+    def analyze_code(self, code: str) -> Dict[str, Any]:
+        """Analizuje kod Python i wykrywa importowane moduły."""
         try:
             tree = ast.parse(code)
-        except SyntaxError as e:
-            logger.error(f"Błąd składni w kodzie: {e}")
-            return {
-                'standard_library': [],
-                'third_party': [],
-                'unknown': []
-            }
+            imports = {}
 
-        imports = set()
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Import):
+                    for name in node.names:
+                        module_name = name.name.split('.')[0]
+                        imports[module_name] = self._classify_module(module_name)
 
-        # Wyszukaj wszystkie importy w kodzie
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Import):
-                for name in node.names:
-                    imports.add(name.name.split('.')[0])  # Pobierz główną nazwę modułu
-            elif isinstance(node, ast.ImportFrom):
-                if node.module:  # Ignoruj 'from . import x'
-                    imports.add(node.module.split('.')[0])  # Pobierz główną nazwę modułu
+                elif isinstance(node, ast.ImportFrom):
+                    if node.module:
+                        module_name = node.module.split('.')[0]
+                        imports[module_name] = self._classify_module(module_name)
 
-        # Podziel importy na kategorie
-        standard_library = []
-        third_party = []
-        unknown = []
-
-        for module_name in imports:
-            if module_name in self.standard_libs:
-                standard_library.append(module_name)
-            elif module_name in DEPENDENCY_MAP:
-                third_party.append(module_name)
-            else:
-                # Jeśli nie jest to moduł standardowy ani znany zewnętrzny, zakładamy, że jest zewnętrzny
-                third_party.append(module_name)
-
-        return {
-            'standard_library': standard_library,
-            'third_party': third_party,
-            'unknown': unknown
-        }
-
-    def _categorize_import(self, module_name: str, imports: Dict[str, List[str]]) -> None:
-        """
-        Kategoryzuje importowany moduł jako standardowy, zewnętrzny lub nieznany.
-
-        Args:
-            module_name: Nazwa importowanego modułu
-            imports: Słownik do aktualizacji
-        """
-        # Wyodrębnij główny moduł (np. z "numpy.random" wyodrębnij "numpy")
-        main_module = module_name.split('.')[0]
-
-        # Sprawdź, czy moduł jest już w jednej z kategorii
-        for category in imports.values():
-            if main_module in category:
-                return
-
-        # Kategoryzuj moduł
-        if main_module in self.standard_library:
-            imports['standard_library'].append(main_module)
-        elif main_module in self.dependency_map or any(
-                module_name.startswith(dep + '.') for dep in self.dependency_map):
-            imports['third_party'].append(main_module)
-        else:
-            # Sprawdź, czy moduł jest zainstalowany
-            try:
-                importlib.util.find_spec(main_module)
-                imports['third_party'].append(main_module)
-            except (ImportError, ModuleNotFoundError):
-                imports['unknown'].append(main_module)
-
-    def get_required_packages(self, imports: Dict[str, List[str]]) -> List[str]:
-        """
-        Zwraca listę pakietów PyPI wymaganych przez kod.
-
-        Args:
-            imports: Słownik z importami podzielonymi na kategorie.
-
-        Returns:
-            Lista nazw pakietów PyPI.
-        """
-        required_packages = []
-
-        # Dodaj pakiety zewnętrzne
-        for module in imports.get('third_party', []):
-            if module in self.dependency_map:
-                required_packages.append(self.dependency_map[module])
-            else:
-                # Jeśli nie ma mapowania, zakładamy, że nazwa pakietu jest taka sama jak nazwa modułu
-                required_packages.append(module)
-
-        # Dodaj pakiety z unknown (może być ryzykowne, ale spróbujemy)
-        for module in imports.get('unknown', []):
-            if module in self.dependency_map:
-                required_packages.append(self.dependency_map[module])
-            else:
-                # Sprawdź, czy istnieje pakiet o takiej nazwie w PyPI
-                required_packages.append(module)
-
-        return list(set(required_packages))  # Usuń duplikaty
-
-
-class DependencyManager:
-    """Klasa do zarządzania zależnościami pakietów Python."""
-
-    def __init__(self):
-        """Inicjalizacja menedżera zależności."""
-        self.code_analyzer = CodeAnalyzer()
-        self.installed_packages = self._get_installed_packages()
-        # Dodatkowe mapowanie dla popularnych pakietów, które mogą być trudne do wykrycia
-        self.additional_mappings = {
-            'np': 'numpy',
-            'pd': 'pandas',
-            'plt': 'matplotlib',
-            'tf': 'tensorflow',
-            'torch': 'torch',
-            'cv2': 'opencv-python',
-            'sk': 'scikit-learn',
-            'sklearn': 'scikit-learn',
-            'bs4': 'beautifulsoup4',
-            'requests': 'requests',
-            'django': 'django',
-            'flask': 'flask',
-            'sqlalchemy': 'sqlalchemy',
-            'pytest': 'pytest',
-            'unittest': None,  # Moduł standardowy
-            'json': None,  # Moduł standardowy
-            'os': None,  # Moduł standardowy
-            'sys': None,  # Moduł standardowy
-            'math': None  # Moduł standardowy
-        }
-
-    def _get_installed_packages(self) -> Dict[str, str]:
-        """Zwraca słownik zainstalowanych pakietów z ich wersjami."""
-        installed = {}
-
-        if HAS_PKG_RESOURCES:
-            # Użyj pkg_resources, jeśli jest dostępny
-            try:
-                for package in pkg_resources.working_set:
-                    installed[package.key] = package.version
-            except Exception as e:
-                logger.warning(f"Nie udało się pobrać listy zainstalowanych pakietów: {e}")
-        else:
-            # Alternatywna metoda, jeśli pkg_resources nie jest dostępny
-            try:
-                # Użyj pip do pobrania listy zainstalowanych pakietów
-                result = subprocess.run(
-                    [sys.executable, '-m', 'pip', 'list', '--format=json'],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    check=True
-                )
-
-                if result.returncode == 0 and result.stdout.strip():
-                    packages = json.loads(result.stdout)
-                    for package in packages:
-                        name = package.get('name', '').lower()
-                        version = package.get('version', '')
-                        if name and version:
-                            installed[name] = version
-            except Exception as e:
-                logger.warning(f"Nie udało się pobrać listy zainstalowanych pakietów przez pip: {e}")
-
-        return installed
-
-    def analyze_dependencies(self, code: str) -> Dict[str, Any]:
-        """
-        Analizuje kod Python i wykrywa zależności.
-
-        Args:
-            code: Kod Python do analizy.
-
-        Returns:
-            Słownik z informacjami o zależnościach.
-        """
-        try:
-            # Analizuj kod i wykryj importy
-            imports = self.code_analyzer.analyze_code(code)
-
-            # Pobierz wymagane pakiety na podstawie importów
-            required_packages = self.code_analyzer.get_required_packages(imports)
-
-            # Dodatkowa analiza kodu dla wykrycia aliasowanych importów
-            for alias, package in self.additional_mappings.items():
-                if package and f"{alias}." in code and package not in required_packages:
-                    required_packages.append(package)
-
-            # Sprawdź, które pakiety są już zainstalowane
-            installed = []
-            missing = []
-
-            for package in required_packages:
-                if package in self.installed_packages:
-                    installed.append(package)
-                else:
-                    missing.append(package)
+            # Filtrowanie i kategoryzacja importów
+            std_lib_imports = [name for name, category in imports.items() if category == 'standard_library']
+            third_party_imports = [name for name, category in imports.items() if category == 'third_party']
+            unknown_imports = [name for name, category in imports.items() if category == 'unknown']
 
             return {
                 'imports': imports,
-                'required_packages': required_packages,
-                'installed_packages': installed,
-                'missing_packages': missing,
-                'installed_packages_count': len(installed)
+                'standard_library': std_lib_imports,
+                'third_party': third_party_imports,
+                'unknown': unknown_imports,
+                'required_packages': third_party_imports + unknown_imports
             }
+
+        except SyntaxError as e:
+            logger.error(f"Błąd składni w kodzie: {e}")
+            return {
+                'imports': {},
+                'standard_library': [],
+                'third_party': [],
+                'unknown': [],
+                'required_packages': [],
+                'error': str(e)
+            }
+
+        except Exception as e:
+            logger.error(f"Błąd podczas analizy kodu: {e}")
+            return {
+                'imports': {},
+                'standard_library': [],
+                'third_party': [],
+                'unknown': [],
+                'required_packages': [],
+                'error': str(e)
+            }
+
+    def _classify_module(self, module_name: str) -> str:
+        """Klasyfikuje moduł jako standardowy, zewnętrzny lub nieznany."""
+        if module_name in self.std_lib_modules:
+            return 'standard_library'
+
+        try:
+            spec = importlib.util.find_spec(module_name)
+            if spec is not None:
+                return 'third_party'
+        except (ImportError, ValueError):
+            pass
+
+        return 'unknown'
+
+
+class DependencyManager:
+    """Klasa do zarządzania zależnościami i instalacji pakietów."""
+
+    def __init__(self):
+        self.analyzer = CodeAnalyzer()
+
+        # Mapowanie popularnych modułów do nazw pakietów
+        self.module_to_package = {
+            'numpy': 'numpy',
+            'pandas': 'pandas',
+            'matplotlib': 'matplotlib',
+            'scipy': 'scipy',
+            'sklearn': 'scikit-learn',
+            'tensorflow': 'tensorflow',
+            'torch': 'torch',
+            'keras': 'keras',
+            'django': 'django',
+            'flask': 'flask',
+            'requests': 'requests',
+            'bs4': 'beautifulsoup4',
+            'beautifulsoup4': 'beautifulsoup4',
+            'lxml': 'lxml',
+            'html5lib': 'html5lib',
+            'selenium': 'selenium',
+            'PIL': 'pillow',
+            'cv2': 'opencv-python',
+            'pytest': 'pytest',
+            'sqlalchemy': 'sqlalchemy',
+            'psycopg2': 'psycopg2-binary',
+            'pymysql': 'pymysql',
+            'sqlite3': 'pysqlite3',
+            'nltk': 'nltk',
+            'gensim': 'gensim',
+            'spacy': 'spacy',
+            'transformers': 'transformers',
+            'networkx': 'networkx',
+            'plotly': 'plotly',
+            'dash': 'dash',
+            'bokeh': 'bokeh',
+            'seaborn': 'seaborn',
+            'sympy': 'sympy',
+            'statsmodels': 'statsmodels',
+            'xgboost': 'xgboost',
+            'lightgbm': 'lightgbm',
+            'catboost': 'catboost',
+            'pyspark': 'pyspark',
+            'dask': 'dask',
+            'ray': 'ray',
+            'fastapi': 'fastapi',
+            'uvicorn': 'uvicorn',
+            'streamlit': 'streamlit',
+            'gradio': 'gradio',
+            'pytest': 'pytest',
+            'tqdm': 'tqdm',
+            'rich': 'rich',
+            'typer': 'typer',
+            'click': 'click',
+            'pydantic': 'pydantic',
+            'jinja2': 'jinja2',
+            'yaml': 'pyyaml',
+            'toml': 'toml',
+            'json5': 'json5',
+            'ujson': 'ujson',
+            'orjson': 'orjson',
+            'redis': 'redis',
+            'pymongo': 'pymongo',
+            'boto3': 'boto3',
+            'google': 'google-api-python-client',
+            'azure': 'azure-storage-blob',
+            'openai': 'openai',
+            'langchain': 'langchain',
+            'huggingface_hub': 'huggingface_hub',
+            'tiktoken': 'tiktoken',
+            'tokenizers': 'tokenizers',
+            'sentencepiece': 'sentencepiece',
+            'diffusers': 'diffusers',
+            'accelerate': 'accelerate',
+            'onnx': 'onnx',
+            'onnxruntime': 'onnxruntime',
+            'tflite': 'tflite',
+            'openvino': 'openvino',
+            'timm': 'timm',
+            'albumentations': 'albumentations',
+            'kornia': 'kornia',
+            'fastai': 'fastai',
+            'pytorch_lightning': 'pytorch-lightning',
+            'wandb': 'wandb',
+            'mlflow': 'mlflow',
+            'optuna': 'optuna',
+            'ray': 'ray[tune]',
+            'hydra': 'hydra-core',
+            'prefect': 'prefect',
+            'airflow': 'apache-airflow',
+            'dagster': 'dagster',
+            'kedro': 'kedro',
+            'great_expectations': 'great_expectations',
+            'dbt': 'dbt-core',
+            'polars': 'polars',
+            'vaex': 'vaex',
+            'datatable': 'datatable',
+            'modin': 'modin',
+            'cudf': 'cudf',
+            'cupy': 'cupy',
+            'jax': 'jax',
+            'flax': 'flax',
+            'optax': 'optax',
+            'haiku': 'dm-haiku',
+            'numpyro': 'numpyro',
+            'pyro': 'pyro-ppl',
+            'pystan': 'pystan',
+            'pymc': 'pymc',
+            'arviz': 'arviz',
+            'corner': 'corner',
+            'emcee': 'emcee',
+            'dynesty': 'dynesty',
+            'astropy': 'astropy',
+            'sunpy': 'sunpy',
+            'healpy': 'healpy',
+            'astroquery': 'astroquery',
+            'astroplan': 'astroplan',
+            'astroml': 'astroml',
+            'astroscrappy': 'astroscrappy',
+            'astrowidgets': 'astrowidgets',
+            'ccdproc': 'ccdproc',
+            'photutils': 'photutils',
+            'specutils': 'specutils',
+            'reproject': 'reproject',
+            'regions': 'regions',
+            'gala': 'gala',
+            'pyia': 'pyia',
+            'galpy': 'galpy',
+            'ginga': 'ginga',
+            'glue': 'glue-vispy-viewers',
+            'pywwt': 'pywwt',
+            'aplpy': 'aplpy',
+            'rebound': 'rebound',
+            'reboundx': 'reboundx',
+            'exoplanet': 'exoplanet',
+            'batman': 'batman-package',
+            'radvel': 'radvel',
+            'lightkurve': 'lightkurve',
+            'astroplan': 'astroplan',
+            'astroquery': 'astroquery',
+            'astropy': 'astropy',
+            'sunpy': 'sunpy',
+            'healpy': 'healpy',
+            'astroquery': 'astroquery',
+            'astroplan': 'astroplan',
+            'astroml': 'astroml',
+            'astroscrappy': 'astroscrappy',
+            'astrowidgets': 'astrowidgets',
+            'ccdproc': 'ccdproc',
+            'photutils': 'photutils',
+            'specutils': 'specutils',
+            'reproject': 'reproject',
+            'regions': 'regions',
+            'gala': 'gala',
+            'pyia': 'pyia',
+            'galpy': 'galpy',
+            'ginga': 'ginga',
+            'glue': 'glue-vispy-viewers',
+            'pywwt': 'pywwt',
+            'aplpy': 'aplpy',
+            'rebound': 'rebound',
+            'reboundx': 'reboundx',
+            'exoplanet': 'exoplanet',
+            'batman': 'batman-package',
+            'radvel': 'radvel',
+            'lightkurve': 'lightkurve'
+        }
+
+    def analyze_dependencies(self, code: str) -> Dict[str, Any]:
+        """Analizuje zależności w kodzie Python."""
+        try:
+            analysis_result = self.analyzer.analyze_code(code)
+            required_modules = analysis_result.get('required_packages', [])
+
+            # Mapowanie modułów na pakiety
+            required_packages = []
+            for module in required_modules:
+                package = self.module_to_package.get(module, module)
+                if package not in required_packages:
+                    required_packages.append(package)
+
+            # Instalacja pakietów
+            installed_packages = []
+            missing_packages = []
+
+            for package in required_packages:
+                if self.install_package(package):
+                    installed_packages.append(package)
+                else:
+                    missing_packages.append(package)
+
+            return {
+                'imports': analysis_result.get('imports', {}),
+                'required_packages': required_packages,
+                'installed_packages': installed_packages,
+                'missing_packages': missing_packages,
+                'installed_packages_count': len(installed_packages)
+            }
+
         except Exception as e:
             logger.error(f"Błąd podczas analizy zależności: {e}")
             return {
@@ -363,417 +359,294 @@ class DependencyManager:
         Instaluje pakiet Python za pomocą pip.
 
         Args:
-            package_name: Nazwa pakietu do zainstalowania
+            package_name: Nazwa pakietu do zainstalowania.
 
         Returns:
-            True, jeśli instalacja się powiodła, False w przeciwnym razie
+            bool: True, jeśli instalacja się powiodła, False w przeciwnym razie.
         """
         try:
             logger.info(f"Instalowanie pakietu: {package_name}")
-            subprocess.check_call(
-                [sys.executable, "-m", "pip", "install", package_name],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
+
+            # Użyj pip do instalacji pakietu
+            result = subprocess.run(
+                [sys.executable, '-m', 'pip', 'install', package_name],
+                capture_output=True,
+                text=True,
+                check=True
             )
-            # Aktualizuj słownik zainstalowanych pakietów
-            self.installed_packages = self._get_installed_packages()
+
+            logger.info(f"Pakiet {package_name} zainstalowany pomyślnie.")
             return True
+
         except subprocess.CalledProcessError as e:
             logger.error(f"Błąd podczas instalacji pakietu {package_name}: {e}")
             return False
+
         except Exception as e:
             logger.error(f"Nieoczekiwany błąd podczas instalacji pakietu {package_name}: {e}")
             return False
 
-    def ensure_dependencies(self, code: str) -> Dict[str, Any]:
+    def check_package_installed(self, package_name: str) -> bool:
         """
-        Analizuje kod i instaluje brakujące zależności.
+        Sprawdza, czy pakiet jest zainstalowany.
 
         Args:
-            code: Kod Python do analizy
+            package_name: Nazwa pakietu do sprawdzenia.
 
         Returns:
-            Słownik z informacjami o zależnościach i wynikach instalacji
-        """
-        # Analizuj zależności
-        dependencies = self.analyze_dependencies(code)
-
-        # Instaluj brakujące pakiety
-        installation_results = []
-        for package in dependencies['missing_packages']:
-            success = self.install_package(package)
-            installation_results.append({
-                'package': package,
-                'success': success
-            })
-
-        # Aktualizuj słownik zainstalowanych pakietów
-        dependencies['installed_packages'] = [
-            {'name': package, 'version': self.installed_packages.get(package.lower(), 'unknown')}
-            for package in dependencies['required_packages']
-            if package.lower() in self.installed_packages
-        ]
-        dependencies['installation_results'] = installation_results
-
-        return dependencies
-
-
-class DockerEnvironment:
-    """Zarządza środowiskiem Docker do uruchamiania kodu Python."""
-
-    def __init__(self, image_name: str = None, container_name: str = None):
-        """
-        Inicjalizacja środowiska Docker.
-
-        Args:
-            image_name: Nazwa obrazu Docker (domyślnie: python:3.9-slim)
-            container_name: Nazwa kontenera (domyślnie: pylama-sandbox-{uuid})
-        """
-        self.image_name = image_name or os.getenv('DOCKER_IMAGE', 'python:3.9-slim')
-        self.container_name = container_name or os.getenv('DOCKER_CONTAINER_NAME',
-                                                          f'pylama-sandbox-{uuid.uuid4().hex[:8]}')
-        self.check_docker_installation()
-
-    def check_docker_installation(self) -> bool:
-        """
-        Sprawdza, czy Docker jest zainstalowany i dostępny.
-
-        Returns:
-            True, jeśli Docker jest dostępny, False w przeciwnym razie
+            bool: True, jeśli pakiet jest zainstalowany, False w przeciwnym razie.
         """
         try:
-            result = subprocess.run(
-                ['docker', '--version'],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                check=False,
-                text=True
-            )
-
-            if result.returncode != 0:
-                logger.error("Docker nie jest prawidłowo zainstalowany.")
-                logger.error(f"Błąd: {result.stderr}")
-                return False
-
-            logger.info(f"Docker zainstalowany: {result.stdout.strip()}")
+            # Próba importu modułu
+            __import__(package_name)
             return True
-        except FileNotFoundError:
-            logger.error("Docker nie jest zainstalowany lub nie jest dostępny w ścieżce systemowej.")
-            return False
+        except ImportError:
+            pass
 
-    def is_container_running(self) -> bool:
-        """
-        Sprawdza, czy kontener Docker jest już uruchomiony.
-
-        Returns:
-            True, jeśli kontener jest uruchomiony, False w przeciwnym razie
-        """
-        try:
-            result = subprocess.run(
-                ['docker', 'ps', '--filter', f'name={self.container_name}', '--format', '{{.Names}}'],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                check=False,
-                text=True
-            )
-
-            return self.container_name in result.stdout
-        except Exception as e:
-            logger.error(f"Błąd podczas sprawdzania stanu kontenera: {e}")
-            return False
-
-    def start_container(self) -> bool:
-        """
-        Uruchamia kontener Docker, jeśli nie jest już uruchomiony.
-
-        Returns:
-            True, jeśli kontener został uruchomiony lub już działa, False w przypadku błędu
-        """
-        if self.is_container_running():
-            logger.info(f"Kontener '{self.container_name}' już działa.")
-            return True
-
-        logger.info(f"Uruchamianie kontenera '{self.container_name}'...")
-
-        try:
-            # Najpierw sprawdź, czy obrazu nie trzeba pobrać
-            result = subprocess.run(
-                ['docker', 'image', 'inspect', self.image_name],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                check=False
-            )
-
-            if result.returncode != 0:
-                logger.info(f"Pobieranie obrazu Docker '{self.image_name}'...")
-                pull_result = subprocess.run(
-                    ['docker', 'pull', self.image_name],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    check=True,
-                    text=True
-                )
-                logger.info(f"Obraz Docker pobrany: {self.image_name}")
-
-            # Utwórz i uruchom kontener
-            run_result = subprocess.run(
-                [
-                    'docker', 'run',
-                    '--name', self.container_name,
-                    '-d',  # Uruchom w tle
-                    '--rm',  # Usuń kontener po zatrzymaniu
-                    '-v', f"{os.getcwd()}:/app",  # Zamontuj bieżący katalog jako /app
-                    '-w', '/app',  # Ustaw katalog roboczy na /app
-                    self.image_name,
-                    'tail', '-f', '/dev/null'  # Utrzymuj kontener uruchomiony
-                ],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                check=True,
-                text=True
-            )
-
-            logger.info(f"Kontener '{self.container_name}' uruchomiony.")
-            return True
-        except subprocess.CalledProcessError as e:
-            logger.error(f"Błąd podczas uruchamiania kontenera: {e}")
-            logger.error(f"STDERR: {e.stderr}")
-            return False
-        except Exception as e:
-            logger.error(f"Nieoczekiwany błąd podczas uruchamiania kontenera: {e}")
-            return False
-
-    def stop_container(self) -> bool:
-        """
-        Zatrzymuje kontener Docker, jeśli jest uruchomiony.
-
-        Returns:
-            True, jeśli kontener został zatrzymany lub nie był uruchomiony, False w przypadku błędu
-        """
-        if not self.is_container_running():
-            logger.info(f"Kontener '{self.container_name}' nie jest uruchomiony.")
-            return True
-
-        logger.info(f"Zatrzymywanie kontenera '{self.container_name}'...")
-
-        try:
-            subprocess.run(
-                ['docker', 'stop', self.container_name],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                check=True,
-                text=True
-            )
-
-            logger.info(f"Kontener '{self.container_name}' zatrzymany.")
-            return True
-        except subprocess.CalledProcessError as e:
-            logger.error(f"Błąd podczas zatrzymywania kontenera: {e}")
-            return False
-        except Exception as e:
-            logger.error(f"Nieoczekiwany błąd podczas zatrzymywania kontenera: {e}")
-            return False
-
-    def run_code(self, code: str, timeout: int = 60) -> Dict[str, Any]:
-        """
-        Uruchamia kod Python w kontenerze Docker.
-
-        Args:
-            code: Kod Python do uruchomienia
-            timeout: Limit czasu wykonania w sekundach
-
-        Returns:
-            Słownik z wynikami wykonania kodu
-        """
-        # Upewnij się, że kontener jest uruchomiony
-        if not self.is_container_running() and not self.start_container():
-            return {
-                'success': False,
-                'stdout': '',
-                'stderr': 'Nie udało się uruchomić kontenera Docker',
-                'error': 'ContainerStartError'
-            }
-
-        # Utwórz tymczasowy plik z kodem
-        with tempfile.NamedTemporaryFile(suffix='.py', mode='w', delete=False) as temp_file:
-            temp_file_path = temp_file.name
-            temp_file.write(code)
-
-        try:
-            # Kopiuj plik do kontenera
-            copy_result = subprocess.run(
-                ['docker', 'cp', temp_file_path, f"{self.container_name}:/app/temp_script.py"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                check=True,
-                text=True
-            )
-
-            # Uruchom kod w kontenerze
-            run_result = subprocess.run(
-                [
-                    'docker', 'exec',
-                    '-e', 'PYTHONUNBUFFERED=1',
-                    self.container_name,
-                    'python', '/app/temp_script.py'
-                ],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                timeout=timeout,
-                text=True
-            )
-
-            return {
-                'success': run_result.returncode == 0,
-                'stdout': run_result.stdout,
-                'stderr': run_result.stderr,
-                'return_code': run_result.returncode
-            }
-        except subprocess.TimeoutExpired:
-            return {
-                'success': False,
-                'stdout': '',
-                'stderr': f'Przekroczono limit czasu wykonania ({timeout}s)',
-                'error': 'TimeoutError'
-            }
-        except subprocess.CalledProcessError as e:
-            return {
-                'success': False,
-                'stdout': e.stdout if hasattr(e, 'stdout') else '',
-                'stderr': e.stderr if hasattr(e, 'stderr') else str(e),
-                'error': 'ExecutionError'
-            }
-        except Exception as e:
-            return {
-                'success': False,
-                'stdout': '',
-                'stderr': str(e),
-                'error': type(e).__name__
-            }
-        finally:
-            # Usuń tymczasowy plik
+        # Sprawdzenie za pomocą pkg_resources
+        if pkg_resources is not None:
             try:
-                os.unlink(temp_file_path)
-            except:
+                pkg_resources.get_distribution(package_name)
+                return True
+            except pkg_resources.DistributionNotFound:
                 pass
 
-            # Usuń plik z kontenera
-            try:
-                subprocess.run(
-                    ['docker', 'exec', self.container_name, 'rm', '-f', '/app/temp_script.py'],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    check=False
-                )
-            except:
-                pass
+        # Sprawdzenie za pomocą pip list
+        try:
+            result = subprocess.run(
+                [sys.executable, '-m', 'pip', 'show', package_name],
+                capture_output=True,
+                text=True
+            )
+            return result.returncode == 0
+        except Exception:
+            pass
+
+        return False
 
 
 class PythonSandbox:
-    """Główna klasa do uruchamiania kodu Python w bezpiecznym środowisku."""
+    """Klasa do bezpiecznego uruchamiania kodu Python w izolowanym środowisku."""
 
-    def __init__(self, use_docker: bool = True):
-        """
-        Inicjalizacja środowiska sandbox.
-
-        Args:
-            use_docker: Czy używać Docker do uruchamiania kodu
-        """
+    def __init__(self, use_docker: bool = False):
         self.use_docker = use_docker
         self.dependency_manager = DependencyManager()
 
-        if use_docker:
-            self.docker_env = DockerEnvironment()
-        else:
-            self.docker_env = None
+        # Sprawdzenie, czy Docker jest zainstalowany, jeśli ma być używany
+        if self.use_docker:
+            self._check_docker_installed()
 
-    def run_code(self, code: str, install_dependencies: bool = True, timeout: int = 60) -> Dict[str, Any]:
+    def _check_docker_installed(self) -> bool:
+        """Sprawdza, czy Docker jest zainstalowany w systemie."""
+        try:
+            result = subprocess.run(['docker', '--version'], capture_output=True, text=True)
+            if result.returncode == 0:
+                logger.info(f"Docker zainstalowany: {result.stdout.strip()}")
+                return True
+            else:
+                logger.warning("Docker nie jest zainstalowany lub nie działa poprawnie.")
+                return False
+        except Exception as e:
+            logger.error(f"Błąd podczas sprawdzania instalacji Dockera: {e}")
+            return False
+
+    def run_code(self, code: str, timeout: int = 30) -> Dict[str, Any]:
         """
         Uruchamia kod Python w bezpiecznym środowisku.
 
         Args:
-            code: Kod Python do uruchomienia
-            install_dependencies: Czy automatycznie instalować zależności
-            timeout: Limit czasu wykonania w sekundach
+            code: Kod Python do uruchomienia.
+            timeout: Limit czasu wykonania w sekundach.
 
         Returns:
-            Słownik z wynikami wykonania kodu i informacjami o zależnościach
+            Dict[str, Any]: Wyniki wykonania kodu.
         """
-        result = {
-            'code': code,
-            'dependencies': None,
-            'execution': None
-        }
+        # Analiza zależności
+        dependencies_result = self.dependency_manager.analyze_dependencies(code)
 
-        # Analizuj i zainstaluj zależności, jeśli potrzeba
-        if install_dependencies:
-            dependencies = self.dependency_manager.ensure_dependencies(code)
-            result['dependencies'] = dependencies
+        # Sprawdzenie, czy kod ma błędy składni
+        try:
+            ast.parse(code)
+        except SyntaxError as e:
+            logger.error(f"Błąd składni w kodzie: {e}")
+            return {
+                **dependencies_result,
+                'success': False,
+                'stdout': '',
+                'stderr': f"Błąd składni: {str(e)}",
+                'error_type': 'SyntaxError',
+                'error_message': str(e)
+            }
 
-        # Uruchom kod
-        if self.use_docker and self.docker_env:
-            execution_result = self.docker_env.run_code(code, timeout)
+        # Uruchomienie kodu w odpowiednim środowisku
+        if self.use_docker:
+            return self._run_in_docker(code, timeout, dependencies_result)
         else:
-            execution_result = self._run_code_locally(code, timeout)
+            return self._run_locally(code, timeout, dependencies_result)
 
-        result['execution'] = execution_result
-        return result
-
-    def _run_code_locally(self, code: str, timeout: int = 60) -> Dict[str, Any]:
-        """
-        Uruchamia kod Python lokalnie (bez Docker).
-
-        Args:
-            code: Kod Python do uruchomienia
-            timeout: Limit czasu wykonania w sekundach
-
-        Returns:
-            Słownik z wynikami wykonania kodu
-        """
-        # Utwórz tymczasowy plik z kodem
+    def _run_locally(self, code: str, timeout: int, dependencies_result: Dict[str, Any]) -> Dict[str, Any]:
+        """Uruchamia kod lokalnie w podprocesie."""
+        # Utworzenie tymczasowego pliku z kodem
         with tempfile.NamedTemporaryFile(suffix='.py', mode='w', delete=False) as temp_file:
-            temp_file_path = temp_file.name
             temp_file.write(code)
+            temp_file_path = temp_file.name
 
         try:
-            # Uruchom kod w nowym procesie
-            process = subprocess.run(
+            # Uruchomienie kodu w podprocesie z limitem czasu
+            result = subprocess.run(
                 [sys.executable, temp_file_path],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                timeout=timeout,
-                text=True
+                capture_output=True,
+                text=True,
+                timeout=timeout
             )
 
             return {
-                'success': process.returncode == 0,
-                'stdout': process.stdout,
-                'stderr': process.stderr,
-                'return_code': process.returncode
+                **dependencies_result,
+                'success': result.returncode == 0,
+                'stdout': result.stdout,
+                'stderr': result.stderr,
+                'exit_code': result.returncode
             }
+
         except subprocess.TimeoutExpired:
             return {
+                **dependencies_result,
                 'success': False,
                 'stdout': '',
-                'stderr': f'Przekroczono limit czasu wykonania ({timeout}s)',
-                'error': 'TimeoutError'
+                'stderr': f"Przekroczono limit czasu wykonania ({timeout} sekund).",
+                'error_type': 'TimeoutError',
+                'error_message': f"Execution timed out after {timeout} seconds"
             }
+
         except Exception as e:
             return {
+                **dependencies_result,
                 'success': False,
                 'stdout': '',
-                'stderr': str(e),
-                'error': type(e).__name__
+                'stderr': f"Błąd podczas wykonania kodu: {str(e)}",
+                'error_type': type(e).__name__,
+                'error_message': str(e)
             }
+
         finally:
-            # Usuń tymczasowy plik
+            # Usunięcie tymczasowego pliku
             try:
                 os.unlink(temp_file_path)
-            except:
+            except Exception:
+                pass
+
+    def _run_in_docker(self, code: str, timeout: int, dependencies_result: Dict[str, Any]) -> Dict[str, Any]:
+        """Uruchamia kod w kontenerze Docker."""
+        # Utworzenie unikalnego ID dla kontenera
+        container_id = f"pylama-sandbox-{uuid.uuid4().hex[:8]}"
+
+        # Utworzenie tymczasowego katalogu na pliki
+        temp_dir = tempfile.mkdtemp()
+        code_file_path = os.path.join(temp_dir, 'code.py')
+
+        try:
+            # Zapisanie kodu do pliku
+            with open(code_file_path, 'w') as f:
+                f.write(code)
+
+            # Przygotowanie polecenia Docker
+            docker_cmd = [
+                'docker', 'run',
+                '--name', container_id,
+                '--rm',  # Automatyczne usunięcie kontenera po zakończeniu
+                '-v', f"{temp_dir}:/app",  # Montowanie katalogu z kodem
+                '-w', '/app',  # Ustawienie katalogu roboczego
+                '--network=none',  # Brak dostępu do sieci
+                '--memory=512m',  # Limit pamięci
+                '--cpus=1',  # Limit CPU
+                'python:3.9-slim',  # Obraz bazowy
+                'python', 'code.py'  # Polecenie do wykonania
+            ]
+
+            # Dodanie wymaganych pakietów
+            required_packages = dependencies_result.get('required_packages', [])
+            if required_packages:
+                # Utworzenie pliku requirements.txt
+                requirements_path = os.path.join(temp_dir, 'requirements.txt')
+                with open(requirements_path, 'w') as f:
+                    f.write('\n'.join(required_packages))
+
+                # Modyfikacja polecenia Docker, aby najpierw zainstalować zależności
+                docker_cmd = [
+                    'docker', 'run',
+                    '--name', container_id,
+                    '--rm',
+                    '-v', f"{temp_dir}:/app",
+                    '-w', '/app',
+                    '--network=host',  # Tymczasowo włączamy sieć do instalacji pakietów
+                    '--memory=1024m',  # Zwiększenie limitu pamięci dla instalacji pakietów
+                    '--cpus=2',  # Zwiększenie limitów CPU dla szybszej instalacji
+                    'python:3.9-slim',
+                    'sh', '-c', f"pip install --no-cache-dir -r requirements.txt && python code.py"
+                ]
+
+            logger.info(f"Uruchamianie kontenera '{container_id}'...")
+
+            # Uruchomienie kontenera z limitem czasu
+            result = subprocess.run(
+                docker_cmd,
+                capture_output=True,
+                text=True,
+                timeout=timeout
+            )
+
+            logger.info(f"Kontener '{container_id}' uruchomiony.")
+
+            return {
+                **dependencies_result,
+                'success': result.returncode == 0,
+                'stdout': result.stdout,
+                'stderr': result.stderr,
+                'exit_code': result.returncode
+            }
+
+        except subprocess.TimeoutExpired:
+            # Zatrzymanie kontenera, jeśli przekroczono limit czasu
+            try:
+                subprocess.run(['docker', 'stop', container_id], capture_output=True)
+            except Exception:
+                pass
+
+            return {
+                **dependencies_result,
+                'success': False,
+                'stdout': '',
+                'stderr': f"Przekroczono limit czasu wykonania ({timeout} sekund).",
+                'error_type': 'TimeoutError',
+                'error_message': f"Execution timed out after {timeout} seconds"
+            }
+
+        except Exception as e:
+            return {
+                **dependencies_result,
+                'success': False,
+                'stdout': '',
+                'stderr': f"Błąd podczas wykonania kodu w Dockerze: {str(e)}",
+                'error_type': type(e).__name__,
+                'error_message': str(e)
+            }
+
+        finally:
+            # Usunięcie tymczasowego katalogu
+            try:
+                shutil.rmtree(temp_dir)
+            except Exception:
+                pass
+
+            # Upewnienie się, że kontener został zatrzymany i usunięty
+            try:
+                subprocess.run(['docker', 'stop', container_id], capture_output=True)
+                subprocess.run(['docker', 'rm', container_id], capture_output=True)
+            except Exception:
                 pass
 
 
-# Przykład użycia
+# Funkcja główna do testowania
 def main():
     # Definiowanie przykładowych kodów jako zmienne
     # Przykład 1: Kod z zewnętrznymi zależnościami (numpy, pandas)
@@ -822,17 +695,6 @@ def main():
         print(f"  Standardowe wyjście:\n{result.get('stdout', '')}")
         if result.get('stderr'):
             print(f"  Standardowe wyjście błędów:\n{result.get('stderr', '')}")
-
-    # Utwórz sandbox i uruchom kod z zewnętrznymi zależnościami
-    print("\n=== Test 1: Uruchamianie kodu z zewnętrznymi zależnościami (numpy, pandas) ===")
-    sandbox = PythonSandbox(use_docker=True)
-    result = sandbox.run_code(example_code)
-    display_results(result, "Wyniki dla kodu z zewnętrznymi zależnościami")
-
-    # Uruchom kod bez zewnętrznych zależności
-    print("\n=== Test 2: Uruchamianie kodu bez zewnętrznych zależności ===")
-    result = sandbox.run_code(simple_code)
-    display_results(result, "Wyniki dla kodu bez zewnętrznych zależności")
 
     # Przykład 3: Kod z błędem składni
     code_with_syntax_error = "print('Ten kod zawiera błąd składni')\n"
