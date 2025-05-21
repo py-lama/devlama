@@ -186,6 +186,19 @@ class OllamaRunner:
         Send a query to the Ollama API and return the response.
         Uses mock implementation if self.mock_mode is True.
         """
+        # Add default template parameters if not provided
+        default_params = {
+            'platform': platform.system(),
+            'os': platform.system(),
+            'dependencies': 'any standard Python library',
+            'python_version': platform.python_version()
+        }
+        
+        # Update template_args with defaults for any missing keys
+        for key, value in default_params.items():
+            if key not in template_args:
+                template_args[key] = value
+                
         if self.mock_mode:
             logger.info("Using mock code generation (Ollama not required)")
             # If a template type is provided, use it to format the query
@@ -212,19 +225,6 @@ class OllamaRunner:
         
         # Format the prompt if needed
         if template_type:
-            # Add default template parameters if not provided
-            default_params = {
-                'platform': platform.system(),
-                'os': platform.system(),
-                'dependencies': 'any standard Python library',
-                'python_version': platform.python_version()
-            }
-            
-            # Only use defaults for parameters that weren't explicitly provided
-            for key, value in default_params.items():
-                if key not in template_args:
-                    template_args[key] = value
-                    
             formatted_prompt = get_template(prompt, template_type, **template_args)
             logger.debug(f"Used template {template_type} for the query")
         else:
