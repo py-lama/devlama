@@ -52,17 +52,16 @@ if USE_DOCKER:
 class OllamaRunner:
     """Class for running Ollama and executing generated code."""
 
-    def __init__(self, ollama_path: str = None, model: str = None):
+    def __init__(self, ollama_path: str = None, model: str = None, mock_mode: bool = False):
         self.ollama_path = ollama_path or os.getenv('OLLAMA_PATH', 'ollama')
         self.model = model or os.getenv('OLLAMA_MODEL', 'llama3')
         self.fallback_models = os.getenv('OLLAMA_FALLBACK_MODELS', '').split(',')
         self.ollama_process = None
-
+        self.mock_mode = mock_mode
         # Update to the correct Ollama API endpoints
         self.generate_api_url = "http://localhost:11434/api/generate"
         self.chat_api_url = "http://localhost:11434/api/chat"
         self.version_api_url = "http://localhost:11434/api/version"
-
         # Docker configuration
         self.use_docker = USE_DOCKER
         self.docker_sandbox = None
@@ -124,43 +123,41 @@ class OllamaRunner:
     def query_ollama(self, prompt: str, template_type: str = None, **template_args) -> str:
         """
         Send a query to the Ollama API and return the response.
-        
-        This is a mock implementation that returns a simple example for the requested task
-        without requiring an actual Ollama server.
-        
-        Args:
-            prompt: Basic query or task to perform
-            template_type: Type of template to use (optional)
-            **template_args: Additional arguments for the template
-        
-        Returns:
-            Response from the LLM model
+        Uses mock implementation if self.mock_mode is True.
         """
-        # Log that we're using a mock implementation
-        logger.info("Using mock code generation (Ollama not required)")
-        
-        # If a template type is provided, use it to format the query
-        if template_type:
-            formatted_prompt = get_template(prompt, template_type, **template_args)
-            logger.debug(f"Used template {template_type} for the query")
-        else:
-            formatted_prompt = prompt
-        
-        # Extract the main task from the prompt
-        task = formatted_prompt.lower()
-        
-        # Generate a simple example based on the task
-        if "web server" in task:
-            return self._load_example_from_file('web_server.py')
-        elif "file" in task and ("read" in task or "write" in task):
-            return self._load_example_from_file('file_io.py')
-        elif "api" in task or "request" in task:
-            return self._load_example_from_file('api_request.py')
-        elif "database" in task or "sql" in task:
-            return self._load_example_from_file('database.py')
-        else:
-            # Default example
-            return self._load_example_from_file('default.py', prompt=formatted_prompt)
+        if self.mock_mode:
+            logger.info("Using mock code generation (Ollama not required)")
+            # If a template type is provided, use it to format the query
+            if template_type:
+                formatted_prompt = get_template(prompt, template_type, **template_args)
+                logger.debug(f"Used template {template_type} for the query")
+            else:
+                formatted_prompt = prompt
+            task = formatted_prompt.lower()
+            if "web server" in task:
+                return self._load_example_from_file('web_server.py')
+            elif "file" in task and ("read" in task or "write" in task):
+                return self._load_example_from_file('file_io.py')
+            elif "api" in task or "request" in task:
+                return self._load_example_from_file('api_request.py')
+            elif "database" in task or "sql" in task:
+                return self._load_example_from_file('database.py')
+            else:
+                return self._load_example_from_file('default.py', prompt=formatted_prompt)
+        # REAL API CALL
+        data = {
+            "model": self.model,
+            "prompt": prompt,
+            "stream": False
+        }
+        try:
+            response = requests.post(self.generate_api_url, json=data)
+            response.raise_for_status()
+            result = response.json()
+            return result.get("response", "")
+        except Exception as e:
+            logger.error(f"Error querying Ollama API: {e}")
+            return f"# Error querying Ollama: {e}"
 
     def _load_example_from_file(self, filename, prompt=None) -> str:
         """Load an example from a file in the examples directory.

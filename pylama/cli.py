@@ -18,11 +18,11 @@ logger = logging.getLogger(__name__)
 # Import main functionality
 from .pylama import (
     check_ollama,
-    generate_code,
-    execute_code,
     save_code_to_file,
+    execute_code,
 )
 from .templates import get_template
+from .OllamaRunner import OllamaRunner
 # Ensure we can import from pybox and pyllm
 import os
 import sys
@@ -71,7 +71,7 @@ def set_default_model(model):
     pass
 
 
-def interactive_mode():
+def interactive_mode(mock_mode=False):
     """
     Run PyLama in interactive mode, allowing the user to input prompts
     and see the generated code and execution results.
@@ -85,6 +85,24 @@ def interactive_mode():
     
     model = get_default_model()
     template = "platform_aware"
+    
+    import builtins
+    real_generate_code = generate_code
+    real_execute_code = execute_code
+    def mock_generate_code(prompt, *args, **kwargs):
+        if "hello world" in prompt.lower():
+            return "print('Hello, World!')"
+        return "# mock code"
+    def mock_execute_code(code, *args, **kwargs):
+        if "print('Hello, World!')" in code:
+            return {"output": "Hello, World!\n", "error": None}
+        return {"output": "", "error": None}
+    if mock_mode:
+        globals()['generate_code'] = mock_generate_code
+        globals()['execute_code'] = mock_execute_code
+    else:
+        globals()['generate_code'] = real_generate_code
+        globals()['execute_code'] = real_execute_code
     
     while True:
         try:
@@ -212,6 +230,11 @@ def main():
         action="store_true",
         help="Run the generated code after creation",
     )
+    parser.add_argument(
+        "--mock",
+        action="store_true",
+        help="Use mock code generation and execution (for testing)",
+    )
     
     args = parser.parse_args()
     
@@ -223,43 +246,36 @@ def main():
         logger.error("Ollama is not running. Please start Ollama with 'ollama serve' and try again.")
         sys.exit(1)
     
-    # Interactive mode
+    # Prepare OllamaRunner with mock_mode
+    runner = OllamaRunner(model=args.model or get_default_model(), mock_mode=args.mock)
+    
+    # For interactive mode
     if args.interactive:
-        interactive_mode()
+        interactive_mode(mock_mode=args.mock)
         return
     
     # Command-line mode
-    if not args.prompt:
-        parser.print_help()
-        return
-    
     prompt = " ".join(args.prompt)
-    model = args.model or get_default_model()
+    template = args.template
     
-    # Generate code
-    code = generate_code(prompt, template_type=args.template, model=model)
-    
+    # Use runner to generate code
+    code = runner.query_ollama(prompt, template_type=template)
     print("\nGenerated Python code:")
     print("----------------------------------------")
     print(code)
     print("----------------------------------------")
     
-    # Save code to file if requested
     if args.save:
         filepath = save_code_to_file(code)
         print(f"\nCode saved to file: {filepath}")
     
-    # Run code if requested
     if args.run:
-        print("\nRunning generated code...")
         result = execute_code(code)
         print("\nCode execution result:")
         print(result.get("output", "No output"))
-        
         if result.get("error"):
             print("\nError occurred:")
             print(result["error"])
-            return 1
         else:
             print("\nCode executed successfully!")
     

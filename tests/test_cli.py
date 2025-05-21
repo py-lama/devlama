@@ -13,9 +13,12 @@ def mock_check_ollama():
 
 @pytest.fixture
 def mock_generate_code():
-    """Mock the generate_code function to return a simple code snippet."""
-    with patch('pylama.cli.generate_code') as mock:
-        mock.return_value = "print('Hello, World!')"
+    """Mock the generate_code function to return a real code snippet for known prompts."""
+    def _mock(prompt, *args, **kwargs):
+        if "hello world" in prompt.lower():
+            return "print('Hello, World!')"
+        return "# mock code"
+    with patch('pylama.cli.generate_code', side_effect=_mock) as mock:
         yield mock
 
 
