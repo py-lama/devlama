@@ -37,7 +37,7 @@ except ImportError:
     # Dla starszych wersji Pythona
     import importlib_metadata as metadata
 
-# Importuj sandbox_docker, jeżeli używamy trybu Docker
+# Importuj sandbox, jeżeli używamy trybu Docker
 USE_DOCKER = os.getenv('USE_DOCKER', 'False').lower() in ('true', '1', 't')
 if USE_DOCKER:
     try:

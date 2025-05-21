@@ -10,7 +10,7 @@ import shutil
 # Dodanie u015bcieu017cki nadrzu0119dnej do sys.path, aby mou017cna byu0142o importowau0107 moduu0142y z pakietu pylama
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from sandbox_improved import CodeAnalyzer, DependencyManager, PythonSandbox
+from sandbox import CodeAnalyzer, DependencyManager, PythonSandbox
 
 
 class TestCodeAnalyzer(unittest.TestCase):

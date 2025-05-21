@@ -10,7 +10,7 @@ import shutil
 # Dodanie ścieżki nadrzędnej do sys.path, aby można było importować moduły z pakietu pylama
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from sandbox_improved import CodeAnalyzer, DependencyManager, PythonSandbox
+from sandbox import CodeAnalyzer, DependencyManager, PythonSandbox
 
 
 class TestCodeAnalyzer(unittest.TestCase):
