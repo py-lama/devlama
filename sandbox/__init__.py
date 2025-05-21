@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Pakiet sandbox do bezpiecznego uruchamiania kodu Python.
+Sandbox package for safely running Python code.
 
-Ten pakiet zawiera moduu0142y do analizy kodu, zarzu0105dzania zaleu017cnou015bciami
-i uruchamiania kodu Python w izolowanym u015brodowisku.
+This package contains modules for code analysis, dependency management,
+and running Python code in an isolated environment.
 """
 
 from sandbox.code_analyzer import CodeAnalyzer

@@ -23,7 +23,7 @@ from sandbox.docker_sandbox import DockerSandbox
 from sandbox.sandbox_manager import SandboxManager
 from sandbox.utils import get_system_info, format_execution_result, ensure_dependencies
 
-# Konfiguracja loggera
+# Logger configuration
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'

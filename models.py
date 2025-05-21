@@ -10,7 +10,7 @@ VENV_DIR = os.path.join(os.path.dirname(__file__), ".venv")
 # 1. Create venv if missing
 if not os.path.isdir(VENV_DIR):
     subprocess.run([sys.executable, "-m", "venv", VENV_DIR], check=True)
-    print(f"Utworzono środowisko wirtualne: {VENV_DIR}")
+    print(f"Created virtual environment: {VENV_DIR}")
 
 # 2. Activate venv for subprocess installs (current process may not inherit, but subprocess installs will work)
 def _venv_python():
@@ -27,9 +27,9 @@ for pkg, imp in zip(REQUIRED_PACKAGES, IMPORT_NAMES):
     except ImportError:
         missing.append(pkg)
 if missing:
-    print(f"Instaluję brakujące pakiety: {', '.join(missing)}")
+    print(f"Installing missing packages: {', '.join(missing)}")
     subprocess.run([_venv_python(), "-m", "pip", "install"] + missing, check=True)
-    print("Zainstalowano wymagane zależności. Uruchom ponownie skrypt.")
+    print("Required dependencies installed. Please restart the script.")
     sys.exit(0)
 # --- END AUTO ENV & DEPENDENCY SETUP ---
 
@@ -191,30 +191,30 @@ def update_models_from_ollama():
         # Save to models.json
         with open(MODELS_JSON_PATH, "w", encoding="utf-8") as f:
             json.dump(models_list, f, ensure_ascii=False, indent=2)
-        print("Zaktualizowano modele z Ollama.")
+        print("Models updated from Ollama.")
     except Exception as e:
-        print(f"Błąd aktualizacji z ollama.com: {e}")
+        print(f"Error updating from ollama.com: {e}")
 
 if __name__ == "__main__":
     default_model = get_default_model()
-    print("Dostępne modele:")
+    print("Available models:")
     models = get_models()
     for idx, m in enumerate(models, 1):
         print(f"{idx}. {m['name']} ({m.get('desc', '')})")
     if default_model:
-        print(f"\nAktualny model domyślny: {default_model}\n")
+        print(f"\nCurrent default model: {default_model}\n")
     else:
-        print("\nBrak ustawionego modelu domyślnego w .env\n")
-    print("\nZapisuję listę do models.json...")
+        print("\nNo default model set in .env\n")
+    print("\nSaving list to models.json...")
     save_models_to_json(models)
     print("\nZainstalowane modele:")
     list_installed_models()
-    print("\n--- Instalacja modeli ---")
-    print("Wpisz numer modelu do pobrania, 'u' aby zaktualizować listę modeli z projektu Ollama lub 'q' aby wyjść.")
+    print("\n--- Model Installation ---")
+    print("Enter the model number to download, 'u' to update the model list from the Ollama project, or 'q' to exit.")
     while True:
-        wyb = input("Wybierz model (numer/'u'/'q'): ").strip()
+        wyb = input("Choose model (number/'u'/'q'): ").strip()
         if wyb.lower() == 'q':
-            print("Koniec.")
+            print("Done.")
             break
         if wyb.lower() == 'u':
             update_models_from_ollama()
@@ -224,7 +224,7 @@ if __name__ == "__main__":
             continue
         if wyb.isdigit() and 1 <= int(wyb) <= len(models):
             model_name = models[int(wyb) - 1]["name"]
-            # Sprawdź czy model jest zainstalowany
+            # Check if the model is installed
             installed = False
             try:
                 output = subprocess.check_output(["ollama", "list"]).decode()
@@ -237,4 +237,4 @@ if __name__ == "__main__":
                     continue
             set_default_model(model_name)
         else:
-            print("Nieprawidłowy wybór.")
+            print("Invalid choice.")

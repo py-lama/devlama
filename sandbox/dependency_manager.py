@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Moduu0142 do zarzu0105dzania zaleu017cnou015bciami i instalacji pakietu00f3w.
+Module for managing dependencies and package installation.
 """
 
 import sys
@@ -11,31 +11,31 @@ from typing import Dict, List, Any, Optional, Tuple
 
 from sandbox.code_analyzer import CodeAnalyzer
 
-# Konfiguracja loggera
+# Logger configuration
 logger = logging.getLogger(__name__)
 
-# Pru00f3ba importu opcjonalnych moduu0142u00f3w
+# Attempt to import optional modules
 try:
     import pkg_resources
 except ImportError:
-    logger.warning("Moduu0142 pkg_resources nie jest dostu0119pny. Niektu00f3re funkcje mogu0105 byu0107 ograniczone.")
+    logger.warning("The pkg_resources module is not available. Some functions may be limited.")
     pkg_resources = None
 
 
 class DependencyManager:
-    """Klasa do zarzu0105dzania zaleu017cnou015bciami i instalacji pakietu00f3w."""
+    """Class for managing dependencies and package installation."""
 
     def __init__(self):
         self.analyzer = CodeAnalyzer()
         self.module_to_package = self._create_module_package_mapping()
 
     def _create_module_package_mapping(self) -> Dict[str, str]:
-        """Tworzy mapowanie popularnych moduu0142u00f3w do nazw pakietu00f3w.
+        """Creates mapping of popular modules to package names.
 
         Returns:
-            Dict[str, str]: Mapowanie moduu0142u00f3w do nazw pakietu00f3w.
+            Dict[str, str]: Mapping of modules to package names.
         """
-        # Mapowanie popularnych moduu0142u00f3w do nazw pakietu00f3w
+        # Mapping of popular modules to package names
         return {
             'numpy': 'numpy',
             'pandas': 'pandas',

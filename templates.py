@@ -1,151 +1,151 @@
 # -*- coding: utf-8 -*-
 """
-Szablony do generowania kodu Python przez modele LLM.
+Templates for generating Python code using LLM models.
 
-Ten moduł zawiera szablony zapytań, które pomagają w generowaniu
-lepszego i bardziej niezawodnego kodu Python przez modele językowe.
+This module contains query templates that help generate
+better and more reliable Python code using language models.
 """
 
-# Podstawowy szablon do generowania kodu Python
+# Basic template for generating Python code
 BASIC_CODE_TEMPLATE = """
-Wygeneruj działający kod Python, który {task}.
+Generate working Python code that {task}.
 
-Twój kod powinien:
-1. Być kompletny i gotowy do uruchomienia
-2. Zawierać wszystkie niezbędne importy
-3. Używać standardowych bibliotek Python tam, gdzie to możliwe
-4. Zawierać komentarze wyjaśniające kluczowe elementy
-5. Obsługiwać podstawowe przypadki błędów
+Your code should:
+1. Be complete and ready to run
+2. Include all necessary imports
+3. Use standard Python libraries where possible
+4. Include comments explaining key elements
+5. Handle basic error cases
 
-Zwróć tylko kod Python w bloku kodu Markdown: ```python ... ```
+Return only Python code in a Markdown code block: ```python ... ```
 """
 
-# Szablon z uwzględnieniem platformy
+# Platform-aware template
 PLATFORM_AWARE_TEMPLATE = """
-Wygeneruj działający kod Python, który {task}.
+Generate working Python code that {task}.
 
-Kod będzie uruchamiany na platformie: {platform} (system operacyjny: {os}).
+The code will be running on platform: {platform} (operating system: {os}).
 
-Twój kod powinien:
-1. Być kompletny i gotowy do uruchomienia
-2. Zawierać wszystkie niezbędne importy
-3. Używać bibliotek kompatybilnych z {platform}
-4. Zawierać komentarze wyjaśniające kluczowe elementy
-5. Obsługiwać podstawowe przypadki błędów
-6. Unikać używania funkcji specyficznych dla innych systemów operacyjnych
+Your code should:
+1. Be complete and ready to run
+2. Include all necessary imports
+3. Use libraries compatible with {platform}
+4. Include comments explaining key elements
+5. Handle basic error cases
+6. Avoid using functions specific to other operating systems
 
-Zwróć tylko kod Python w bloku kodu Markdown: ```python ... ```
+Return only Python code in a Markdown code block: ```python ... ```
 """
 
-# Szablon do generowania kodu z określonymi zależnościami
+# Template for generating code with specific dependencies
 DEPENDENCY_AWARE_TEMPLATE = """
-Wygeneruj działający kod Python, który {task}.
+Generate working Python code that {task}.
 
-Możesz używać TYLKO następujących bibliotek zewnętrznych: {dependencies}.
-Jeśli potrzebujesz innych funkcji, zaimplementuj je samodzielnie.
+You can ONLY use the following external libraries: {dependencies}.
+If you need other functionality, implement it yourself.
 
-Twój kod powinien:
-1. Być kompletny i gotowy do uruchomienia
-2. Zawierać wszystkie niezbędne importy (tylko z dozwolonych bibliotek)
-3. Zawierać komentarze wyjaśniające kluczowe elementy
-4. Obsługiwać podstawowe przypadki błędów
+Your code should:
+1. Be complete and ready to run
+2. Include all necessary imports (only from allowed libraries)
+3. Include comments explaining key elements
+4. Handle basic error cases
 
-Zwróć tylko kod Python w bloku kodu Markdown: ```python ... ```
+Return only Python code in a Markdown code block: ```python ... ```
 """
 
-# Szablon do debugowania istniejącego kodu
+# Template for debugging existing code
 DEBUG_CODE_TEMPLATE = """
-Poniższy kod Python zawiera błąd:
+The following Python code contains an error:
 
 ```python
 {code}
 ```
 
-Błąd:
+Error:
 {error_message}
 
-Napraw ten kod, aby działał prawidłowo. Upewnij się, że:
-1. Wszystkie importy są poprawne
-2. Składnia jest prawidłowa
-3. Logika działa zgodnie z zamierzeniem
-4. Kod obsługuje przypadki brzegowe i potencjalne błędy
+Fix this code to work correctly. Make sure that:
+1. All imports are correct
+2. The syntax is valid
+3. The logic works as intended
+4. The code handles edge cases and potential errors
 
-Zwróć tylko poprawiony kod Python w bloku kodu Markdown: ```python ... ```
+Return only the corrected Python code in a Markdown code block: ```python ... ```
 """
 
-# Szablon do generowania kodu z testami jednostkowymi
+# Template for generating code with unit tests
 TESTABLE_CODE_TEMPLATE = """
-Wygeneruj działający kod Python, który {task}.
+Generate working Python code that {task}.
 
-Twój kod powinien:
-1. Być kompletny i gotowy do uruchomienia
-2. Zawierać wszystkie niezbędne importy
-3. Być zorganizowany w funkcje lub klasy z jasno określonymi odpowiedzialnościami
-4. Zawierać komentarze wyjaśniające kluczowe elementy
-5. Obsługiwać podstawowe przypadki błędów
+Your code should:
+1. Be complete and ready to run
+2. Include all necessary imports
+3. Be organized into functions or classes with clearly defined responsibilities
+4. Include comments explaining key elements
+5. Handle basic error cases
 
-Dodatkowo, dołącz testy jednostkowe, które sprawdzają poprawność działania kodu.
+Additionally, include unit tests that verify the correctness of the code.
 
-Zwróć tylko kod Python w bloku kodu Markdown: ```python ... ```
+Return only Python code in a Markdown code block: ```python ... ```
 """
 
-# Szablon do generowania kodu z uwzględnieniem bezpieczeństwa
+# Template for generating code with security considerations
 SECURE_CODE_TEMPLATE = """
-Wygeneruj bezpieczny kod Python, który {task}.
+Generate secure Python code that {task}.
 
-Twój kod powinien:
-1. Być kompletny i gotowy do uruchomienia
-2. Zawierać wszystkie niezbędne importy
-3. Implementować najlepsze praktyki bezpieczeństwa
-4. Walidować dane wejściowe
-5. Obsługiwać wyjątki w bezpieczny sposób
-6. Unikać typowych podatności (np. wstrzykiwanie kodu, niekontrolowane dostępy do plików)
-7. Zawierać komentarze wyjaśniające aspekty bezpieczeństwa
+Your code should:
+1. Be complete and ready to run
+2. Include all necessary imports
+3. Implement security best practices
+4. Validate input data
+5. Handle exceptions in a secure manner
+6. Avoid common vulnerabilities (e.g., code injection, uncontrolled file access)
+7. Include comments explaining security aspects
 
-Zwróć tylko kod Python w bloku kodu Markdown: ```python ... ```
+Return only Python code in a Markdown code block: ```python ... ```
 """
 
-# Szablon do generowania kodu z uwzględnieniem wydajności
+# Template for generating code with performance considerations
 PERFORMANCE_CODE_TEMPLATE = """
-Wygeneruj wydajny kod Python, który {task}.
+Generate efficient Python code that {task}.
 
-Twój kod powinien:
-1. Być kompletny i gotowy do uruchomienia
-2. Zawierać wszystkie niezbędne importy
-3. Być zoptymalizowany pod kątem wydajności
-4. Unikać niepotrzebnych operacji i nadmiernego zużycia pamięci
-5. Wykorzystywać odpowiednie struktury danych i algorytmy
-6. Zawierać komentarze wyjaśniające wybory dotyczące wydajności
+Your code should:
+1. Be complete and ready to run
+2. Include all necessary imports
+3. Be optimized for performance
+4. Avoid unnecessary operations and excessive memory usage
+5. Use appropriate data structures and algorithms
+6. Include comments explaining performance-related choices
 
-Zwróć tylko kod Python w bloku kodu Markdown: ```python ... ```
+Return only Python code in a Markdown code block: ```python ... ```
 """
 
-# Szablon do generowania kodu zgodnego z PEP 8
+# Template for generating PEP 8 compliant code
 PEP8_CODE_TEMPLATE = """
-Wygeneruj kod Python zgodny z PEP 8, który {task}.
+Generate PEP 8 compliant Python code that {task}.
 
-Twój kod powinien:
-1. Być kompletny i gotowy do uruchomienia
-2. Zawierać wszystkie niezbędne importy
-3. Ściśle przestrzegać konwencji PEP 8 (nazewnictwo, wcięcia, długość linii, itp.)
-4. Zawierać docstringi zgodne z PEP 257
-5. Obsługiwać podstawowe przypadki błędów
+Your code should:
+1. Be complete and ready to run
+2. Include all necessary imports
+3. Strictly follow PEP 8 conventions (naming, indentation, line length, etc.)
+4. Include docstrings compliant with PEP 257
+5. Handle basic error cases
 
-Zwróć tylko kod Python w bloku kodu Markdown: ```python ... ```
+Return only Python code in a Markdown code block: ```python ... ```
 """
 
-# Funkcja do wyboru odpowiedniego szablonu na podstawie kontekstu zapytania
+# Function to select the appropriate template based on the query context
 def get_template(task: str, template_type: str = "basic", **kwargs) -> str:
     """
-    Wybiera i wypełnia odpowiedni szablon na podstawie typu i parametrów.
+    Selects and fills the appropriate template based on type and parameters.
     
     Args:
-        task: Opis zadania do wykonania przez kod
-        template_type: Typ szablonu (basic, platform_aware, dependency_aware, debug, testable, secure, performance, pep8)
-        **kwargs: Dodatkowe parametry specyficzne dla wybranego szablonu
+        task: Description of the task to be performed by the code
+        template_type: Template type (basic, platform_aware, dependency_aware, debug, testable, secure, performance, pep8)
+        **kwargs: Additional parameters specific to the selected template
     
     Returns:
-        Wypełniony szablon gotowy do wysłania do modelu LLM
+        Filled template ready to be sent to the LLM model
     """
     templates = {
         "basic": BASIC_CODE_TEMPLATE,
@@ -160,7 +160,7 @@ def get_template(task: str, template_type: str = "basic", **kwargs) -> str:
     
     template = templates.get(template_type.lower(), BASIC_CODE_TEMPLATE)
     
-    # Wypełnij szablon podstawowymi parametrami
+    # Fill the template with basic parameters
     prompt = template.format(task=task, **kwargs)
     
     return prompt

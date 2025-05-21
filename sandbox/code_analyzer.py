@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Moduu0142 do analizy kodu Python i wykrywania zaleu017cnou015bci.
+Module for analyzing Python code and detecting dependencies.
 """
 
 import sys
@@ -10,23 +10,23 @@ import importlib.util
 import logging
 from typing import Dict, Any, Set
 
-# Konfiguracja loggera
+# Logger configuration
 logger = logging.getLogger(__name__)
 
 
 class CodeAnalyzer:
-    """Klasa do analizy kodu Python i wykrywania zaleu017cnou015bci."""
+    """Class for analyzing Python code and detecting dependencies."""
 
     def __init__(self):
-        # Standardowe moduu0142y Pythona
+        # Standard Python modules
         self.std_lib_modules = set(sys.builtin_module_names)
 
-        # Dodanie innych standardowych moduu0142u00f3w
+        # Add other standard modules
         for module in sys.modules:
             if module and '.' not in module:
                 self.std_lib_modules.add(module)
 
-        # Dodanie dodatkowych standardowych moduu0142u00f3w
+        # Add additional standard modules
         self._add_standard_libraries()
 
     def _add_standard_libraries(self) -> None:
