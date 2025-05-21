@@ -178,6 +178,16 @@ class OllamaRunner:
             if self.model in available_models:
                 return True
                 
+            # Special handling for SpeakLeash/Bielik models - check if already installed with a different name
+            if self.model.lower().startswith('speakleash/bielik'):
+                for model in available_models:
+                    if model.startswith('bielik-custom-'):
+                        logger.info(f"Found existing Bielik model installation: {model}")
+                        print(f"\nFound existing Bielik model installation: {model}")
+                        print(f"Using existing model instead of downloading again.")
+                        self.model = model
+                        return True
+                
             # Log available models for debugging
             logger.warning(f"Model {self.model} not found in Ollama. Available models: {available_models}")
             
@@ -279,12 +289,38 @@ class OllamaRunner:
         Returns:
             True if installation was successful, False otherwise
         """
+        # Check if a Bielik model is already installed
+        try:
+            response = requests.get(self.list_api_url, timeout=10)
+            response.raise_for_status()
+            available_models = [tag['name'] for tag in response.json().get('models', [])]
+            
+            for model in available_models:
+                if model.startswith('bielik-custom-'):
+                    logger.info(f"Using existing Bielik model installation: {model}")
+                    print(f"\nFound existing Bielik model installation: {model}")
+                    print(f"Using existing model instead of downloading again.")
+                    
+                    # Update the current model
+                    self.model = model
+                    
+                    # Update environment variables for future use
+                    os.environ["OLLAMA_MODEL"] = model
+                    
+                    # Save these settings to .env file if it exists
+                    self._update_env_file(model)
+                    
+                    return True
+        except Exception as e:
+            logger.warning(f"Could not check for existing Bielik models: {e}")
+            # Continue with installation if we can't check for existing models
+        
         # Extract the model version from the name
         model_parts = model_name.split('/')
         if len(model_parts) != 2:
             print(f"Invalid model name format: {model_name}")
             return False
-            
+        
         model_version = model_parts[1].lower()
         
         # Set up custom model name for Ollama
