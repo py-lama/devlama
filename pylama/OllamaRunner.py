@@ -54,7 +54,7 @@ class OllamaRunner:
 
     def __init__(self, ollama_path: str = None, model: str = None, mock_mode: bool = False):
         self.ollama_path = ollama_path or os.getenv('OLLAMA_PATH', 'ollama')
-        self.model = model or os.getenv('OLLAMA_MODEL', 'llama3')
+        self.model = model or os.getenv('OLLAMA_MODEL', 'codellama:7b')  # Changed default from llama3 to codellama:7b
         self.fallback_models = os.getenv('OLLAMA_FALLBACK_MODELS', '').split(',')
         self.ollama_process = None
         self.mock_mode = mock_mode
@@ -122,6 +122,48 @@ class OllamaRunner:
             self.ollama_process.wait()
             logger.info("Ollama server stopped")
 
+    def check_model_availability(self) -> bool:
+        """
+        Check if the selected model is available in Ollama.
+        Returns True if the model is available, False otherwise.
+        """
+        if self.mock_mode:
+            return True  # In mock mode, we don't need to check model availability
+            
+        try:
+            # Get list of available models
+            response = requests.get(self.list_api_url, timeout=5)
+            response.raise_for_status()
+            models_data = response.json()
+            
+            # Extract model names from the response
+            available_models = []
+            if "models" in models_data:
+                available_models = [model["name"] for model in models_data["models"]]
+            else:
+                # Older Ollama versions use different format
+                available_models = [model["name"] for model in models_data]
+                
+            # Check if our model is in the list
+            if self.model in available_models:
+                return True
+                
+            # If model not found by exact name, check for aliases or tags
+            model_base = self.model.split(':')[0] if ':' in self.model else self.model
+            for available in available_models:
+                if model_base in available:
+                    logger.info(f"Using model {available} instead of {self.model}")
+                    self.model = available
+                    return True
+                    
+            # Model not found
+            logger.warning(f"Model {self.model} not found in Ollama. Available models: {available_models}")
+            return False
+            
+        except Exception as e:
+            logger.warning(f"Could not check model availability: {e}")
+            return False  # Assume model is not available if we can't check
+
     def query_ollama(self, prompt: str, template_type: str = None, **template_args) -> str:
         """
         Send a query to the Ollama API and return the response.
@@ -146,6 +188,10 @@ class OllamaRunner:
                 return self._load_example_from_file('database.py')
             else:
                 return self._load_example_from_file('default.py', prompt=formatted_prompt)
+        
+        # Check if the model is available
+        if not self.check_model_availability():
+            return f"# Error: Model '{self.model}' not found in Ollama.\n\n# Please ensure:\n# 1. Ollama is running (ollama serve)\n# 2. The model is available (ollama pull {self.model})\n# 3. Or use one of the available models"
         
         # Format the prompt if needed
         if template_type:
@@ -175,7 +221,7 @@ class OllamaRunner:
                 "stream": False
             }
             logger.debug(f"Sending chat request to {self.chat_api_url} with model {self.model}")
-            chat_response = requests.post(self.chat_api_url, json=chat_data, timeout=60)
+            chat_response = requests.post(self.chat_api_url, json=chat_data, timeout=30)  # Reduced timeout
             chat_response.raise_for_status()
             chat_json = chat_response.json()
             
@@ -197,7 +243,7 @@ class OllamaRunner:
                     "stream": False
                 }
                 logger.debug(f"Sending generate request to {self.generate_api_url} with model {self.model}")
-                generate_response = requests.post(self.generate_api_url, json=generate_data, timeout=60)
+                generate_response = requests.post(self.generate_api_url, json=generate_data, timeout=30)  # Reduced timeout
                 generate_response.raise_for_status()
                 generate_json = generate_response.json()
                 
