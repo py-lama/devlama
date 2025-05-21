@@ -7,7 +7,7 @@ from typing import List, Dict, Any, Tuple, Optional
 import logging
 from pathlib import Path
 from dotenv import load_dotenv
-from dependency_manager import DependencyManager
+from DependencyManager import DependencyManager
 from OllamaRunner import OllamaRunner
 
 # Konfiguracja logowania

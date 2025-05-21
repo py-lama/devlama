@@ -3,6 +3,7 @@ import json
 import time
 import subprocess
 import sys
+import re
 import requests
 import importlib
 import logging
