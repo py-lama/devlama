@@ -21,6 +21,15 @@ from .pylama import (
     save_code_to_file,
 )
 from .templates import get_template
+# Ensure we can import from pybox and pyllm
+import os
+import sys
+
+# Add parent directory to sys.path to find pybox and pyllm packages
+parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
 from pyllm import get_models, get_default_model, set_default_model
 
 
