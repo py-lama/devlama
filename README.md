@@ -7,6 +7,7 @@ PyLama is a Python tool that leverages Ollama's language models to generate and 
 ## Features
 
 - **Real Ollama Integration**: Uses real Ollama models to generate high-quality Python code
+- **Automatic Model Installation**: Automatically installs models when requested, including special handling for SpeakLeash/Bielik models
 - **Mock Mode**: Supports a mock mode for testing without requiring Ollama
 - **Smart Model Selection**: Automatically selects the best available model with fallbacks
 - **Progress Indicator**: Shows real-time progress during code generation
@@ -50,6 +51,9 @@ pylama --model codellama:7b "create a binary search tree implementation"
 
 # Use mock mode (no Ollama required)
 pylama --mock "print hello world"
+
+# Use a model that will be automatically installed if not available
+pylama --model SpeakLeash/bielik-1.5b-v3.0-instruct-gguf "print hello world"
 ```
 
 ### Interactive Mode
@@ -68,10 +72,11 @@ PyLama integrates with Ollama to provide high-quality code generation. By defaul
 
 1. Connect to the Ollama server running on `localhost:11434`
 2. Check if the requested model is available
-3. **Automatically select an available model** if the requested one isn't found
-4. Use the best available model for code generation
-5. Fall back to alternative models if needed
-6. Display a progress spinner with elapsed time during code generation
+3. **Automatically install the model** if it's not available and auto-install is enabled
+4. **Automatically select an available model** if the requested one isn't found
+5. Use the best available model for code generation
+6. Fall back to alternative models if needed
+7. Display a progress spinner with elapsed time during code generation
 
 ### Setting Up Ollama
 
@@ -87,6 +92,22 @@ ollama pull codellama:7b
 ollama pull phi3:latest
 ```
 
+### Automatic Model Installation
+
+PyLama can automatically install models when requested:
+
+```bash
+# This will automatically download and install the model if not available
+pylama --model SpeakLeash/bielik-1.5b-v3.0-instruct-gguf "print hello world"
+```
+
+For SpeakLeash/Bielik models, PyLama uses a special installation process:
+
+1. Downloads the model file from Hugging Face
+2. Creates a custom Modelfile with appropriate parameters
+3. Creates the model in Ollama with a unique name
+4. Updates your environment settings to use the new model
+
 ### Environment Variables
 
 You can configure PyLama using environment variables:
@@ -95,6 +116,60 @@ You can configure PyLama using environment variables:
 - `OLLAMA_MODEL`: Default model to use (default: `codellama:7b`)
 - `OLLAMA_FALLBACK_MODELS`: Comma-separated list of fallback models (default: `codellama:7b,phi3:latest,tinyllama:latest`)
 - `OLLAMA_AUTO_SELECT_MODEL`: Whether to automatically select an available model when the specified one isn't found (default: `True`)
+- `OLLAMA_AUTO_INSTALL_MODEL`: Whether to automatically install a model when it's not found (default: `True`)
+- `OLLAMA_TIMEOUT`: API timeout in seconds (default: `30`, recommended to set to `60` for larger models)
+
+## Troubleshooting
+
+### Model Not Found
+
+If you see an error like this:
+
+```
+Model 'your-model-name' not found in Ollama. Available models: ['codellama:7b', 'phi3:latest']
+```
+
+You can either:
+
+1. Pull the model manually:
+   ```bash
+   ollama pull your-model-name
+   ```
+
+2. Enable automatic model installation (already enabled by default):
+   ```bash
+   export OLLAMA_AUTO_INSTALL_MODEL=true
+   ```
+
+### Connection Timeout
+
+If you see a timeout error:
+
+```
+Error querying Ollama API: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=30)
+```
+
+Make sure Ollama is running:
+
+```bash
+ollama serve
+```
+
+If Ollama is running but still timing out, try increasing the timeout:
+
+```bash
+export OLLAMA_TIMEOUT=60
+```
+
+Or the model might be too large for your system. Try using a smaller model:
+
+```bash
+pylama --model tinyllama:latest "your prompt"
+```
+
+### Special Models (SpeakLeash/Bielik)
+
+If you're having trouble with SpeakLeash/Bielik models, see the detailed guide in `BIELIK.txt` for manual installation steps and troubleshooting.
 
 ## Mock Mode
 
@@ -962,5 +1037,3 @@ Poniżej orientacyjne wymagania sprzętowe dla różnych rozmiarów modeli:
   - A: Run `models.py` and press `u` in the menu.
 - **Q: How do I run code with sandbox.py?**
   - A: See the usage example above. Dependencies are managed automatically.
-
-```

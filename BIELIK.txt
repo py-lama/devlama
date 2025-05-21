@@ -8,7 +8,7 @@ When the SpeakLeash/bielik model isn't available in the Ollama registry, you can
 
 ### 1. Download the GGUF File
 
-First, download the model file from Hugging Face:
+First, download the model file from Hugging Face (note: this is a large file, approximately 1.5GB):
 
 ```bash
 # Create a directory for the model
@@ -24,7 +24,7 @@ wget https://huggingface.co/speakleash/Bielik-1.5B-v3.0-Instruct-GGUF/resolve/ma
 
 ### 2. Create a Modelfile
 
-Create a Modelfile in the same directory:
+After the download completes, create a Modelfile in the same directory:
 
 ```bash
 cat > Modelfile << 'EOF'
@@ -60,6 +60,77 @@ Now you can use the custom model with PyLama:
 pylama --model bielik-custom "print hello world"
 ```
 
+## Alternative Installation Method: Hugging Face CLI
+
+If you prefer using the Hugging Face CLI for more reliable downloads:
+
+```bash
+# Install the Hugging Face CLI
+pip install huggingface_hub
+
+# Create a directory for the model
+mkdir -p ~/models/bielik-cli
+
+# Download the model (this will show a progress bar)
+huggingface-cli download speakleash/Bielik-1.5B-v3.0-Instruct-GGUF Bielik-1.5B-v3.0-Instruct.Q8_0.gguf --local-dir ~/models/bielik-cli
+
+# Create a Modelfile in the download directory
+cd ~/models/bielik-cli
+cat > Modelfile << 'EOF'
+FROM ./Bielik-1.5B-v3.0-Instruct.Q8_0.gguf
+PARAMETER num_ctx 4096
+SYSTEM """
+Poland-optimized NLU model with constitutional AI constraints
+"""
+EOF
+
+# Create the model in Ollama
+ollama create bielik-custom -f ./Modelfile
+```
+
+## Integrating with PyLama's Automatic Model Selection
+
+After manually installing the model, you can configure PyLama to use it as a fallback option. There are two reliable ways to do this:
+
+### Method 1: Create a .env file
+
+Create or edit the `.env` file in your PyLama directory:
+
+```bash
+# Create or edit the .env file
+cat > /home/tom/github/py-lama/pylama/.env << 'EOF'
+OLLAMA_MODEL=bielik-custom
+OLLAMA_FALLBACK_MODELS=bielik-custom,phi:2.7b,tinyllama:latest
+OLLAMA_AUTO_SELECT_MODEL=true
+OLLAMA_TIMEOUT=60
+EOF
+```
+
+### Method 2: Set environment variables in your shell configuration
+
+Add these lines to your `~/.bashrc` or `~/.zshrc` file:
+
+```bash
+# Add to your shell configuration file
+export OLLAMA_MODEL=bielik-custom
+export OLLAMA_FALLBACK_MODELS=bielik-custom,phi:2.7b,tinyllama:latest
+export OLLAMA_AUTO_SELECT_MODEL=true
+export OLLAMA_TIMEOUT=60
+```
+
+Then reload your shell configuration:
+
+```bash
+source ~/.bashrc  # or source ~/.zshrc if using zsh
+```
+
+With this configuration:
+
+1. PyLama will try to use `bielik-custom` first
+2. If that fails, it will automatically try the fallback models
+3. The progress spinner will show which model is being used
+4. The API timeout is set to 60 seconds to avoid timeout issues with larger models
+
 ## Performance Optimization
 
 ### Quantization Options
@@ -94,26 +165,39 @@ Model SpeakLeash/bielik-1.5b-v3.0-instruct-gguf not found in Ollama.
 
 This means you need to manually install the model as described above, rather than relying on the automatic model selection.
 
-### Download Issues
+### Direct Ollama Pull Doesn't Work
 
-If you encounter issues downloading from Hugging Face, try using the Hugging Face CLI:
-
-```bash
-# Install the Hugging Face CLI
-pip install huggingface_hub
-
-# Download the model
-huggingface-cli download speakleash/Bielik-1.5B-v3.0-Instruct-GGUF Bielik-1.5B-v3.0-Instruct.Q8_0.gguf --local-dir ~/models/bielik
-```
-
-### Ollama Pull Alternative
-
-If the manual installation is too complex, you can try pulling directly from Ollama's registry:
+We've verified that the following command does not work for this model:
 
 ```bash
-# Check if the model is available in Ollama's registry
 ollama pull speakleash/bielik-1.5b-v3.0-instruct
 ```
+
+You must use the manual installation method described in this guide.
+
+### Download Taking Too Long
+
+If the download is taking too long:
+
+1. Try using a different network connection
+2. Use the Hugging Face CLI method which provides a progress bar
+3. Consider using a smaller model like `phi:2.7b` which is already available in your Ollama installation
+
+### API Timeout Issues
+
+If you experience API timeout errors when using the model:
+
+```
+Error querying Ollama API: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=30)
+```
+
+This is a common issue with larger models. To fix it:
+
+1. Increase the API timeout by setting the `OLLAMA_TIMEOUT` environment variable as shown in the configuration section above
+2. Ensure your system has enough RAM and CPU resources available
+3. Consider using a smaller model or a model with lower quantization for faster responses
+
+The default timeout is 30 seconds, which may not be enough for larger models or complex prompts.
 
 ## Advanced Configuration
 
