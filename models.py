@@ -62,6 +62,24 @@ def get_default_model():
         env = dotenv.dotenv_values(example_env_path)
     return env.get("OLLAMA_MODEL", "")
 
+def set_default_model(model_name):
+    env_path = Path(__file__).parent / ".env"
+    lines = []
+    found = False
+    if env_path.exists():
+        with open(env_path, "r", encoding="utf-8") as f:
+            for line in f:
+                if line.strip().startswith("OLLAMA_MODEL="):
+                    lines.append(f"OLLAMA_MODEL={model_name}\n")
+                    found = True
+                else:
+                    lines.append(line)
+    if not found:
+        lines.append(f"OLLAMA_MODEL={model_name}\n")
+    with open(env_path, "w", encoding="utf-8") as f:
+        f.writelines(lines)
+    print(f"Ustawiono OLLAMA_MODEL={model_name} jako domyślny w .env")
+
 DEFAULT_MODELS = [
     {"name": "tinyllama:1.1b", "size": "1.1B", "desc": "TinyLlama 1.1B - szybki, mały model"},
     {"name": "codellama:7b", "size": "7B", "desc": "CodeLlama 7B - kodowanie, Meta"},
@@ -206,6 +224,17 @@ if __name__ == "__main__":
             continue
         if wyb.isdigit() and 1 <= int(wyb) <= len(models):
             model_name = models[int(wyb) - 1]["name"]
-            install_model(model_name)
+            # Sprawdź czy model jest zainstalowany
+            installed = False
+            try:
+                output = subprocess.check_output(["ollama", "list"]).decode()
+                installed = any(model_name in line for line in output.strip().split("\n")[1:])
+            except Exception:
+                pass
+            if not installed:
+                ok = install_model(model_name)
+                if not ok:
+                    continue
+            set_default_model(model_name)
         else:
             print("Nieprawidłowy wybór.")

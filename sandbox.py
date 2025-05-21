@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Ulepszona wersja modułu sandbox z dodatkowymi funkcjami i lepszą obsługą błędów.
+Enhanced version of the sandbox module with additional functions and improved error handling.
 
-Ten moduł zapewnia rozszerzoną funkcjonalność w porównaniu do oryginalnego modułu sandbox.py,
-jednocześnie zachowując kompatybilność wsteczną.
+This module provides extended functionality compared to the original sandbox.py module,
+while maintaining backward compatibility.
 """
 
 import os
@@ -15,7 +15,7 @@ import traceback
 import subprocess
 from typing import Dict, List, Any, Optional, Union, Tuple, Callable
 
-# Import komponentów z pakietu sandbox
+# Import components from the sandbox package
 from sandbox.code_analyzer import CodeAnalyzer
 from sandbox.dependency_manager import DependencyManager
 from sandbox.python_sandbox import PythonSandbox
@@ -34,16 +34,16 @@ logger = logging.getLogger(__name__)
 
 class EnhancedSandboxManager(SandboxManager):
     """
-    Rozszerzona wersja SandboxManager z dodatkowymi funkcjami i lepszą obsługą błędów.
+    Enhanced version of SandboxManager with additional functions and improved error handling.
     """
 
     def __init__(self, use_docker: bool = None):
         """
-        Inicjalizuje EnhancedSandboxManager.
+        Initialize EnhancedSandboxManager.
 
         Args:
-            use_docker: Czy używać Dockera do uruchamiania kodu. Jeśli None, wartość zostanie
-                        pobrana ze zmiennej środowiskowej USE_DOCKER.
+            use_docker: Whether to use Docker for running code. If None, the value will be
+                        retrieved from the USE_DOCKER environment variable.
         """
         super().__init__(use_docker)
         self.code_analyzer = CodeAnalyzer()
@@ -51,56 +51,56 @@ class EnhancedSandboxManager(SandboxManager):
 
     def run_code_with_retry(self, code: str, timeout: int = 30, max_retries: int = 3) -> Dict[str, Any]:
         """
-        Uruchamia kod Python z automatycznym ponowieniem próby w przypadku błędów zależności.
+        Run Python code with automatic retry in case of dependency errors.
 
         Args:
-            code: Kod Python do uruchomienia.
-            timeout: Limit czasu wykonania w sekundach.
-            max_retries: Maksymalna liczba ponownych prób w przypadku błędów zależności.
+            code: Python code to run.
+            timeout: Execution time limit in seconds.
+            max_retries: Maximum number of retries in case of dependency errors.
 
         Returns:
-            Dict[str, Any]: Wyniki wykonania kodu.
+            Dict[str, Any]: Code execution results.
         """
         result = None
         retries = 0
         missing_deps = []
 
         while retries < max_retries:
-            # Analizuj kod i zainstaluj zależności
+            # Analyze code and install dependencies
             deps_analysis = self.dependency_manager.analyze_dependencies(code)
             missing_deps = deps_analysis.get('missing_packages', [])
 
             if missing_deps:
-                logger.info(f"Instalowanie brakujących zależności: {', '.join(missing_deps)}")
+                logger.info(f"Installing missing dependencies: {', '.join(missing_deps)}")
                 for pkg in missing_deps:
                     self.dependency_manager.install_package(pkg)
 
-            # Uruchom kod
+            # Run the code
             result = self.run_code(code, timeout)
 
-            # Sprawdź, czy wystąpiły błędy związane z zależnościami
+            # Check if there were dependency-related errors
             if result['success'] or 'ModuleNotFoundError' not in result.get('error', ''):
                 break
 
-            # Wyodrębnij nazwę brakującego modułu z błędu
+            # Extract the name of the missing module from the error
             error_msg = result.get('error', '')
             import_error_match = None
 
             if 'ModuleNotFoundError: No module named' in error_msg:
-                # Przykład: ModuleNotFoundError: No module named 'numpy'
+                # Example: ModuleNotFoundError: No module named 'numpy'
                 import_name = error_msg.split("'")
                 if len(import_name) >= 2:
                     import_error_match = import_name[1]
 
             if import_error_match and import_error_match not in missing_deps:
-                logger.info(f"Wykryto brakujący moduł: {import_error_match}")
+                logger.info(f"Detected missing module: {import_error_match}")
                 self.dependency_manager.install_package(import_error_match)
                 missing_deps.append(import_error_match)
 
             retries += 1
-            logger.info(f"Ponowna próba uruchomienia kodu ({retries}/{max_retries})")
+            logger.info(f"Retrying code execution ({retries}/{max_retries})")
 
-        # Dodaj informacje o zainstalowanych zależnościach do wyniku
+        # Add information about installed dependencies to the result
         if result:
             result['installed_dependencies'] = missing_deps
 
@@ -109,26 +109,26 @@ class EnhancedSandboxManager(SandboxManager):
     def run_code_with_callback(self, code: str, callback: Callable[[Dict[str, Any]], None],
                                timeout: int = 30) -> None:
         """
-        Uruchamia kod Python i wywołuje funkcję callback z wynikami.
+        Run Python code and call a callback function with the results.
 
         Args:
-            code: Kod Python do uruchomienia.
-            callback: Funkcja, która zostanie wywołana z wynikami wykonania kodu.
-            timeout: Limit czasu wykonania w sekundach.
+            code: Python code to run.
+            callback: Function to be called with the code execution results.
+            timeout: Execution time limit in seconds.
         """
         result = self.run_code_with_retry(code, timeout)
         callback(result)
 
     def run_code_in_file(self, file_path: str, timeout: int = 30) -> Dict[str, Any]:
         """
-        Uruchamia kod Python z pliku.
+        Run Python code from a file.
 
         Args:
-            file_path: Ścieżka do pliku z kodem Python.
-            timeout: Limit czasu wykonania w sekundach.
+            file_path: Path to the Python code file.
+            timeout: Execution time limit in seconds.
 
         Returns:
-            Dict[str, Any]: Wyniki wykonania kodu.
+            Dict[str, Any]: Code execution results.
         """
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
@@ -146,25 +146,25 @@ class EnhancedSandboxManager(SandboxManager):
 
     def run_interactive_session(self, initial_code: str = "") -> None:
         """
-        Uruchamia interaktywną sesję Python z możliwością wykonywania kodu.
+        Run an interactive Python session with code execution capability.
 
         Args:
-            initial_code: Kod Python do wykonania na początku sesji.
+            initial_code: Python code to execute at the beginning of the session.
         """
-        print("=== Interaktywna sesja Python ===")
-        print("Wpisz 'exit()' lub 'quit()' aby zakończyć sesję.")
-        print("Wpisz 'help()' aby uzyskać pomoc.")
+        print("=== Interactive Python Session ===")
+        print("Type 'exit()' or 'quit()' to end the session.")
+        print("Type 'help()' to get help.")
 
-        # Wykonaj początkowy kod, jeśli istnieje
+        # Execute initial code if it exists
         if initial_code:
-            print("\nWykonywanie początkowego kodu:")
+            print("\nExecuting initial code:")
             result = self.run_code_with_retry(initial_code)
             if result['stdout']:
                 print(result['stdout'])
             if result['stderr']:
-                print(f"Błędy:\n{result['stderr']}")
+                print(f"Errors:\n{result['stderr']}")
 
-        # Główna pętla interaktywna
+        # Main interactive loop
         context = {}
         while True:
             try:
@@ -173,130 +173,130 @@ class EnhancedSandboxManager(SandboxManager):
                 if user_input.lower() in ('exit()', 'quit()'):
                     break
                 elif user_input.lower() == 'help()':
-                    print("\nPomoc interaktywnej sesji Python:")
-                    print("  exit(), quit() - Zakończ sesję")
-                    print("  help() - Wyświetl tę pomoc")
-                    print("  clear() - Wyczyść ekran")
-                    print("  reset() - Zresetuj kontekst sesji")
+                    print("\nInteractive Python Session Help:")
+                    print("  exit(), quit() - End the session")
+                    print("  help() - Display this help")
+                    print("  clear() - Clear the screen")
+                    print("  reset() - Reset the session context")
                     continue
                 elif user_input.lower() == 'clear()':
                     os.system('cls' if os.name == 'nt' else 'clear')
                     continue
                 elif user_input.lower() == 'reset()':
                     context = {}
-                    print("Kontekst sesji został zresetowany.")
+                    print("Session context has been reset.")
                     continue
 
-                # Wykonaj kod użytkownika
+                # Execute user code
                 result = self.run_code_with_retry(user_input)
                 if result['stdout']:
                     print(result['stdout'])
                 if result['stderr']:
-                    print(f"Błędy:\n{result['stderr']}")
+                    print(f"Errors:\n{result['stderr']}")
 
             except KeyboardInterrupt:
-                print("\nPrzerwano przez użytkownika. Wpisz 'exit()' aby zakończyć sesję.")
+                print("\nInterrupted by user. Type 'exit()' to end the session.")
             except Exception as e:
-                print(f"Błąd: {str(e)}")
+                print(f"Error: {str(e)}")
 
-        print("\nSesja zakończona.")
+        print("\nSession ended.")
 
 
-# Utworzenie instancji EnhancedSandboxManager dla kompatybilności wstecznej
+# Create an instance of EnhancedSandboxManager for backward compatibility
 _enhanced_sandbox_manager = EnhancedSandboxManager.from_env()
 
 
-# Funkcje dla kompatybilności wstecznej i nowe funkcje
+# Functions for backward compatibility and new functions
 
 def run_code_with_retry(code: str, timeout: int = 30, max_retries: int = 3) -> Dict[str, Any]:
     """
-    Uruchamia kod Python z automatycznym ponowieniem próby w przypadku błędów zależności.
+    Run Python code with automatic retry in case of dependency errors.
 
     Args:
-        code: Kod Python do uruchomienia.
-        timeout: Limit czasu wykonania w sekundach.
-        max_retries: Maksymalna liczba ponownych prób w przypadku błędów zależności.
+        code: Python code to run.
+        timeout: Execution time limit in seconds.
+        max_retries: Maximum number of retries in case of dependency errors.
 
     Returns:
-        Dict[str, Any]: Wyniki wykonania kodu.
+        Dict[str, Any]: Code execution results.
     """
     return _enhanced_sandbox_manager.run_code_with_retry(code, timeout, max_retries)
 
 
 def run_code_in_file(file_path: str, timeout: int = 30) -> Dict[str, Any]:
     """
-    Uruchamia kod Python z pliku.
+    Run Python code from a file.
 
     Args:
-        file_path: Ścieżka do pliku z kodem Python.
-        timeout: Limit czasu wykonania w sekundach.
+        file_path: Path to the Python code file.
+        timeout: Execution time limit in seconds.
 
     Returns:
-        Dict[str, Any]: Wyniki wykonania kodu.
+        Dict[str, Any]: Code execution results.
     """
     return _enhanced_sandbox_manager.run_code_in_file(file_path, timeout)
 
 
 def run_interactive_session(initial_code: str = "") -> None:
     """
-    Uruchamia interaktywną sesję Python z możliwością wykonywania kodu.
+    Run an interactive Python session with code execution capability.
 
     Args:
-        initial_code: Kod Python do wykonania na początku sesji.
+        initial_code: Python code to execute at the beginning of the session.
     """
     _enhanced_sandbox_manager.run_interactive_session(initial_code)
 
 
-# Funkcja główna do testowania
+# Main function for testing
 def main():
     """
-    Funkcja główna do testowania modułu sandbox_new.
+    Main function for testing the sandbox module.
     """
-    print("=== Test modułu sandbox_new ===\n")
+    print("=== Sandbox Module Test ===\n")
 
-    # Przykładowy kod do testu
+    # Example code for testing
     code = """
 import os
 import sys
 import math
 import platform
 
-print('Informacje o systemie:')
-print(f'System operacyjny: {platform.system()} {platform.release()}')
-print(f'Wersja Pythona: {sys.version}')
-print(f'Katalog bieżący: {os.getcwd()}')
+print('System Information:')
+print(f'Operating System: {platform.system()} {platform.release()}')
+print(f'Python Version: {sys.version}')
+print(f'Current Directory: {os.getcwd()}')
 
-# Przykład obliczeń matematycznych
-print('\nObliczenia matematyczne:')
+# Example of mathematical calculations
+print('\nMathematical Calculations:')
 print(f'Pi: {math.pi}')
-print(f'Pierwiastek z 16: {math.sqrt(16)}')
-print(f'Silnia z 5: {math.factorial(5)}')
+print(f'Square root of 16: {math.sqrt(16)}')
+print(f'Factorial of 5: {math.factorial(5)}')
 """
 
-    # Uruchomienie kodu z automatycznym ponowieniem próby
-    print("Uruchamianie kodu z automatycznym ponowieniem próby:")
+    # Run code with automatic retry
+    print("Running code with automatic retry:")
     result = run_code_with_retry(code)
-    print(f"Sukces: {result['success']}")
-    print(f"Standardowe wyjście:\n{result['stdout']}")
+    print(f"Success: {result['success']}")
+    print(f"Standard output:\n{result['stdout']}")
 
-    # Zapisz kod do pliku tymczasowego i uruchom go
+    # Save code to a temporary file and run it
     with tempfile.NamedTemporaryFile(suffix='.py', delete=False, mode='w', encoding='utf-8') as temp_file:
         temp_file.write(code)
         temp_path = temp_file.name
 
-    print("\nUruchamianie kodu z pliku:")
+    print("\nRunning code from file:")
     result = run_code_in_file(temp_path)
-    print(f"Sukces: {result['success']}")
-    print(f"Standardowe wyjście:\n{result['stdout']}")
+    print(f"Success: {result['success']}")
+    print(f"Standard output:\n{result['stdout']}")
 
-    # Usuń plik tymczasowy
+    # Remove temporary file
     os.unlink(temp_path)
 
-    print("\nTest zakończony.")
+    print("\nTest completed.")
 
-    # Zapytaj użytkownika, czy chce uruchomić interaktywną sesję
-    choice = input("\nCzy chcesz uruchomić interaktywną sesję? (t/n): ")
-    if choice.lower() in ('t', 'tak', 'y', 'yes'):
+    # Ask the user if they want to run an interactive session
+    choice = input("\nDo you want to run an interactive session? (y/n): ")
+    if choice.lower() in ('y', 'yes'):
         run_interactive_session()
 
 

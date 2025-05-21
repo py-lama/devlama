@@ -270,25 +270,25 @@ class OllamaRunner:
         return ""
 
     def save_code_to_file(self, code: str, filename: str = None) -> str:
-        """Zapisz wygenerowany kod do pliku i zwróć ścieżkę do pliku."""
+        """Save the generated code to a file and return the path to the file."""
         if filename is None:
             timestamp = time.strftime("%Y%m%d_%H%M%S")
             filename = os.path.join(PACKAGE_DIR, f"generated_script_{timestamp}.py")
         
-        # Upewnij się, że katalog docelowy istnieje
-        os.makedirs(os.path.dirname(filename), exist_ok=True)
+        # Ensure the target directory exists
+        os.makedirs(os.path.dirname(os.path.abspath(filename)), exist_ok=True)
         
         with open(filename, "w", encoding="utf-8") as f:
             f.write(code)
         
-        logger.info(f'Zapisano skrypt do pliku: {filename}')
+        logger.info(f'Saved script to file: {filename}')
         return os.path.abspath(filename)
 
     def run_code_with_debug(self, code_file: str, original_prompt: str, original_code: str) -> bool:
         """Uruchamia kod i obsługuje ewentualne błędy."""
         try:
-            # Uruchom kod w nowym procesie
-            print("\nUruchamianie wygenerowanego kodu...")
+            # Run code in a new process
+            print("\nRunning generated code...")
             process = subprocess.Popen(
                 [sys.executable, code_file],
                 stdout=subprocess.PIPE,
@@ -301,76 +301,79 @@ class OllamaRunner:
                 stdout = stdout.decode('utf-8', errors='ignore')
                 stderr = stderr.decode('utf-8', errors='ignore')
 
-                # Sprawdź kod wyjścia
+                # Check exit code
                 if process.returncode != 0:
-                    print(f"Kod zakończył się z błędem (kod: {process.returncode}).")
+                    print(f"Code execution failed with error code: {process.returncode}.")
                     if stderr:
-                        print(f"Błąd: {stderr}")
+                        print(f"Error: {stderr}")
 
-                    # Próba debugowania i regeneracji kodu
+                    # Attempt debugging and code regeneration
                     debugged_code = self.debug_and_regenerate_code(original_prompt, stderr, original_code)
 
                     if debugged_code:
-                        print("\nOtrzymano poprawiony kod:")
+                        print("\nReceived fixed code:")
                         print("-" * 40)
                         print(debugged_code)
                         print("-" * 40)
 
-                        # Zapisz poprawiony kod do pliku
-                        fixed_code_file = self.save_code_to_file(debugged_code, "fixed_script.py")
-                        print(f"Poprawiony kod zapisany do pliku: {fixed_code_file}")
+                        # Save the fixed code to a file
+                        fixed_code_file = self.save_code_to_file(debugged_code, os.path.join(PACKAGE_DIR, "fixed_script.py"))
+                        print(f"Fixed code saved to file: {fixed_code_file}")
 
-                        # Zapytaj użytkownika, czy chce uruchomić poprawiony kod
-                        user_input = input("\nCzy chcesz uruchomić poprawiony kod? (t/n): ").lower()
-                        if user_input.startswith('t'):
-                            # Rekurencyjne wywołanie, ale bez dalszego debugowania w przypadku kolejnych błędów
-                            print("\nUruchamianie poprawionego kodu...")
-                            subprocess.run([sys.executable, fixed_code_file])
+                        # Ask the user if they want to run the fixed code
+                        user_input = input("\nDo you want to run the fixed code? (y/n): ").lower()
+                        if user_input.startswith('y'):
+                            # Recursive call, but without further debugging in case of subsequent errors
+                            print("\nRunning fixed code...")
+                            try:
+                                subprocess.run([sys.executable, fixed_code_file], check=True)
+                            except Exception as run_error:
+                                print(f"Error running fixed code: {run_error}")
 
                     return False
 
-                # Jeśli nie było błędów
+                # If there were no errors
                 if stdout:
-                    print("Wynik działania kodu:")
+                    print("Code execution result:")
                     print(stdout)
 
-                print("Kod został wykonany pomyślnie!")
+                print("Code executed successfully!")
                 return True
 
             except subprocess.TimeoutExpired:
                 process.kill()
-                print("Wykonanie kodu przerwane - przekroczony limit czasu (30 sekund).")
+                print("Code execution interrupted - time limit exceeded (30 seconds).")
                 return False
 
         except Exception as e:
-            print(f"Błąd podczas uruchamiania kodu: {e}")
+            print(f"Error running code: {e}")
             return False
 
     def debug_and_regenerate_code(self, original_prompt: str, error_message: str, code: str) -> str:
-        """Debuguje błędy w wygenerowanym kodzie i prosi o poprawkę."""
-        print(f"\nWykryto błąd w wygenerowanym kodzie. Próbuję naprawić...")
+        """Debug errors in the generated code and request a fix."""
+        print(f"\nDetected an error in the generated code. Attempting to fix...")
 
-        # Użyj szablonu do debugowania kodu
-        # Wyślij zapytanie o debugowanie z użyciem specjalnego szablonu
+        # Use a template for code debugging
+        # Send a debugging query using a special template
         debug_response = self.query_ollama(
-            original_prompt,  # Oryginalne zadanie
-            template_type="debug",  # Użyj szablonu do debugowania
-            code=code,  # Przekaż oryginalny kod
-            error_message=error_message  # Przekaż komunikat o błędzie
+            original_prompt,  # Original task
+            template_type="debug",  # Use debugging template
+            code=code,  # Pass the original code
+            error_message=error_message  # Pass the error message
         )
 
         if not debug_response:
-            print("Nie otrzymano odpowiedzi na zapytanie debugujące.")
+            print("No response received for the debugging query.")
             return ""
 
-        # Wyodrębnij poprawiony kod
+        # Extract the fixed code
         debugged_code = self.extract_python_code(debug_response)
 
         if not debugged_code:
-            print("Nie udało się wyodrębnić poprawionego kodu.")
-            # Jeśli nie udało się wyodrębnić kodu, spróbuj użyć całej odpowiedzi
+            print("Failed to extract the fixed code.")
+            # If code extraction failed, try to use the entire response
             if debug_response and "import" in debug_response:
-                # Jeśli odpowiedź zawiera import, może być kodem bez znaczników
+                # If the response contains an import, it might be code without markers
                 return debug_response
             return ""
 
