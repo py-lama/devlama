@@ -167,54 +167,47 @@ class OllamaRunner:
         Check if the selected model is available in Ollama.
         Returns True if the model is available, False otherwise.
         """
-        if self.mock_mode:
-            return True  # In mock mode, we don't need to check model availability
-            
         try:
-            # Get list of available models
-            response = requests.get(self.list_api_url, timeout=5)
+            # Get list of available models from Ollama
+            response = requests.get(self.list_api_url, timeout=10)
             response.raise_for_status()
-            models_data = response.json()
+            available_models = [tag['name'] for tag in response.json().get('models', [])]
             
-            # Extract model names from the response
-            available_models = []
-            if "models" in models_data:
-                available_models = [model["name"] for model in models_data["models"]]
-            else:
-                # Older Ollama versions use different format
-                available_models = [model["name"] for model in models_data]
-                
-            # Check if our model is in the list
+            # If the model is available, return True
             if self.model in available_models:
                 return True
                 
-            # If model not found by exact name, check for aliases or tags
-            model_base = self.model.split(':')[0] if ':' in self.model else self.model
-            for available in available_models:
-                if model_base in available:
-                    logger.info(f"Using model {available} instead of {self.model}")
-                    self.model = available
-                    return True
+            # Log available models for debugging
+            logger.warning(f"Model {self.model} not found in Ollama. Available models: {available_models}")
             
-            # Only use fallbacks if the model wasn't explicitly specified
-            if not hasattr(self, 'original_model_specified') or not self.original_model_specified:
-                # Try fallback models if primary model not available
-                for fallback in self.fallback_models:
-                    if fallback in available_models:
-                        logger.info(f"Primary model {self.model} not found. Using fallback model {fallback}")
-                        self.model = fallback
+            # If user explicitly specified a model and it's not available, don't use fallbacks
+            if self.original_model_specified:
+                # Check if we should try to automatically use an available model
+                if os.getenv('OLLAMA_AUTO_SELECT_MODEL', 'True').lower() in ('true', '1', 't'):
+                    # Try to find a suitable model from the available ones
+                    for model in available_models:
+                        if 'code' in model.lower() or 'llama' in model.lower() or 'phi' in model.lower():
+                            logger.info(f"Automatically selecting available model: {model} instead of {self.model}")
+                            self.model = model
+                            return True
+                    # If no suitable model found, use the first available one
+                    if available_models:
+                        logger.info(f"Automatically selecting first available model: {available_models[0]} instead of {self.model}")
+                        self.model = available_models[0]
                         return True
-                        
-                # If we still don't have a model, use the first available one
-                if available_models:
-                    self.model = available_models[0]
-                    logger.info(f"Using available model {self.model}")
+                else:
+                    # Don't use fallbacks if user explicitly specified a model
+                    return False
+            
+            # Try fallback models
+            for fallback in self.fallback_models:
+                if fallback in available_models:
+                    self.model = fallback
+                    logger.info(f"Using fallback model: {fallback}")
                     return True
                     
-            # Model not found
-            logger.warning(f"Model {self.model} not found in Ollama. Available models: {available_models}")
+            # If no fallbacks are available, return False
             return False
-            
         except Exception as e:
             logger.warning(f"Could not check model availability: {e}")
             return False  # Assume model is not available if we can't check

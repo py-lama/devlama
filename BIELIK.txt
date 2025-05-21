@@ -1,0 +1,145 @@
+# Manual Installation Guide for SpeakLeash/bielik Models with Ollama
+
+This guide provides detailed instructions for manually installing and configuring SpeakLeash/bielik models for use with PyLama, rather than relying on automatic model selection.
+
+## Manual Deployment from GGUF Source
+
+When the SpeakLeash/bielik model isn't available in the Ollama registry, you can manually install it following these steps:
+
+### 1. Download the GGUF File
+
+First, download the model file from Hugging Face:
+
+```bash
+# Create a directory for the model
+mkdir -p ~/models/bielik
+cd ~/models/bielik
+
+# Download the model file
+wget https://huggingface.co/SpeakLeash/bielik-1.5b-v3.0-instruct-gguf/resolve/main/bielik-1.5b-v3.0-instruct-q4_0.gguf
+```
+
+### 2. Create a Modelfile
+
+Create a Modelfile in the same directory:
+
+```bash
+cat > Modelfile << 'EOF'
+FROM ./bielik-1.5b-v3.0-instruct-q4_0.gguf
+PARAMETER num_ctx 4096
+SYSTEM """
+Poland-optimized NLU model with constitutional AI constraints
+"""
+EOF
+```
+
+### 3. Create the Model in Ollama
+
+Build the model with Ollama:
+
+```bash
+ollama create bielik-custom -f ./Modelfile
+```
+
+### 4. Verify the Model
+
+Verify that the model was created successfully:
+
+```bash
+ollama list | grep bielik
+```
+
+### 5. Use with PyLama
+
+Now you can use the custom model with PyLama:
+
+```bash
+pylama --model bielik-custom "print hello world"
+```
+
+## Performance Optimization
+
+### Quantization Options
+
+The model is available in different quantization levels:
+
+| Precision | VRAM Usage | Performance |
+|-----------|------------|-------------|
+| Q4_0      | ~4GB       | Fastest, slightly lower quality |
+| Q5_K_M    | ~5GB       | Good balance of speed/quality |
+| Q8_0      | ~8GB       | Highest quality, slower |
+
+To use a different quantization, download the appropriate file and update your Modelfile accordingly.
+
+### GPU Acceleration
+
+For better performance with GPU:
+
+```bash
+export CUDA_VISIBLE_DEVICES=0  # Use first GPU
+export OLLAMA_GPU_LAYERS=24     # Number of layers to offload to GPU
+```
+
+## Troubleshooting
+
+### Model Not Found
+
+If you see an error like:
+
+```
+Model SpeakLeash/bielik-1.5b-v3.0-instruct-gguf not found in Ollama.
+```
+
+This means you need to manually install the model as described above, rather than relying on the automatic model selection.
+
+### Download Issues
+
+If you encounter issues downloading from Hugging Face, try an alternative source:
+
+```bash
+# Alternative download source
+wget https://huggingface.co/DevQuasar/speakleash.Bielik-1.5B-v3.0-Instruct-GGUF/resolve/main/bielik-1.5b-v3.0-instruct-q4_0.gguf
+```
+
+### Memory Issues
+
+If you encounter memory issues:
+
+```bash
+# Use a smaller quantization
+wget https://huggingface.co/SpeakLeash/bielik-1.5b-v3.0-instruct-gguf/resolve/main/bielik-1.5b-v3.0-instruct-q4_0.gguf
+```
+
+## Advanced Configuration
+
+### Custom System Prompt
+
+You can customize the model's behavior by modifying the system prompt in the Modelfile:
+
+```
+SYSTEM """
+You are an AI assistant specialized in Polish legal documentation.
+Follow these constraints:
+1. Never provide financial advice
+2. Reject requests for medical information
+3. Cite legal sources for all statements
+"""
+```
+
+### Network Configuration
+
+Configure Ollama's API endpoint for remote access:
+
+```yaml
+# /etc/ollama/config.yaml
+host: 0.0.0.0
+port: 11434
+ssl_cert: /etc/ssl/ollama.crt
+ssl_key: /etc/ssl/ollama.key
+```
+
+## References
+
+- [Hugging Face SpeakLeash Models](https://huggingface.co/speakleash)
+- [Ollama Modelfile Documentation](https://github.com/ollama/ollama/blob/main/docs/modelfile.md)
+- [GGUF Format Specifications](https://github.com/ggerganov/ggml/blob/master/docs/gguf.md)
