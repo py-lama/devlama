@@ -13,6 +13,10 @@ from DependencyManager import DependencyManager
 from OllamaRunner import OllamaRunner
 from templates import get_template
 
+# Import from the new packages
+from pyllm import get_models, get_default_model, set_default_model, install_model
+from pybox import PythonSandbox, DockerSandbox
+
 # Create .pylama directory
 PACKAGE_DIR = os.path.join(os.path.expanduser('~'), '.pylama')
 os.makedirs(PACKAGE_DIR, exist_ok=True)

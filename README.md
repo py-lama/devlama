@@ -12,7 +12,7 @@ PyLama is a Python tool that leverages Ollama's language models to generate and 
 - **Automatic Dependency Management** - Automatically detects and installs required Python packages
 - **Code Execution** - Run generated code in a controlled environment
 - **Error Handling** - Automatic error detection and debugging suggestions with specialized templates
-- **Modular Architecture** - Separated components for better maintainability
+- **Modular Architecture** - Separated components for better maintainability with independent packages
 
 ## Prerequisites
 
@@ -28,14 +28,31 @@ PyLama is a Python tool that leverages Ollama's language models to generate and 
    cd pylama
    ```
 
-2. Install the required Python packages:
+2. Install the PyLama application and its package dependencies:
    ```bash
-   pip install -r requirements.txt
+   # Install the main PyLama application
+   cd pylama
+   pip install -e .
+   
+   # Install the PyBox package
+   cd ../pybox
+   pip install -e .
+   
+   # Install the Pyllm package
+   cd ../pyllm
+   pip install -e .
    ```
 
 3. Ensure Ollama is running:
    ```bash
    ollama serve
+   ```
+
+4. Install at least one code generation model:
+   ```bash
+   ollama pull codellama:7b
+   # or a smaller model if you have limited resources
+   ollama pull phi:2.7b
    ```
 
 ## Usage
@@ -116,20 +133,76 @@ python pylama.py -m phi3 "create a simple game"
 
 ## Project Structure
 
-- `pylama.py`: Main script with command-line interface
-- `OllamaRunner.py`: Handles communication with Ollama API
-- `templates.py`: Contains specialized templates for different code generation needs
-- `DependencyManager.py`: Manages Python package dependencies
-- `sandbox.py`: Compatibility layer for the sandbox package
-- `sandbox/`: Modular package for code execution and dependency management
-  - `code_analyzer.py`: Analyzes Python code and detects dependencies
-  - `dependency_manager.py`: Manages package dependencies and installations
-  - `python_sandbox.py`: Executes Python code safely in a local environment
-  - `docker_sandbox.py`: Executes Python code in a Docker container
-  - `sandbox_manager.py`: Manages different sandbox types
-  - `utils.py`: Provides utility functions for the sandbox package
-  - `examples.py`: Contains example usage of the sandbox components
-- `models.sh`: Script to manage Ollama models
+PyLama has been restructured into a modular architecture with three main components:
+
+1. **Core PyLama** - The main application
+   - `pylama.py`: Main script for the application
+   - `DependencyManager.py`: Manages Python package dependencies
+   - `OllamaRunner.py`: Handles interaction with the Ollama API
+   - `templates.py`: Contains templates for code generation
+
+2. **PyBox Package** - Sandbox for safe code execution
+   - `code_analyzer.py`: Analyzes Python code and detects dependencies
+   - `dependency_manager.py`: Manages package dependencies and installations
+   - `python_sandbox.py`: Executes Python code safely in a local environment
+   - `docker_sandbox.py`: Executes Python code in a Docker container
+   - `sandbox_manager.py`: Manages different sandbox types
+   - `utils.py`: Provides utility functions for the sandbox
+
+3. **Pyllm Package** - Model management for LLMs
+   - `models.py`: Handles model discovery, installation, and configuration
+   - Functions for model management: `get_models()`, `get_default_model()`, `set_default_model()`, etc.
+
+### Package Dependencies
+
+The modular architecture allows each component to be developed, tested, and maintained independently:
+
+- **PyLama Core** depends on both PyBox and Pyllm packages
+- **PyBox** is independent and can be used in other projects for safe code execution
+- **Pyllm** is independent and can be used in other projects for LLM model management
+
+This separation of concerns makes the codebase more maintainable and allows for better testing and development workflows.
+
+## Advanced Usage
+
+### Using PyBox for Code Execution
+
+```python
+from pybox import PythonSandbox, DockerSandbox
+
+# Run code in a Python sandbox
+sandbox = PythonSandbox()
+result = sandbox.run_code("print('Hello, World!')")
+print(result['output'])
+
+# Run code in a Docker sandbox for better isolation
+docker_sandbox = DockerSandbox()
+result = docker_sandbox.run_code("print('Hello from Docker!')")
+print(result['output'])
+```
+
+### Using Pyllm for Model Management
+
+```python
+from pyllm import get_models, get_default_model, set_default_model, install_model
+
+# Get available models
+models = get_models()
+for model in models:
+    print(f"{model['name']} - {model.get('desc', '')}")
+
+# Get the current default model
+default_model = get_default_model()
+print(f"Current default model: {default_model}")
+
+# Set a new default model
+set_default_model("codellama:7b")
+
+# Install a model
+install_model("deepseek-coder:6.7b")
+```
+
+### Custom Templates
 
 ## How It Works
 
@@ -151,6 +224,35 @@ OLLAMA_FALLBACK_MODELS=phi3,llama2
 LOG_LEVEL=INFO
 USE_DOCKER=False
 ```
+
+## Development and Testing
+
+### Testing the Packages
+
+Both PyBox and Pyllm packages come with comprehensive test suites using pytest and tox:
+
+```bash
+# Test the PyBox package
+cd pybox
+python -m pytest  # Run tests with pytest
+python -m pytest --cov=pybox  # Run tests with coverage report
+tox  # Run tests across multiple Python versions
+
+# Test the Pyllm package
+cd pyllm
+python -m pytest  # Run tests with pytest
+python -m pytest --cov=pyllm  # Run tests with coverage report
+tox  # Run tests across multiple Python versions
+```
+
+### Development Workflow
+
+When developing new features or fixing bugs:
+
+1. Make changes to the appropriate package (PyLama core, PyBox, or Pyllm)
+2. Run the tests for that package
+3. Update documentation if necessary
+4. Submit a pull request
 
 ## Contributing
 
