@@ -4,6 +4,7 @@ import argparse
 import logging
 import sys
 from pathlib import Path
+import questionary
 
 # Set up logging
 logging.basicConfig(
@@ -77,7 +78,8 @@ def interactive_mode():
     print("\n=== PyLama Interactive Mode ===\n")
     print("Type 'exit', 'quit', or Ctrl+C to exit.")
     print("Type 'models' to see available models.")
-    print("Type 'set model <name>' to change the current model.")
+    print("Type 'set model' to change the current model interactively.")
+    print("Type 'set model <name>' to change the current model by name.")
     print("Type 'help' for more commands.\n")
     
     model = get_default_model()
@@ -94,8 +96,9 @@ def interactive_mode():
             elif user_input.lower() == "help":
                 print("\nAvailable commands:")
                 print("  exit, quit - Exit PyLama")
-                print("  models - List available models")
-                print("  set model <name> - Change the current model")
+                print("  models - List available models and select one interactively")
+                print("  set model - Select a model interactively")
+                print("  set model <name> - Change the current model by name")
                 print("  set template <name> - Change the current template")
                 print("  templates - List available templates")
                 print("  Any other input will be treated as a code generation prompt\n")
@@ -107,7 +110,21 @@ def interactive_mode():
                     star = "*" if m == model else " "
                     print(f"  {star} {m}")
                 print(f"\nCurrent model: {model}")
-                
+                # Interactive selection
+                select = questionary.select("Select a model to use:", choices=models, default=model).ask()
+                if select:
+                    model = select
+                    set_default_model(model)
+                    print(f"Model changed to: {model}")
+
+            elif user_input.lower() == "set model":
+                models = get_models()
+                select = questionary.select("Select a model to use:", choices=models, default=model).ask()
+                if select:
+                    model = select
+                    set_default_model(model)
+                    print(f"Model changed to: {model}")
+
             elif user_input.lower().startswith("set model "):
                 new_model = user_input[10:].strip()
                 models = get_models()
