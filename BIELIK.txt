@@ -15,8 +15,11 @@ First, download the model file from Hugging Face:
 mkdir -p ~/models/bielik
 cd ~/models/bielik
 
-# Download the model file
-wget https://huggingface.co/SpeakLeash/bielik-1.5b-v3.0-instruct-gguf/resolve/main/bielik-1.5b-v3.0-instruct-q4_0.gguf
+# Download the model file (Q8_0 version - higher quality)
+wget https://huggingface.co/speakleash/Bielik-1.5B-v3.0-Instruct-GGUF/resolve/main/Bielik-1.5B-v3.0-Instruct.Q8_0.gguf
+
+# Or download the FP16 version (larger file but higher quality)
+# wget https://huggingface.co/speakleash/Bielik-1.5B-v3.0-Instruct-GGUF/resolve/main/Bielik-1.5B-v3.0-Instruct-fp16.gguf
 ```
 
 ### 2. Create a Modelfile
@@ -25,7 +28,7 @@ Create a Modelfile in the same directory:
 
 ```bash
 cat > Modelfile << 'EOF'
-FROM ./bielik-1.5b-v3.0-instruct-q4_0.gguf
+FROM ./Bielik-1.5B-v3.0-Instruct.Q8_0.gguf
 PARAMETER num_ctx 4096
 SYSTEM """
 Poland-optimized NLU model with constitutional AI constraints
@@ -63,13 +66,12 @@ pylama --model bielik-custom "print hello world"
 
 The model is available in different quantization levels:
 
-| Precision | VRAM Usage | Performance |
-|-----------|------------|-------------|
-| Q4_0      | ~4GB       | Fastest, slightly lower quality |
-| Q5_K_M    | ~5GB       | Good balance of speed/quality |
-| Q8_0      | ~8GB       | Highest quality, slower |
+| Version | File Size | Quality |
+|---------|-----------|----------|
+| Q8_0    | ~1.5GB    | Good balance of size/quality |
+| FP16    | ~3GB      | Highest quality, larger file |
 
-To use a different quantization, download the appropriate file and update your Modelfile accordingly.
+Choose the quantization that best fits your system's capabilities.
 
 ### GPU Acceleration
 
@@ -94,20 +96,23 @@ This means you need to manually install the model as described above, rather tha
 
 ### Download Issues
 
-If you encounter issues downloading from Hugging Face, try an alternative source:
+If you encounter issues downloading from Hugging Face, try using the Hugging Face CLI:
 
 ```bash
-# Alternative download source
-wget https://huggingface.co/DevQuasar/speakleash.Bielik-1.5B-v3.0-Instruct-GGUF/resolve/main/bielik-1.5b-v3.0-instruct-q4_0.gguf
+# Install the Hugging Face CLI
+pip install huggingface_hub
+
+# Download the model
+huggingface-cli download speakleash/Bielik-1.5B-v3.0-Instruct-GGUF Bielik-1.5B-v3.0-Instruct.Q8_0.gguf --local-dir ~/models/bielik
 ```
 
-### Memory Issues
+### Ollama Pull Alternative
 
-If you encounter memory issues:
+If the manual installation is too complex, you can try pulling directly from Ollama's registry:
 
 ```bash
-# Use a smaller quantization
-wget https://huggingface.co/SpeakLeash/bielik-1.5b-v3.0-instruct-gguf/resolve/main/bielik-1.5b-v3.0-instruct-q4_0.gguf
+# Check if the model is available in Ollama's registry
+ollama pull speakleash/bielik-1.5b-v3.0-instruct
 ```
 
 ## Advanced Configuration
@@ -141,5 +146,6 @@ ssl_key: /etc/ssl/ollama.key
 ## References
 
 - [Hugging Face SpeakLeash Models](https://huggingface.co/speakleash)
+- [Bielik-1.5B-v3.0-Instruct-GGUF Model](https://huggingface.co/speakleash/Bielik-1.5B-v3.0-Instruct-GGUF)
 - [Ollama Modelfile Documentation](https://github.com/ollama/ollama/blob/main/docs/modelfile.md)
 - [GGUF Format Specifications](https://github.com/ggerganov/ggml/blob/master/docs/gguf.md)
