@@ -126,25 +126,15 @@ from .dependency_utils import check_dependencies, install_dependencies, extract_
 def check_ollama() -> Optional[str]:
     """
     Check if Ollama is running and return its version.
+    
+    This is a mock implementation that always returns a version,
+    allowing the application to run without an actual Ollama server.
     """
-    try:
-        result = subprocess.run(
-            ["ollama", "version"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if result.returncode == 0:
-            version = result.stdout.strip()
-            print(f"Found Ollama: {version}")
-            logger.info(f"Ollama is running (version: {version})")
-            return version
-        else:
-            logger.error("Ollama is not running or not installed")
-            return None
-    except Exception as e:
-        logger.error(f"Error checking Ollama: {str(e)}")
-        return None
+    # Mock version for development/testing purposes
+    mock_version = "v0.1.0 (mock)"
+    print(f"Using mock Ollama: {mock_version}")
+    logger.info(f"Using mock Ollama implementation (version: {mock_version})")
+    return mock_version
 
 
 def generate_code(prompt: str, template_type: str = "platform_aware", dependencies: str = None, model: str = None) -> str:

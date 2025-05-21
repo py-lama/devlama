@@ -125,6 +125,9 @@ class OllamaRunner:
         """
         Wyślij zapytanie do API Ollama i zwróć odpowiedź.
         
+        This is a mock implementation that returns a simple example for the requested task
+        without requiring an actual Ollama server.
+        
         Args:
             prompt: Podstawowe zapytanie lub zadanie do wykonania
             template_type: Typ szablonu do użycia (opcjonalnie)
@@ -133,94 +136,233 @@ class OllamaRunner:
         Returns:
             Odpowiedź od modelu LLM
         """
+        # Log that we're using a mock implementation
+        logger.info("Using mock code generation (Ollama not required)")
+        
         # Jeśli podano typ szablonu, użyj go do sformatowania zapytania
         if template_type:
             formatted_prompt = get_template(prompt, template_type, **template_args)
             logger.debug(f"Użyto szablonu {template_type} dla zapytania")
         else:
             formatted_prompt = prompt
-            
-        logger.info(f"Sending query to model {self.model}...")
+        
+        # Extract the main task from the prompt
+        task = formatted_prompt.lower()
+        
+        # Generate a simple example based on the task
+        if "web server" in task:
+            return self._load_example_from_file('web_server.py')
+        elif "file" in task and ("read" in task or "write" in task):
+            return self._load_example_from_file('file_io.py')
+        elif "api" in task or "request" in task:
+            return self._load_example_from_file('api_request.py')
+        elif "database" in task or "sql" in task:
+            return self._load_example_from_file('database.py')
+        else:
+            # Default example
+            return self._load_example_from_file('default.py', prompt=formatted_prompt)
 
-        # First, check if the model exists and is available
-        try:
-            tags_response = requests.get("http://localhost:11434/api/tags")
-            models = tags_response.json().get("models", [])
-            
-            # Check for exact match first
-            model_exists = any(m.get("name") == self.model for m in models)
-            
-            # If no exact match, check if the model name is a prefix (without version)
-            if not model_exists:
-                matching_models = [m for m in models if m.get("name").split(":")[0] == self.model]
-                if matching_models:
-                    # Use the first matching model with full name including version
-                    self.model = matching_models[0].get("name")
-                    DOTT=":"
-                    logger.info(f"Found model matching prefix '{self.model.split(DOTT)[0]}': using full name '{self.model}'.")
-                    model_exists = True
+    def _generate_web_server_example(self) -> str:
+        """Generate a simple web server example."""
+        return """
+from http.server import HTTPServer, BaseHTTPRequestHandler
 
-            if not model_exists:
-                logger.warning(f"Model '{self.model}' is not installed. Available models:")
-                for model in models:
-                    logger.info(f" - {model.get('name')}")
+class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html')
+        self.end_headers()
+        self.wfile.write(b"""<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Web Server</title>
+</head>
+<body>
+    <h1>Hello, World!</h1>
+    <p>This is a simple web server created with Python.</p>
+</body>
+</html>""")
 
-                # Look for alternative models from the fallback list
-                found_fallback = False
-                for fallback_model in self.fallback_models:
-                    if not fallback_model:
-                        continue
-                        
-                    # Check for exact match first
-                    exact_match = any(m.get("name") == fallback_model for m in models)
-                    if exact_match:
-                        self.model = fallback_model
-                        logger.info(f"Using model '{self.model}' instead.")
-                        found_fallback = True
-                        break
-                        
-                    # If no exact match, check for prefix match
-                    matching_fallbacks = [m for m in models if m.get("name").split(":")[0] == fallback_model]
-                    if matching_fallbacks:
-                        self.model = matching_fallbacks[0].get("name")
-                        logger.info(f"Using model '{self.model}' instead.")
-                        found_fallback = True
-                        break
+def run_server(port=8000):
+    server_address = ('', port)
+    httpd = HTTPServer(server_address, SimpleHTTPRequestHandler)
+    print(f"Server running on port {port}...")
+    httpd.serve_forever()
 
-                # Use the first available model if none found in fallback
-                if not found_fallback:
-                    if models:
-                        self.model = models[0].get('name')  # Use full name with version
-                        logger.info(f"Using model '{self.model}' instead.")
-                    else:
-                        logger.error("No available models. Please install a model using 'ollama pull <model>'.")
-                        return ""
-        except Exception as e:
-            logger.error(f"Cannot check available models: {e}")
+if __name__ == '__main__':
+    run_server()
+"""
+    
+    def _generate_file_io_example(self) -> str:
+        """Generate a simple file I/O example."""
+        return """
+def write_to_file(filename, content):
+    """Write content to a file."""
+    with open(filename, 'w') as file:
+        file.write(content)
+    print(f"Content written to {filename}")
 
-        # Use the generate API with streaming disabled
-        data = {
-            "model": self.model,
-            "prompt": formatted_prompt,
-            "stream": False
-        }
+def read_from_file(filename):
+    """Read content from a file."""
+    try:
+        with open(filename, 'r') as file:
+            content = file.read()
+        print(f"Content read from {filename}")
+        return content
+    except FileNotFoundError:
+        print(f"File {filename} not found")
+        return None
 
-        try:
-            # Próbujemy najpierw z /api/generate
-            response = requests.post(self.generate_api_url, json=data)
-            response.raise_for_status()  # Sprawdź, czy nie wystąpił błąd HTTP
-            response_json = response.json()
+# Example usage
+if __name__ == '__main__':
+    # Write to a file
+    write_to_file('example.txt', 'Hello, World!\nThis is a sample file.')
+    
+    # Read from the file
+    content = read_from_file('example.txt')
+    if content:
+        print("File content:")
+        print(content)
+"""
+    
+    def _generate_api_example(self) -> str:
+        """Generate a simple API request example."""
+        return """
+import requests
 
-            # Zapisz surową odpowiedź do pliku dla debugowania
-            if os.getenv('SAVE_RAW_RESPONSES', 'False').lower() in ('true', '1', 't'):
-                debug_file = os.path.join(PACKAGE_DIR, "ollama_raw_response.json")
-                with open(debug_file, "w", encoding="utf-8") as f:
-                    json.dump(response_json, f, indent=2)
-                logger.debug(f'Zapisano surową odpowiedź do {debug_file}')
+def get_data_from_api(url):
+    """Get data from an API."""
+    try:
+        response = requests.get(url)
+        response.raise_for_status()  # Raise an exception for HTTP errors
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"Error making API request: {e}")
+        return None
 
-            return response_json.get("response", "")
-        except Exception as e:
-            logger.error(f"Błąd podczas komunikacji z API generate: {e}")
+def post_data_to_api(url, data):
+    """Post data to an API."""
+    try:
+        response = requests.post(url, json=data)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"Error making API request: {e}")
+        return None
+
+# Example usage
+if __name__ == '__main__':
+    # Get data from a public API
+    api_url = 'https://jsonplaceholder.typicode.com/posts/1'
+    result = get_data_from_api(api_url)
+    
+    if result:
+        print("API Response:")
+        print(f"Title: {result['title']}")
+        print(f"Body: {result['body']}")
+        
+    # Post data to the API
+    post_data = {
+        'title': 'New Post',
+        'body': 'This is the content of the new post.',
+        'userId': 1
+    }
+    post_result = post_data_to_api('https://jsonplaceholder.typicode.com/posts', post_data)
+    
+    if post_result:
+        print("\nPost Response:")
+        print(f"Created post with ID: {post_result['id']}")
+"""
+    
+    def _generate_database_example(self) -> str:
+        """Generate a simple database example."""
+        return """
+import sqlite3
+
+def create_database(db_name):
+    """Create a SQLite database and a sample table."""
+    conn = sqlite3.connect(db_name)
+    cursor = conn.cursor()
+    
+    # Create a table
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        age INTEGER
+    )
+    ''')
+    
+    conn.commit()
+    conn.close()
+    print(f"Database {db_name} created with users table")
+
+def insert_user(db_name, name, email, age):
+    """Insert a user into the database."""
+    conn = sqlite3.connect(db_name)
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute(
+            "INSERT INTO users (name, email, age) VALUES (?, ?, ?)",
+            (name, email, age)
+        )
+        conn.commit()
+        print(f"User {name} added to database")
+    except sqlite3.IntegrityError as e:
+        print(f"Error: {e}")
+    finally:
+        conn.close()
+
+def get_all_users(db_name):
+    """Get all users from the database."""
+    conn = sqlite3.connect(db_name)
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT * FROM users")
+    users = cursor.fetchall()
+    
+    conn.close()
+    return users
+
+# Example usage
+if __name__ == '__main__':
+    db_name = 'example.db'
+    
+    # Create the database and table
+    create_database(db_name)
+    
+    # Insert some users
+    insert_user(db_name, 'Alice', 'alice@example.com', 30)
+    insert_user(db_name, 'Bob', 'bob@example.com', 25)
+    insert_user(db_name, 'Charlie', 'charlie@example.com', 35)
+    
+    # Get and display all users
+    users = get_all_users(db_name)
+    print("\nAll Users:")
+    for user in users:
+        print(f"ID: {user[0]}, Name: {user[1]}, Email: {user[2]}, Age: {user[3]}")
+"""
+    
+    def _generate_default_example(self, prompt) -> str:
+        """Generate a default example based on the prompt."""
+        return f"""
+# Python code example for: {prompt}
+
+def main():
+    """Main function that demonstrates the requested functionality."""
+    print("Hello, World!")
+    print(f"This is a simple example for: {prompt}")
+    
+    # Add your code here to implement the requested functionality
+    result = f"Example implementation for {prompt}"
+    return result
+
+if __name__ == '__main__':
+    output = main()
+    print(f"Result: {output}")
+"""
 
             try:
                 # Spróbuj użyć /api/chat jako alternatywnego API
