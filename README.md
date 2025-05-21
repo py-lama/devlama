@@ -153,7 +153,7 @@ You can configure PyLama using environment variables:
 - `OLLAMA_FALLBACK_MODELS`: Comma-separated list of fallback models (default: `codellama:7b,phi3:latest,tinyllama:latest`)
 - `OLLAMA_AUTO_SELECT_MODEL`: Whether to automatically select an available model when the specified one isn't found (default: `True`)
 - `OLLAMA_AUTO_INSTALL_MODEL`: Whether to automatically install a model when it's not found (default: `True`)
-- `OLLAMA_TIMEOUT`: API timeout in seconds (default: `30`, recommended to set to `60` for larger models)
+- `OLLAMA_TIMEOUT`: API timeout in seconds (default: `30`, recommended `120` for Bielik models)
 
 ## Troubleshooting
 
