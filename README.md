@@ -377,11 +377,11 @@ graph TD
     A[PyLama] -->|Uses for code generation| B[PyLLM]
     A -->|Uses for code execution| C[PyBox]
     B -->|Connects to| D[Ollama API]
-    C -->|Executes code in| E[Python Sandbox]
-    C -->|Optional execution in| F[Docker Sandbox]
-    A -->|Provides templates for| G[Code Generation]
-    G -->|Creates| H[Runnable Python Code]
-    H -->|Executed in| E
+    D -->|Generated Code| B
+    B -->|Code| A
+    A -->|Code to Execute| C
+    C -->|Execution Results| A
+    A -->|Results| E[User]
 ```
 
 ### Core Components
@@ -473,7 +473,7 @@ Provides templates for different code generation scenarios:
 - **basic**: Simple code generation
 - **platform_aware**: Adapts code to the current platform
 - **dependency_aware**: Includes necessary dependencies
-- **testable**: Includes test functions
+- **testable**: Includes unit tests
 - **secure**: Adds security checks
 - **performance**: Optimizes for performance
 - **pep8**: Follows PEP 8 style guidelines
@@ -849,6 +849,43 @@ install_model("deepseek-coder:6.7b")
 
 ### Custom Templates
 
+## Quick Start: Using Bielik Models with Ollama and pylama
+
+### 1. Run Bielik Models with Ollama
+
+To run the Bielik-7B-Instruct-v0.1 model:
+```
+ollama run SpeakLeash/bielik-7b-instruct-v0.1-gguf
+```
+
+To specify a quantization (e.g., Q8_0):
+```
+ollama run SpeakLeash/bielik-7b-instruct-v0.1-gguf:Q8_0
+```
+
+You can use the same pattern for other models, e.g.:
+```
+ollama run SpeakLeash/bielik-11b-v2.3-instruct-gguf:Q6_K
+```
+
+### 2. Use Bielik Models Directly from pylama CLI
+
+If pylama supports direct model selection, you can run Bielik models like this:
+```
+pylama --model bielik-7b-instruct-v0.1 [your-options] [your-file.py]
+```
+Or select from available models:
+```
+pylama --list-models
+# Then run:
+pylama --model bielik-11b-v2.3-instruct [your-options] [your-file.py]
+```
+Replace `[your-options]` and `[your-file.py]` with your actual options and file.
+
+**Note:**
+- Bielik models are licensed under CC BY NC 4.0 (non-commercial use only).
+- Optimized for Polish language tasks.
+
 ## How It Works
 
 1. The tool analyzes your prompt and selects the appropriate template based on your requirements
@@ -940,6 +977,49 @@ PyLama includes a powerful template system that helps generate better quality co
 ### Debug Template
 
 When errors occur in generated code, PyLama uses a specialized debug template to analyze and fix the issues automatically.
+
+## Using Bielik Models from SpeakLeash with Ollama
+
+You can run Bielik models from SpeakLeash (Spichlerz) using Ollama. Below are the available models and example commands:
+
+**Available Bielik Models:**
+1. Bielik-7B-Instruct-v0.1
+2. Bielik-11B-v2.0-Instruct
+3. Bielik-11B-v2.1-Instruct
+4. Bielik-11B-v2.2-Instruct
+5. Bielik-11B-v2.3-Instruct
+6. Bielik-1.5B-v3.0-Instruct
+7. Bielik-4.5B-v3.0-Instruct
+
+**How to run a model (example for Bielik-7B-Instruct-v0.1):**
+
+```
+ollama run SpeakLeash/bielik-7b-instruct-v0.1-gguf
+```
+
+To specify a quantization (e.g. highest quality Q8_0):
+
+```
+ollama run SpeakLeash/bielik-7b-instruct-v0.1-gguf:Q8_0
+```
+
+**Available quantizations:**
+- Q4_K_M
+- Q5_K_S
+- Q6_K
+- Q8_0 (highest quality, more resources)
+
+Use the same pattern for other models, e.g.:
+
+```
+ollama run SpeakLeash/bielik-11b-v2.3-instruct-gguf:Q6_K
+```
+
+For custom parameters (like temperature), see the [Ollama Modelfile documentation](https://github.com/ollama/ollama/blob/main/docs/modelfile.md).
+
+**License:**
+- Models are licensed under CC BY NC 4.0 (non-commercial use only).
+- Optimized for Polish language tasks.
 
 ## Wymagania
 
@@ -1163,3 +1243,5 @@ Poniżej orientacyjne wymagania sprzętowe dla różnych rozmiarów modeli:
   - A: Run `models.py` and press `u` in the menu.
 - **Q: How do I run code with sandbox.py?**
   - A: See the usage example above. Dependencies are managed automatically.
+
+```
