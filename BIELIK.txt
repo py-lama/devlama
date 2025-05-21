@@ -1,10 +1,54 @@
 # Manual Installation Guide for SpeakLeash/bielik Models with Ollama
 
-This guide provides detailed instructions for manually installing and configuring SpeakLeash/bielik models for use with PyLama, rather than relying on automatic model selection.
+This guide provides detailed instructions for manually installing and configuring SpeakLeash/bielik models for use with PyLama. Note that PyLama now supports automatic installation of these models, but this guide is useful if you prefer manual installation or need to troubleshoot issues.
+
+## Automatic Installation (Recommended)
+
+PyLama now supports automatic installation of SpeakLeash/bielik models. Simply run:
+
+```bash
+pylama --model SpeakLeash/bielik-1.5b-v3.0-instruct-gguf "print hello world"
+```
+
+This will:
+1. Download the model file from Hugging Face
+2. Create a custom Modelfile with appropriate parameters
+3. Create the model in Ollama with a unique name
+4. Update your environment settings to use the new model
+5. Automatically reuse the model in future runs without downloading again
+
+Example output:
+```
+Found existing Bielik model installation: bielik-custom-1747866289:latest
+Using existing model instead of downloading again.
+Increased API timeout to 120 seconds for Bielik model.
+
+Generated Python code:
+----------------------------------------
+#!/bin/env python3
+import sys, os
+
+# Function to check if the operating system is Linux
+def is_linux():
+    return os.name == 'posix' and sys.platform == 'linux'
+
+if not is_linux():
+    print("This code requires a Linux operating system to run.")
+    exit()
+
+# Hello World function
+def hello_world():
+    print("Hello, World!")
+
+if __name__ == "__main__":
+    # Call the hello_world function
+    hello_world()
+----------------------------------------
+```
 
 ## Manual Deployment from GGUF Source
 
-When the SpeakLeash/bielik model isn't available in the Ollama registry, you can manually install it following these steps:
+If you prefer to manually install the model or if automatic installation fails, follow these steps:
 
 ### 1. Download the GGUF File
 
@@ -102,7 +146,7 @@ cat > /home/tom/github/py-lama/pylama/.env << 'EOF'
 OLLAMA_MODEL=bielik-custom
 OLLAMA_FALLBACK_MODELS=bielik-custom,phi:2.7b,tinyllama:latest
 OLLAMA_AUTO_SELECT_MODEL=true
-OLLAMA_TIMEOUT=60
+OLLAMA_TIMEOUT=120
 EOF
 ```
 
@@ -115,7 +159,7 @@ Add these lines to your `~/.bashrc` or `~/.zshrc` file:
 export OLLAMA_MODEL=bielik-custom
 export OLLAMA_FALLBACK_MODELS=bielik-custom,phi:2.7b,tinyllama:latest
 export OLLAMA_AUTO_SELECT_MODEL=true
-export OLLAMA_TIMEOUT=60
+export OLLAMA_TIMEOUT=120
 ```
 
 Then reload your shell configuration:
@@ -129,7 +173,7 @@ With this configuration:
 1. PyLama will try to use `bielik-custom` first
 2. If that fails, it will automatically try the fallback models
 3. The progress spinner will show which model is being used
-4. The API timeout is set to 60 seconds to avoid timeout issues with larger models
+4. The API timeout is set to 120 seconds to avoid timeout issues with larger models
 
 ## Performance Optimization
 
@@ -149,38 +193,24 @@ Choose the quantization that best fits your system's capabilities.
 For better performance with GPU:
 
 ```bash
-export CUDA_VISIBLE_DEVICES=0  # Use first GPU
-export OLLAMA_GPU_LAYERS=24     # Number of layers to offload to GPU
+# Set Ollama to use GPU
+export OLLAMA_USE_GPU=true
 ```
 
 ## Troubleshooting
 
 ### Model Not Found
 
-If you see an error like:
+If you see an error like this:
 
 ```
-Model SpeakLeash/bielik-1.5b-v3.0-instruct-gguf not found in Ollama.
+Model 'SpeakLeash/bielik-1.5b-v3.0-instruct-gguf' not found in Ollama. Available models: ['codellama:7b', 'phi:2.7b']
 ```
 
-This means you need to manually install the model as described above, rather than relying on the automatic model selection.
+Possible solutions:
 
-### Direct Ollama Pull Doesn't Work
-
-We've verified that the following command does not work for this model:
-
-```bash
-ollama pull speakleash/bielik-1.5b-v3.0-instruct
-```
-
-You must use the manual installation method described in this guide.
-
-### Download Taking Too Long
-
-If the download is taking too long:
-
-1. Try using a different network connection
-2. Use the Hugging Face CLI method which provides a progress bar
+1. Make sure you've enabled automatic model installation: `export OLLAMA_AUTO_INSTALL_MODEL=true`
+2. Check if you have sufficient disk space for the model download (~1.5GB)
 3. Consider using a smaller model like `phi:2.7b` which is already available in your Ollama installation
 
 ### API Timeout Issues
@@ -191,45 +221,22 @@ If you experience API timeout errors when using the model:
 Error querying Ollama API: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=30)
 ```
 
-This is a common issue with larger models. To fix it:
+Possible solutions:
 
-1. Increase the API timeout by setting the `OLLAMA_TIMEOUT` environment variable as shown in the configuration section above
-2. Ensure your system has enough RAM and CPU resources available
-3. Consider using a smaller model or a model with lower quantization for faster responses
+1. Increase the timeout value: `export OLLAMA_TIMEOUT=120`
+2. Ensure Ollama is running: `ollama serve`
+3. Check if your system has sufficient resources to run the model
+4. Try using a smaller model if your system has limited resources
 
-The default timeout is 30 seconds, which may not be enough for larger models or complex prompts.
+### Duplicate Model Downloads
 
-## Advanced Configuration
+If PyLama is downloading the model again even though you've already installed it:
 
-### Custom System Prompt
+1. The automatic detection should now prevent this, as it looks for any model name starting with `bielik-custom-`
+2. If you still experience issues, manually set the model name in your environment: `export OLLAMA_MODEL=bielik-custom-1234567890` (use the actual model name from `ollama list`)
 
-You can customize the model's behavior by modifying the system prompt in the Modelfile:
+## Additional Resources
 
-```
-SYSTEM """
-You are an AI assistant specialized in Polish legal documentation.
-Follow these constraints:
-1. Never provide financial advice
-2. Reject requests for medical information
-3. Cite legal sources for all statements
-"""
-```
-
-### Network Configuration
-
-Configure Ollama's API endpoint for remote access:
-
-```yaml
-# /etc/ollama/config.yaml
-host: 0.0.0.0
-port: 11434
-ssl_cert: /etc/ssl/ollama.crt
-ssl_key: /etc/ssl/ollama.key
-```
-
-## References
-
-- [Hugging Face SpeakLeash Models](https://huggingface.co/speakleash)
-- [Bielik-1.5B-v3.0-Instruct-GGUF Model](https://huggingface.co/speakleash/Bielik-1.5B-v3.0-Instruct-GGUF)
-- [Ollama Modelfile Documentation](https://github.com/ollama/ollama/blob/main/docs/modelfile.md)
-- [GGUF Format Specifications](https://github.com/ggerganov/ggml/blob/master/docs/gguf.md)
+- [Ollama Documentation](https://github.com/ollama/ollama/blob/main/docs/modelfile.md)
+- [SpeakLeash Models on Hugging Face](https://huggingface.co/speakleash)
+- [PyLama GitHub Repository](https://github.com/py-lama/pylama)
