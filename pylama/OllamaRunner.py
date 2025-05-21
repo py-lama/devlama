@@ -58,10 +58,12 @@ class OllamaRunner:
         self.fallback_models = os.getenv('OLLAMA_FALLBACK_MODELS', '').split(',')
         self.ollama_process = None
         self.mock_mode = mock_mode
-        # Update to the correct Ollama API endpoints
-        self.generate_api_url = "http://localhost:11434/api/generate"
-        self.chat_api_url = "http://localhost:11434/api/chat"
-        self.version_api_url = "http://localhost:11434/api/version"
+        # Update to the correct Ollama API endpoints for v0.7.0
+        self.base_api_url = "http://localhost:11434/api"
+        self.generate_api_url = f"{self.base_api_url}/generate"
+        self.chat_api_url = f"{self.base_api_url}/chat"
+        self.version_api_url = f"{self.base_api_url}/version"
+        self.list_api_url = f"{self.base_api_url}/tags"
         # Docker configuration
         self.use_docker = USE_DOCKER
         self.docker_sandbox = None
@@ -144,63 +146,70 @@ class OllamaRunner:
                 return self._load_example_from_file('database.py')
             else:
                 return self._load_example_from_file('default.py', prompt=formatted_prompt)
-        # REAL API CALL
-        data = {
-            "model": self.model,
-            "prompt": prompt,
-            "stream": False
-        }
-        try:
-            response = requests.post(self.generate_api_url, json=data)
-            response.raise_for_status()
-            result = response.json()
-            return result.get("response", "")
-        except Exception as e:
-            logger.error(f"Error querying Ollama API: {e}")
-            return f"# Error querying Ollama: {e}"
-
-    def _load_example_from_file(self, filename, prompt=None) -> str:
-        """Load an example from a file in the examples directory.
         
-        Args:
-            filename: The name of the file to load from the examples directory
-            prompt: Optional prompt to include in the example
+        # Format the prompt if needed
+        if template_type:
+            # Add default template parameters if not provided
+            default_params = {
+                'platform': platform.system(),
+                'os': platform.system(),
+                'dependencies': 'any standard Python library',
+                'python_version': platform.python_version()
+            }
             
-        Returns:
-            The content of the example file
-        """
-        # Get the path to the examples directory
-        examples_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'examples')
-        example_path = os.path.join(examples_dir, filename)
-        
+            # Only use defaults for parameters that weren't explicitly provided
+            for key, value in default_params.items():
+                if key not in template_args:
+                    template_args[key] = value
+                    
+            formatted_prompt = get_template(prompt, template_type, **template_args)
+            logger.debug(f"Used template {template_type} for the query")
+        else:
+            formatted_prompt = prompt
+            
+        # Try chat API first (most reliable in newer Ollama versions)
         try:
-            with open(example_path, 'r') as f:
-                content = f.read()
-                
-            # Replace the placeholder in default.py if a prompt is provided
-            if prompt and filename == 'default.py':
-                content = content.replace('your task description', prompt)
-                
-            return content
-        except Exception as e:
-            logger.error(f"Error loading example from {example_path}: {e}")
-            # Create a fallback example in case of error
-            fallback_code = f"""# Error loading example: {str(e)}
-
-# Here's a simple example instead:
-
-def main():
-    print("Hello, World!")
-    return "Success"
-
-if __name__ == '__main__':
-    main()
-"""
-            return fallback_code
+            chat_data = {
+                "model": self.model,
+                "messages": [{"role": "user", "content": formatted_prompt}],
+                "stream": False
+            }
+            logger.debug(f"Sending chat request to {self.chat_api_url} with model {self.model}")
+            chat_response = requests.post(self.chat_api_url, json=chat_data, timeout=60)
+            chat_response.raise_for_status()
+            chat_json = chat_response.json()
             
-    # The old example methods have been replaced by the _load_example_from_file method
-    
-    # All example methods have been replaced by the _load_example_from_file method
+            # Extract response from chat API
+            if "message" in chat_json and "content" in chat_json["message"]:
+                return chat_json["message"]["content"]
+            elif "response" in chat_json:
+                return chat_json["response"]
+            else:
+                logger.warning(f"Unexpected chat API response format: {chat_json}")
+        except Exception as e:
+            logger.warning(f"Chat API failed: {e}, trying generate API...")
+            
+            # Fallback to generate API
+            try:
+                generate_data = {
+                    "model": self.model,
+                    "prompt": formatted_prompt,
+                    "stream": False
+                }
+                logger.debug(f"Sending generate request to {self.generate_api_url} with model {self.model}")
+                generate_response = requests.post(self.generate_api_url, json=generate_data, timeout=60)
+                generate_response.raise_for_status()
+                generate_json = generate_response.json()
+                
+                if "response" in generate_json:
+                    return generate_json["response"]
+                else:
+                    logger.warning(f"Unexpected generate API response format: {generate_json}")
+            except Exception as e2:
+                logger.error(f"Both API endpoints failed. Error: {e2}")
+                return f"# Error querying Ollama API: {e2}\n\n# Please ensure:\n# 1. Ollama is running (ollama serve)\n# 2. The model '{self.model}' is available (ollama pull {self.model})\n# 3. The Ollama API is accessible at {self.base_api_url}"
+        
+        return "# Error: Could not get a valid response from Ollama"
 
     def try_chat_api(self, formatted_prompt):
         """Try using the chat API as an alternative."""
@@ -386,3 +395,46 @@ if __name__ == '__main__':
             return ""
 
         return debugged_code
+
+    def _load_example_from_file(self, filename, prompt=None) -> str:
+        """Load an example from a file in the examples directory.
+        
+        Args:
+            filename: The name of the file to load from the examples directory
+            prompt: Optional prompt to include in the example
+            
+        Returns:
+            The content of the example file
+        """
+        # Get the path to the examples directory
+        examples_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'examples')
+        example_path = os.path.join(examples_dir, filename)
+        
+        try:
+            with open(example_path, 'r') as f:
+                content = f.read()
+                
+            # Replace the placeholder in default.py if a prompt is provided
+            if prompt and filename == 'default.py':
+                content = content.replace('your task description', prompt)
+                
+            return content
+        except Exception as e:
+            logger.error(f"Error loading example from {example_path}: {e}")
+            # Create a fallback example in case of error
+            fallback_code = f"""# Error loading example: {str(e)}
+
+# Here's a simple example instead:
+
+def main():
+    print("Hello, World!")
+    return "Success"
+
+if __name__ == '__main__':
+    main()
+"""
+            return fallback_code
+            
+    # The old example methods have been replaced by the _load_example_from_file method
+    
+    # All example methods have been replaced by the _load_example_from_file method
