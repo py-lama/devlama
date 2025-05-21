@@ -100,8 +100,44 @@ PyLama can automatically install models when requested:
 # This will automatically download and install the model if not available
 pylama --model SpeakLeash/bielik-1.5b-v3.0-instruct-gguf "print hello world"
 ```
+SpeakLeash/Bielik models Result Example
+```bsh
+Application started
+2025-05-22 00:41:34 -    INFO - Application started
+Using mock Ollama: v0.1.0 (mock)
+Using mock Ollama implementation (version: v0.1.0 (mock))
+2025-05-22 00:41:34 -    INFO - Using mock Ollama implementation (version: v0.1.0 (mock))
+Found existing Bielik model installation: bielik-custom-1747866289:latest
+2025-05-22 00:41:34 -    INFO - Found existing Bielik model installation: bielik-custom-1747866289:latest
 
-For SpeakLeash/Bielik models, PyLama uses a special installation process:
+Found existing Bielik model installation: bielik-custom-1747866289:latest
+Using existing model instead of downloading again.
+Increased API timeout to 120 seconds for Bielik model.
+                                                                        
+Generated Python code:
+----------------------------------------
+#!/bin/env python3
+import sys, os
+
+# Function to check if the operating system is Linux
+def is_linux():
+    return os.name == 'posix' and sys.platform == 'linux'
+
+if not is_linux():
+    print("This code requires a Linux operating system to run.")
+    exit()
+
+# Hello World function
+def hello_world():
+    print("Hello, World!")
+
+if __name__ == "__main__":
+    # Call the hello_world function
+    hello_world()
+----------------------------------------
+```
+
+PyLama uses a special installation process:
 
 1. Downloads the model file from Hugging Face
 2. Creates a custom Modelfile with appropriate parameters
