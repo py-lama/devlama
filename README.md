@@ -82,19 +82,35 @@ python pylama.py -m phi3 "create a simple game"
 - **Immediate Feedback:**
   - Installed models are listed at startup for quick reference.
 
-## Python Sandbox (sandbox.py)
+## Python Sandbox (sandbox package)
 
+- **Modular Architecture:**
+  - Refactored into specialized components for better maintainability and organization:
+    - `code_analyzer.py`: Analyzes Python code and detects dependencies
+    - `dependency_manager.py`: Manages package dependencies and installations
+    - `python_sandbox.py`: Executes Python code safely in a local environment
+    - `docker_sandbox.py`: Executes Python code in a Docker container
+    - `sandbox_manager.py`: Manages different sandbox types
+    - `utils.py`: Provides utility functions for the sandbox package
 - **Automatic Dependency Management:**
   - The sandbox analyzes Python code, detects imports, and installs missing packages automatically (locally or in Docker).
 - **Safe & Flexible Execution:**
   - Run code locally or in a Docker container for isolation (choose with `use_docker=True/False`).
   - Handles syntax errors and runtime exceptions with clear error messages.
   - Execution timeout can be set to avoid hanging code.
+- **Backward Compatibility:**
+  - Original `sandbox.py` serves as a compatibility layer for existing code.
 - **Usage Example:**
   ```python
-  from sandbox import PythonSandbox
+  # Using the new modular structure
+  from sandbox.python_sandbox import PythonSandbox
   sandbox = PythonSandbox(use_docker=False)
   result = sandbox.run_code('import numpy as np\nprint(np.arange(5))')
+  print(result['stdout'])
+  
+  # Using the compatibility layer (for existing code)
+  from sandbox import run_code
+  result = run_code('import numpy as np\nprint(np.arange(5))')
   print(result['stdout'])
   ```
 
@@ -104,8 +120,15 @@ python pylama.py -m phi3 "create a simple game"
 - `OllamaRunner.py`: Handles communication with Ollama API
 - `templates.py`: Contains specialized templates for different code generation needs
 - `DependencyManager.py`: Manages Python package dependencies
-- `sandbox.py`: Provides a safe environment for code execution
-- `sandbox_improved.py`: Enhanced sandbox with better dependency management
+- `sandbox.py`: Compatibility layer for the sandbox package
+- `sandbox/`: Modular package for code execution and dependency management
+  - `code_analyzer.py`: Analyzes Python code and detects dependencies
+  - `dependency_manager.py`: Manages package dependencies and installations
+  - `python_sandbox.py`: Executes Python code safely in a local environment
+  - `docker_sandbox.py`: Executes Python code in a Docker container
+  - `sandbox_manager.py`: Manages different sandbox types
+  - `utils.py`: Provides utility functions for the sandbox package
+  - `examples.py`: Contains example usage of the sandbox components
 - `models.sh`: Script to manage Ollama models
 
 ## How It Works
