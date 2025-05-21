@@ -24,13 +24,13 @@ The architecture has been refactored to improve maintainability, scalability, an
 The PyLama ecosystem is built around a central orchestration service (PyLama) that coordinates all other components. This architecture allows for better integration and simplified deployment.
 
 ```
-                            +------------+
-                            |   Ollama   |
-                            |   (LLM)    |
-                            +------------+
-                                 ^
-                                 |
-                                 v
+                   +------------+
+                   |   Ollama   |
+                   |   (LLM)    |
+                   +------------+
+                        ^
+                        |
+                        v
 +------------+     +------------+     +---------------+     +------------+
 |   PyBox    |     |   PyLLM    |<--->|   PyLama      |<--->| SheLLama   |
 |  (Sandbox) |<--->|   (LLM)    |     | (Orchestrator)|     |  (Shell)   |
