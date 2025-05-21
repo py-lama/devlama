@@ -1,3 +1,5 @@
+![obraz](https://github.com/user-attachments/assets/3e1c9667-c299-4121-a8eb-ac5f72006c50)
+
 # PyLama - Python Code Generation with Ollama
 
 PyLama is a Python tool that leverages Ollama's language models to generate and execute Python code. It simplifies the process of writing and running Python scripts by handling dependency management and code execution automatically.
