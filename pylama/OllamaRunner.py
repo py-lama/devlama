@@ -186,6 +186,13 @@ class OllamaRunner:
                         print(f"\nFound existing Bielik model installation: {model}")
                         print(f"Using existing model instead of downloading again.")
                         self.model = model
+                        
+                        # Increase timeout for Bielik models as they tend to be larger
+                        current_timeout = int(os.getenv('OLLAMA_TIMEOUT', '30'))
+                        if current_timeout < 120:
+                            os.environ['OLLAMA_TIMEOUT'] = '120'
+                            print(f"Increased API timeout to 120 seconds for Bielik model.")
+                        
                         return True
                 
             # Log available models for debugging
@@ -306,6 +313,10 @@ class OllamaRunner:
                     
                     # Update environment variables for future use
                     os.environ["OLLAMA_MODEL"] = model
+                    
+                    # Increase timeout for Bielik models as they tend to be larger
+                    os.environ["OLLAMA_TIMEOUT"] = "120"
+                    print(f"Increased API timeout to 120 seconds for Bielik model.")
                     
                     # Save these settings to .env file if it exists
                     self._update_env_file(model)
@@ -462,7 +473,8 @@ class OllamaRunner:
                     f.write(f"OLLAMA_MODEL={model_name}\n")
                     f.write(f"OLLAMA_FALLBACK_MODELS={model_name},codellama:7b,phi:latest\n")
                     f.write("OLLAMA_AUTO_SELECT_MODEL=true\n")
-                    f.write("OLLAMA_TIMEOUT=60\n")
+                    # Set higher timeout for Bielik models
+                    f.write("OLLAMA_TIMEOUT=120\n")
                 print(f"Created .env file with model settings: {env_file}")
             except Exception as e:
                 print(f"Error creating .env file: {e}")
@@ -493,13 +505,8 @@ class OllamaRunner:
                     lines[i] = "OLLAMA_AUTO_SELECT_MODEL=true\n"
                     auto_select_line_found = True
                 elif line.startswith("OLLAMA_TIMEOUT="):
-                    # Only update timeout if it's less than 60
-                    timeout_value = line.split("=")[1].strip()
-                    try:
-                        if int(timeout_value) < 60:
-                            lines[i] = "OLLAMA_TIMEOUT=60\n"
-                    except ValueError:
-                        lines[i] = "OLLAMA_TIMEOUT=60\n"
+                    # Set higher timeout for Bielik models
+                    lines[i] = "OLLAMA_TIMEOUT=120\n"
                     timeout_line_found = True
             
             # Add missing settings
@@ -510,7 +517,7 @@ class OllamaRunner:
             if not auto_select_line_found:
                 lines.append("OLLAMA_AUTO_SELECT_MODEL=true\n")
             if not timeout_line_found:
-                lines.append("OLLAMA_TIMEOUT=60\n")
+                lines.append("OLLAMA_TIMEOUT=120\n")
             
             # Write updated .env file
             with open(env_file, "w") as f:
@@ -592,7 +599,11 @@ class OllamaRunner:
             }
             
             # Send the API request
-            response = requests.post(self.generate_api_url, json=payload, timeout=30)
+            timeout = int(os.getenv('OLLAMA_TIMEOUT', '30'))
+            if self.model.startswith('bielik-custom-') and timeout < 120:
+                timeout = 120
+                print(f"Using extended timeout of {timeout}s for Bielik model.")
+            response = requests.post(self.generate_api_url, json=payload, timeout=timeout)
             response.raise_for_status()
             response_json = response.json()
             
@@ -610,13 +621,19 @@ class OllamaRunner:
     def try_chat_api(self, formatted_prompt):
         """Try using the chat API as an alternative."""
         try:
+            # Get timeout from environment variable with special handling for Bielik models
+            timeout = int(os.getenv('OLLAMA_TIMEOUT', '30'))
+            if self.model.startswith('bielik-custom-') and timeout < 120:
+                timeout = 120
+                logger.info(f"Using extended timeout of {timeout}s for Bielik model in chat API.")
+                
             chat_data = {
                 "model": self.model,
                 "messages": [{"role": "user", "content": formatted_prompt}],
                 "stream": False
             }
             logger.debug(f"Sending chat request to {self.chat_api_url} with model {self.model}")
-            chat_response = requests.post(self.chat_api_url, json=chat_data, timeout=30)  # Reduced timeout
+            chat_response = requests.post(self.chat_api_url, json=chat_data, timeout=timeout)  # Use dynamic timeout
             chat_response.raise_for_status()
             chat_json = chat_response.json()
             
