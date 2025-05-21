@@ -4,6 +4,322 @@
 
 PyLama is a Python tool that leverages Ollama's language models to generate and execute Python code. It simplifies the process of writing and running Python scripts by handling dependency management and code execution automatically. With the new template system, it generates higher quality, platform-aware code that's ready to run.
 
+# PyLama Microservices Architecture
+
+## Overview
+
+This repository contains a microservices-based architecture for the PyLama ecosystem, consisting of the following components:
+
+- **PyBox**: Python code execution sandbox
+- **PyLLM**: LLM operations service
+- **PyLama**: Ollama management service
+- **SheLLama**: Shell and filesystem operations service
+- **APILama**: API gateway for all services
+- **WebLama**: Web frontend (JavaScript/HTML/CSS)
+
+The architecture has been refactored to improve maintainability, scalability, and separation of concerns. Each component now exposes a REST API that can be consumed by other services through the APILama gateway.
+
+## Architecture
+
+The PyLama ecosystem is built around a central orchestration service (PyLama) that coordinates all other components. This architecture allows for better integration and simplified deployment.
+
+```
+                            +------------+
+                            |   Ollama   |
+                            |   (LLM)    |
+                            +------------+
+                                 ^
+                                 |
+                                 v
++------------+     +------------+     +---------------+     +------------+
+|   PyBox    |     |   PyLLM    |<--->|   PyLama      |<--->| SheLLama   |
+|  (Sandbox) |<--->|   (LLM)    |     | (Orchestrator)|     |  (Shell)   |
++------------+     +------------+     +---------------+     +------------+
+      ^                  ^                  ^                  ^
+      |                  |                  |                  |
+      v                  v                  v                  v
++-----------------------------------------------------------------------+
+|                            APILama                                    |
+|                          (API Gateway)                                |
++-----------------------------------------------------------------------+
+                                ^
+                                |
+                                v
++-----------------------------------------------------------------------+
+|                            WebLama                                    |
+|                           (Frontend)                                  |
++-----------------------------------------------------------------------+
+                                ^
+                                |
+                                v
++-----------------------------------------------------------------------+
+|                            Browser                                    |
++-----------------------------------------------------------------------+
+```
+
+## Services
+
+### PyBox (Port 8000)
+
+Python code execution sandbox service that provides:
+- Code execution in isolated environments
+- Dependency management
+- Code analysis
+
+### PyLLM (Port 8001)
+
+LLM operations service that provides:
+- LLM model queries
+- Code fixing functionality
+- Alternative fix generation
+
+### SheLLama (Port 8002)
+
+Shell and filesystem operations service that provides:
+- File operations (read, write, list, search)
+- Directory management
+- Shell command execution
+- Git integration for version control
+
+### APILama (Port 8080)
+
+API gateway service that provides:
+- Unified API for all services
+- Request routing to appropriate services
+- Health monitoring
+- Logging and error handling
+
+### WebLama (Static Frontend)
+
+Web frontend that provides:
+- User interface for interacting with the services
+- Code editor with syntax highlighting
+- File explorer
+- Execution results display
+
+### PyLama (Port 8003)
+
+Ollama management service that provides:
+- Model management
+- Model inference
+- Model fine-tuning
+
+## Getting Started
+
+### Prerequisites
+
+- Docker and Docker Compose (recommended for easy deployment)
+- Python 3.8 or higher (for development without Docker)
+- Node.js 14 or higher (for WebLama frontend development)
+- Git
+
+### Docker Deployment (Recommended)
+
+The easiest way to run the entire PyLama ecosystem is using Docker Compose, which will set up all components with the correct configuration and dependencies.
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/py-lama.git
+   cd py-lama
+   ```
+
+2. Start all services with Docker Compose:
+   ```bash
+   docker-compose up -d
+   ```
+   This will start all components in the correct order with PyLama as the central orchestration point.
+
+3. Access the web interface:
+   - Open your browser and navigate to `http://localhost:80`
+
+4. Monitor the logs:
+   ```bash
+   docker-compose logs -f
+   ```
+
+5. Stop all services:
+   ```bash
+   docker-compose down
+   ```
+
+### Manual Installation (Development)
+
+For development purposes, you can set up each component individually.
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/py-lama.git
+   cd py-lama
+   ```
+
+2. Set up each component:
+
+   #### PyLama (Central Orchestration Service)
+   ```bash
+   cd pylama
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   pip install -e .
+   ```
+
+   #### APILama (API Gateway)
+   ```bash
+   cd apilama
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   pip install -e .
+   ```
+
+   #### SheLLama (Shell Operations)
+   ```bash
+   cd shellama
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   pip install -e .
+   ```
+
+   #### PyBox (Sandbox)
+   ```bash
+   cd pybox
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   pip install -e .
+   ```
+
+   #### PyLLM (LLM Operations)
+   ```bash
+   cd pyllm
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   pip install -e .
+   ```
+
+   #### WebLama (Frontend)
+   ```bash
+   cd weblama
+   npm install
+   ```
+
+### Running the Services Manually
+
+If you're not using Docker, start the services in the following order:
+
+1. **PyBox** (Sandbox):
+   ```bash
+   cd pybox
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   python -m pybox.app --port 8000 --host 127.0.0.1
+   ```
+
+2. **PyLLM** (LLM Operations):
+   ```bash
+   cd pyllm
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   python -m pyllm.app --port 8001 --host 127.0.0.1
+   ```
+
+3. **APILama** (API Gateway):
+   ```bash
+   cd apilama
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   python -m apilama.app --port 8080 --host 127.0.0.1
+   ```
+   Note: APILama will automatically use SheLLama as a library.
+
+4. **PyLama** (Central Orchestration):
+   ```bash
+   cd pylama
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   python -m pylama.app --port 8003 --host 127.0.0.1
+   ```
+   PyLama coordinates all other services and provides a unified interface.
+
+5. **WebLama** (Frontend):
+   ```bash
+   cd weblama
+   npm start
+   ```
+   Or serve the static files with a web server of your choice.
+
+6. Access the web interface:
+   - Open your browser and navigate to `http://localhost:8080` (or whatever port you configured for the WebLama frontend)
+
+## API Documentation
+
+### APILama Endpoints
+
+#### Health Check
+```
+GET /api/health
+```
+Returns the health status of the APILama service.
+
+#### PyLama Endpoints
+```
+GET /api/pylama/health
+POST /api/pylama/execute
+```
+
+#### PyBox Endpoints
+```
+GET /api/pybox/health
+POST /api/pybox/execute
+```
+
+#### PyLLM Endpoints
+```
+GET /api/pyllm/health
+POST /api/pyllm/generate
+```
+
+#### SheLLama Endpoints
+```
+GET /api/shellama/health
+GET /api/shellama/files
+GET /api/shellama/file
+POST /api/shellama/file
+DELETE /api/shellama/file
+GET /api/shellama/directory
+POST /api/shellama/directory
+DELETE /api/shellama/directory
+POST /api/shellama/shell
+```
+
+## Development
+
+### Adding a New Service
+
+To add a new service to the ecosystem:
+
+1. Create a new directory for your service
+2. Implement the service with a REST API
+3. Add routes to APILama to proxy requests to your service
+4. Update the WebLama frontend to interact with your service through APILama
+
+### Testing
+
+Each service has its own test suite. To run the tests for a service:
+
+```bash
+cd <service-directory>
+python -m unittest discover tests
+```
+
+To run the integration tests for the entire ecosystem:
+
+```bash
+python integration_test.py
+```
+
+## Benefits of the Microservices Architecture
+
+1. **Modularity**: Each service can be developed, deployed, and scaled independently
+2. **Scalability**: Services can be scaled based on demand
+3. **Maintainability**: Clearer separation of concerns
+4. **Deployment Flexibility**: Components can be deployed separately or together
+5. **Language Agnostic**: Future components could be written in different languages
+
+
 ## Using the Makefile
 
 PyLama includes a Makefile to simplify common development tasks:
