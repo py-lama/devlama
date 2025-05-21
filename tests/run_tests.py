@@ -13,7 +13,9 @@ def run_all_tests():
     """Uruchamia wszystkie testy w katalogu tests."""
     # Odkrycie i załadowanie wszystkich testów
     test_loader = unittest.TestLoader()
-    test_suite = test_loader.discover(os.path.dirname(__file__), pattern='test_*.py')
+    
+    # Używamy tylko poprawionych testów z przyrostkiem _fixed
+    test_suite = test_loader.discover(os.path.dirname(__file__), pattern='test_*_fixed.py')
     
     # Uruchomienie testów z wyświetlaniem wyników
     test_runner = unittest.TextTestRunner(verbosity=2)

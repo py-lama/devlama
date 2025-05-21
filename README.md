@@ -4,11 +4,11 @@ PyLama is a Python tool that leverages Ollama's language models to generate and 
 
 ## Features
 
-- 🚀 **AI-Powered Code Generation** - Generate Python code using Ollama's language models
-- 🔄 **Automatic Dependency Management** - Automatically detects and installs required Python packages
-- 🛠 **Code Execution** - Run generated code in a controlled environment
-- 🔍 **Error Handling** - Automatic error detection and debugging suggestions
-- 📦 **Modular Architecture** - Separated components for better maintainability
+- **AI-Powered Code Generation** - Generate Python code using Ollama's language models
+- **Automatic Dependency Management** - Automatically detects and installs required Python packages
+- **Code Execution** - Run generated code in a controlled environment
+- **Error Handling** - Automatic error detection and debugging suggestions
+- **Modular Architecture** - Separated components for better maintainability
 
 ## Prerequisites
 
@@ -53,6 +53,34 @@ python pylama.py
 ```bash
 python pylama.py --model llama3 --output my_script.py
 ```
+
+## Model Management (models.py)
+
+- **Automatic Environment & Dependency Setup:**
+  - Running `models.py` will auto-create a `.venv` and install required dependencies (`requests`, `bs4`, `python-dotenv`) if missing.
+  - No manual pip/venv setup required—just run the script.
+- **Model List Updating:**
+  - Models are fetched directly from the [Ollama library](https://ollama.com/library) (HTML scraping), not from a static JSON.
+  - Only coding-related models up to 7B parameters are shown.
+  - Use the interactive CLI to update the list (`u`), install by number, or quit (`q`).
+- **Immediate Feedback:**
+  - Installed models are listed at startup for quick reference.
+
+## Python Sandbox (sandbox.py)
+
+- **Automatic Dependency Management:**
+  - The sandbox analyzes Python code, detects imports, and installs missing packages automatically (locally or in Docker).
+- **Safe & Flexible Execution:**
+  - Run code locally or in a Docker container for isolation (choose with `use_docker=True/False`).
+  - Handles syntax errors and runtime exceptions with clear error messages.
+  - Execution timeout can be set to avoid hanging code.
+- **Usage Example:**
+  ```python
+  from sandbox import PythonSandbox
+  sandbox = PythonSandbox(use_docker=False)
+  result = sandbox.run_code('import numpy as np\nprint(np.arange(5))')
+  print(result['stdout'])
+  ```
 
 ## Project Structure
 
@@ -300,3 +328,12 @@ Poniżej orientacyjne wymagania sprzętowe dla różnych rozmiarów modeli:
 | Small (3-7B) | 8GB | 16GB | Zalecany |
 | Medium (8-13B) | 16GB | 24GB | Zalecany ≥4GB VRAM |
 | Large (30-70B) | 32GB | 64GB | Wymagany ≥8GB VRAM |
+
+## FAQ
+
+- **Q: Do I need to install anything before running `models.py`?**
+  - A: No, the script will auto-create a venv and install dependencies if needed.
+- **Q: How do I update the model list?**
+  - A: Run `models.py` and press `u` in the menu.
+- **Q: How do I run code with sandbox.py?**
+  - A: See the usage example above. Dependencies are managed automatically.

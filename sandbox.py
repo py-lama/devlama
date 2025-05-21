@@ -1,5 +1,37 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""
+PyLama Sandbox - Automatyczne środowisko do uruchamiania dowolnego kodu Python
+
+Ten moduł zapewnia automatyczne środowisko do uruchamiania kodu Python z zarządzaniem
+zależnościami oraz opcjonalną izolacją w Dockerze. Pozwala na szybkie tworzenie środowiska
+do dowolnego kodu Python, automatycznie wykrywając i instalując wymagane zależności.
+
+Główne funkcje:
+1. Analiza kodu Python i wykrywanie importów (moduł ast)
+2. Automatyczna instalacja brakujących pakietów (lokalnie lub w Dockerze)
+3. Bezpieczne środowisko wykonawcze lokalnie lub w kontenerze Docker
+4. Obsługa błędów składni i ograniczanie czasu wykonania
+
+Klasy:
+- CodeAnalyzer: Analizuje kod Python i wykrywa wymagane moduły (standardowe, zewnętrzne, nieznane).
+- DependencyManager: Zarządza instalacją zależności na podstawie analizy kodu.
+- PythonSandbox: Główna klasa do uruchamiania kodu Python lokalnie lub w Dockerze z automatyczną obsługą zależności.
+
+Zmiany w najnowszej wersji:
+- Uproszczona logika analizy importów i mapowania pakietów.
+- Automatyczna instalacja zależności na starcie uruchamianego kodu.
+- Możliwość uruchamiania kodu w Dockerze lub lokalnie (parametr use_docker).
+- Obsługa błędów składni oraz błędów wykonania z czytelnymi komunikatami.
+- Ograniczanie czasu wykonania kodu (timeout).
+
+Przykład użycia:
+    sandbox = PythonSandbox(use_docker=False)
+    result = sandbox.run_code('import numpy as np\nprint(np.arange(5))')
+    print(result['stdout'])
+
+Autor: PyLama Team
+"""
 
 import os
 import sys
