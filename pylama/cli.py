@@ -14,13 +14,13 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Import main functionality
-from pylama.pylama import (
+from .pylama import (
     check_ollama,
     generate_code,
     execute_code,
-    get_template,
     save_code_to_file,
 )
+from .templates import get_template
 from pyllm import get_models, get_default_model, set_default_model
 
 

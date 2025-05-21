@@ -14,3 +14,10 @@
 # limitations under the License.
 
 __version__ = "0.1.0"
+
+# Export main functionality
+from .pylama import check_ollama, generate_code, execute_code, save_code_to_file
+from .templates import get_template
+
+# Make the CLI accessible
+from .cli import main as cli_main
