@@ -100,16 +100,17 @@ PyLama can automatically install models when requested:
 # This will automatically download and install the model if not available
 pylama --model SpeakLeash/bielik-1.5b-v3.0-instruct-gguf "print hello world"
 ```
-SpeakLeash/Bielik models Result Example
-```bsh
-Application started
-2025-05-22 00:41:34 -    INFO - Application started
-Using mock Ollama: v0.1.0 (mock)
-Using mock Ollama implementation (version: v0.1.0 (mock))
-2025-05-22 00:41:34 -    INFO - Using mock Ollama implementation (version: v0.1.0 (mock))
-Found existing Bielik model installation: bielik-custom-1747866289:latest
-2025-05-22 00:41:34 -    INFO - Found existing Bielik model installation: bielik-custom-1747866289:latest
 
+#### SpeakLeash/Bielik Models
+
+PyLama has enhanced support for SpeakLeash/Bielik models with the following features:
+
+1. **Automatic Installation**: Downloads and installs the model from Hugging Face when first requested
+2. **Model Reuse**: Detects existing Bielik installations to avoid redundant downloads
+3. **Extended Timeouts**: Automatically increases API timeout to 120 seconds for these larger models
+
+Example output:
+```
 Found existing Bielik model installation: bielik-custom-1747866289:latest
 Using existing model instead of downloading again.
 Increased API timeout to 120 seconds for Bielik model.
@@ -137,12 +138,15 @@ if __name__ == "__main__":
 ----------------------------------------
 ```
 
-PyLama uses a special installation process:
+PyLama's installation process for SpeakLeash/Bielik models:
 
 1. Downloads the model file from Hugging Face
 2. Creates a custom Modelfile with appropriate parameters
 3. Creates the model in Ollama with a unique name
 4. Updates your environment settings to use the new model
+5. Remembers the model for future use to avoid redundant downloads
+
+For more details on working with Bielik models, see [BIELIK.txt](BIELIK.txt).
 
 ### Environment Variables
 
