@@ -3,12 +3,15 @@
 import os
 import subprocess
 import sys
+import platform
 from typing import List, Dict, Any, Tuple, Optional
 import logging
+import argparse
 from pathlib import Path
 from dotenv import load_dotenv
 from DependencyManager import DependencyManager
 from OllamaRunner import OllamaRunner
+from templates import get_template
 
 # Create .pylama directory
 PACKAGE_DIR = os.path.join(os.path.expanduser('~'), '.pylama')
@@ -101,9 +104,22 @@ ensure_basic_dependencies()
 
 
 
+def parse_arguments():
+    """Parsuje argumenty wiersza poleceń."""
+    parser = argparse.ArgumentParser(description='PyLama - Generator kodu Python z użyciem modeli LLM')
+    parser.add_argument('prompt', nargs='*', help='Zadanie do wykonania przez kod Python')
+    parser.add_argument('-t', '--template', choices=['basic', 'platform_aware', 'dependency_aware', 'testable', 'secure', 'performance', 'pep8'], 
+                        default='platform_aware', help='Typ szablonu do użycia')
+    parser.add_argument('-d', '--dependencies', help='Lista dozwolonych zależności (tylko dla template=dependency_aware)')
+    parser.add_argument('-m', '--model', help='Nazwa modelu Ollama do użycia')
+    return parser.parse_args()
+
 def main():
     """Główna funkcja programu."""
     try:
+        # Parsuj argumenty wiersza poleceń
+        args = parse_arguments()
+        
         # Sprawdź, czy Ollama jest zainstalowana
         try:
             result = subprocess.run([os.environ.get("OLLAMA_PATH", "ollama"), "--version"],
@@ -119,32 +135,38 @@ def main():
             return
 
         # Utwórz instancje klas
-        ollama = OllamaRunner()
+        ollama = OllamaRunner(model=args.model) if args.model else OllamaRunner()
         dependency_manager = DependencyManager()
 
         # Uruchom Ollama
         ollama.start_ollama()
 
-        # Pobierz zapytanie od użytkownika lub użyj domyślnego z zmiennych środowiskowych
-        if len(sys.argv) > 1:
+        # Pobierz zapytanie od użytkownika
+        if args.prompt:
             # Jeśli podano argumenty, połącz je w jeden prompt
-            prompt = ' '.join(sys.argv[1:])
+            prompt = ' '.join(args.prompt)
         else:
-            # W przeciwnym razie użyj domyślnego promptu z zmiennych środowiskowych
+            # W przeciwnym razie użyj domyślnego promptu z zmiennych środowiskowych lub zapytaj użytkownika
             prompt = os.environ.get("TEST_PROMPT_1")
             if not prompt:
                 prompt = input("Podaj zadanie do wykonania przez kod Python: ")
 
-        # Określ system operacyjny dla szablonu
-        os_name = platform.system()
-        os_details = f"{platform.system()} {platform.release()}"
+        # Przygotuj argumenty dla szablonu
+        template_args = {}
         
-        # Wyślij zapytanie do Ollama z użyciem szablonu platform_aware
+        # Dodaj argumenty specyficzne dla wybranego szablonu
+        if args.template == 'platform_aware':
+            template_args['platform'] = platform.system()
+            template_args['os'] = f"{platform.system()} {platform.release()}"
+        elif args.template == 'dependency_aware' and args.dependencies:
+            template_args['dependencies'] = args.dependencies
+        
+        # Wyślij zapytanie do Ollama z użyciem wybranego szablonu
+        logger.info(f"Używanie szablonu: {args.template}")
         response = ollama.query_ollama(
             prompt,  # Podstawowe zadanie
-            template_type="platform_aware",  # Użyj szablonu uwzględniającego platformę
-            platform=os_name,  # Przekaż nazwę platformy
-            os=os_details  # Przekaż szczegóły systemu operacyjnego
+            template_type=args.template,  # Użyj wybranego szablonu
+            **template_args  # Przekaz dodatkowe argumenty dla szablonu
         )
 
         if not response:
