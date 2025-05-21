@@ -125,11 +125,27 @@ def main():
         # Uruchom Ollama
         ollama.start_ollama()
 
-        # Zapytanie takie samo jak w przykładzie
-        prompt = os.environ.get("TEST_PROMPT_1")
+        # Pobierz zapytanie od użytkownika lub użyj domyślnego z zmiennych środowiskowych
+        if len(sys.argv) > 1:
+            # Jeśli podano argumenty, połącz je w jeden prompt
+            prompt = ' '.join(sys.argv[1:])
+        else:
+            # W przeciwnym razie użyj domyślnego promptu z zmiennych środowiskowych
+            prompt = os.environ.get("TEST_PROMPT_1")
+            if not prompt:
+                prompt = input("Podaj zadanie do wykonania przez kod Python: ")
 
-        # Wyślij zapytanie do Ollama
-        response = ollama.query_ollama(prompt)
+        # Określ system operacyjny dla szablonu
+        os_name = platform.system()
+        os_details = f"{platform.system()} {platform.release()}"
+        
+        # Wyślij zapytanie do Ollama z użyciem szablonu platform_aware
+        response = ollama.query_ollama(
+            prompt,  # Podstawowe zadanie
+            template_type="platform_aware",  # Użyj szablonu uwzględniającego platformę
+            platform=os_name,  # Przekaż nazwę platformy
+            os=os_details  # Przekaż szczegóły systemu operacyjnego
+        )
 
         if not response:
             print("Nie otrzymano odpowiedzi od Ollama.")

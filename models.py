@@ -52,6 +52,16 @@ def get_models_dir():
         env = dotenv.dotenv_values(example_env_path)
     return env.get("MODELS_DIR", "./models")
 
+def get_default_model():
+    env_path = Path(__file__).parent / ".env"
+    example_env_path = Path(__file__).parent / ".env.example"
+    env = {}
+    if env_path.exists():
+        env = dotenv.dotenv_values(env_path)
+    elif example_env_path.exists():
+        env = dotenv.dotenv_values(example_env_path)
+    return env.get("OLLAMA_MODEL", "")
+
 DEFAULT_MODELS = [
     {"name": "tinyllama:1.1b", "size": "1.1B", "desc": "TinyLlama 1.1B - szybki, mały model"},
     {"name": "codellama:7b", "size": "7B", "desc": "CodeLlama 7B - kodowanie, Meta"},
@@ -168,10 +178,15 @@ def update_models_from_ollama():
         print(f"Błąd aktualizacji z ollama.com: {e}")
 
 if __name__ == "__main__":
+    default_model = get_default_model()
     print("Dostępne modele:")
     models = get_models()
     for idx, m in enumerate(models, 1):
         print(f"{idx}. {m['name']} ({m.get('desc', '')})")
+    if default_model:
+        print(f"\nAktualny model domyślny: {default_model}\n")
+    else:
+        print("\nBrak ustawionego modelu domyślnego w .env\n")
     print("\nZapisuję listę do models.json...")
     save_models_to_json(models)
     print("\nZainstalowane modele:")

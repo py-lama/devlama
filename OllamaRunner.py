@@ -7,7 +7,9 @@ import re
 import requests
 import importlib
 import logging
+import platform
 from typing import List, Dict, Any, Tuple, Optional
+from templates import get_template
 
 # Create .pylama directory if it doesn't exist
 PACKAGE_DIR = os.path.join(os.path.expanduser('~'), '.pylama')
@@ -119,8 +121,25 @@ class OllamaRunner:
             self.ollama_process.wait()
             logger.info("Serwer Ollama zatrzymany")
 
-    def query_ollama(self, prompt: str) -> str:
-        """Wyślij zapytanie do API Ollama i zwróć odpowiedź."""
+    def query_ollama(self, prompt: str, template_type: str = None, **template_args) -> str:
+        """
+        Wyślij zapytanie do API Ollama i zwróć odpowiedź.
+        
+        Args:
+            prompt: Podstawowe zapytanie lub zadanie do wykonania
+            template_type: Typ szablonu do użycia (opcjonalnie)
+            **template_args: Dodatkowe argumenty dla szablonu
+        
+        Returns:
+            Odpowiedź od modelu LLM
+        """
+        # Jeśli podano typ szablonu, użyj go do sformatowania zapytania
+        if template_type:
+            formatted_prompt = get_template(prompt, template_type, **template_args)
+            logger.debug(f"Użyto szablonu {template_type} dla zapytania")
+        else:
+            formatted_prompt = prompt
+            
         logger.info(f"Wysyłanie zapytania do modelu {self.model}...")
 
         # Najpierw sprawdźmy, czy model istnieje i jest dostępny
@@ -157,7 +176,7 @@ class OllamaRunner:
         # Używamy API generate z wyłączonym streamingiem
         data = {
             "model": self.model,
-            "prompt": prompt,
+            "prompt": formatted_prompt,
             "stream": False
         }
 
@@ -183,7 +202,7 @@ class OllamaRunner:
                 logger.info("Próba użycia API chat...")
                 chat_data = {
                     "model": self.model,
-                    "messages": [{"role": "user", "content": prompt}],
+                    "messages": [{"role": "user", "content": formatted_prompt}],
                     "stream": False
                 }
 
@@ -331,17 +350,14 @@ class OllamaRunner:
         """Debuguje błędy w wygenerowanym kodzie i prosi o poprawkę."""
         print(f"\nWykryto błąd w wygenerowanym kodzie. Próbuję naprawić...")
 
-        debug_prompt = f"""
-Wygenerowany kod ma błąd: {error_message}
-Oto oryginalny kod:
-```python
-{code}
-```
-Proszę napraw ten kod, aby działał prawidłowo. Zwróć tylko kod Python, bez dodatkowych wyjaśnień, tylko poprawiony kod.
-"""
-
-        # Wyślij zapytanie o debugowanie
-        debug_response = self.query_ollama(debug_prompt)
+        # Użyj szablonu do debugowania kodu
+        # Wyślij zapytanie o debugowanie z użyciem specjalnego szablonu
+        debug_response = self.query_ollama(
+            original_prompt,  # Oryginalne zadanie
+            template_type="debug",  # Użyj szablonu do debugowania
+            code=code,  # Przekaż oryginalny kod
+            error_message=error_message  # Przekaż komunikat o błędzie
+        )
 
         if not debug_response:
             print("Nie otrzymano odpowiedzi na zapytanie debugujące.")
