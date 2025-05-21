@@ -65,164 +65,164 @@ logger.addHandler(file_handler)
 logger.info('Application started')
 logger.debug(f'Logs directory: {PACKAGE_DIR}')
 
-# Załaduj zmienne środowiskowe
+# Load environment variables
 load_dotenv()
 
-# Funkcja do instalacji podstawowych zależności
+# Function to install basic dependencies
 def ensure_basic_dependencies():
-    """Sprawdza i instaluje podstawowe zależności potrzebne do działania skryptu."""
+    """Checks and installs basic dependencies needed for the script to work."""
     basic_dependencies = ['setuptools', 'requests', 'importlib-metadata', 'python-dotenv']
 
     for dep in basic_dependencies:
         try:
-            # Próba importu, aby sprawdzić czy jest zainstalowany
+            # Try to import to check if it's installed
             if dep == 'setuptools':
                 import setuptools
             elif dep == 'requests':
                 import requests
             elif dep == 'importlib-metadata':
                 try:
-                    # Python 3.8+ ma to wbudowane
+                    # Python 3.8+ has this built-in
                     from importlib import metadata
                 except ImportError:
-                    # Dla starszych wersji Pythona
+                    # For older Python versions
                     import importlib_metadata
             elif dep == 'python-dotenv':
                 from dotenv import load_dotenv
         except ImportError:
-            logger.info(f"Instalowanie podstawowej zależności: {dep}...")
+            logger.info(f"Installing basic dependency: {dep}...")
             try:
                 subprocess.check_call([sys.executable, "-m", "pip", "install", dep])
-                logger.info(f"Zainstalowano {dep}")
+                logger.info(f"Installed {dep}")
             except subprocess.CalledProcessError:
-                logger.error(f"Nie udało się zainstalować {dep}. Przerwanie.")
+                logger.error(f"Failed to install {dep}. Aborting.")
                 sys.exit(1)
 
 
-# Instalacja podstawowych zależności przed importowaniem pozostałych modułów
+# Install basic dependencies before importing other modules
 ensure_basic_dependencies()
 
 
 
 def parse_arguments():
-    """Parsuje argumenty wiersza poleceń."""
-    parser = argparse.ArgumentParser(description='PyLama - Generator kodu Python z użyciem modeli LLM')
-    parser.add_argument('prompt', nargs='*', help='Zadanie do wykonania przez kod Python')
+    """Parses command line arguments."""
+    parser = argparse.ArgumentParser(description='PyLama - Python Code Generator using LLM models')
+    parser.add_argument('prompt', nargs='*', help='Task to be performed by Python code')
     parser.add_argument('-t', '--template', choices=['basic', 'platform_aware', 'dependency_aware', 'testable', 'secure', 'performance', 'pep8'], 
-                        default='platform_aware', help='Typ szablonu do użycia')
-    parser.add_argument('-d', '--dependencies', help='Lista dozwolonych zależności (tylko dla template=dependency_aware)')
-    parser.add_argument('-m', '--model', help='Nazwa modelu Ollama do użycia')
+                        default='platform_aware', help='Type of template to use')
+    parser.add_argument('-d', '--dependencies', help='List of allowed dependencies (only for template=dependency_aware)')
+    parser.add_argument('-m', '--model', help='Name of the Ollama model to use')
     return parser.parse_args()
 
 def main():
-    """Główna funkcja programu."""
+    """Main program function."""
     try:
-        # Parsuj argumenty wiersza poleceń
+        # Parse command line arguments
         args = parse_arguments()
         
-        # Sprawdź, czy Ollama jest zainstalowana
+        # Check if Ollama is installed
         try:
             result = subprocess.run([os.environ.get("OLLAMA_PATH", "ollama"), "--version"],
                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
             if result.returncode != 0:
-                print("Ollama nie jest prawidłowo zainstalowana.")
-                print("Proszę zainstalować Ollama: https://ollama.ai/download")
+                print("Ollama is not properly installed.")
+                print("Please install Ollama: https://ollama.ai/download")
                 return
-            print(f"Znaleziono Ollama: {result.stdout.decode('utf-8').strip()}")
+            print(f"Found Ollama: {result.stdout.decode('utf-8').strip()}")
         except FileNotFoundError:
-            print("Ollama nie jest zainstalowana lub nie jest dostępna w ścieżce systemowej.")
-            print("Proszę zainstalować Ollama: https://ollama.ai/download")
+            print("Ollama is not installed or not available in the system path.")
+            print("Please install Ollama: https://ollama.ai/download")
             return
 
-        # Utwórz instancje klas
+        # Create class instances
         ollama = OllamaRunner(model=args.model) if args.model else OllamaRunner()
         dependency_manager = DependencyManager()
 
-        # Uruchom Ollama
+        # Start Ollama
         ollama.start_ollama()
 
-        # Pobierz zapytanie od użytkownika
+        # Get query from the user
         if args.prompt:
-            # Jeśli podano argumenty, połącz je w jeden prompt
+            # If arguments were provided, join them into a single prompt
             prompt = ' '.join(args.prompt)
         else:
-            # W przeciwnym razie użyj domyślnego promptu z zmiennych środowiskowych lub zapytaj użytkownika
+            # Otherwise use the default prompt from environment variables or ask the user
             prompt = os.environ.get("TEST_PROMPT_1")
             if not prompt:
-                prompt = input("Podaj zadanie do wykonania przez kod Python: ")
+                prompt = input("Enter the task to be performed by Python code: ")
 
-        # Przygotuj argumenty dla szablonu
+        # Prepare arguments for the template
         template_args = {}
         
-        # Dodaj argumenty specyficzne dla wybranego szablonu
+        # Add specific arguments for the selected template
         if args.template == 'platform_aware':
             template_args['platform'] = platform.system()
             template_args['os'] = f"{platform.system()} {platform.release()}"
         elif args.template == 'dependency_aware' and args.dependencies:
             template_args['dependencies'] = args.dependencies
         
-        # Wyślij zapytanie do Ollama z użyciem wybranego szablonu
-        logger.info(f"Używanie szablonu: {args.template}")
+        # Send query to Ollama using the selected template
+        logger.info(f"Using template: {args.template}")
         response = ollama.query_ollama(
-            prompt,  # Podstawowe zadanie
-            template_type=args.template,  # Użyj wybranego szablonu
-            **template_args  # Przekaz dodatkowe argumenty dla szablonu
+            prompt,  # Basic task
+            template_type=args.template,  # Use selected template
+            **template_args  # Pass additional arguments for the template
         )
 
         if not response:
-            print("Nie otrzymano odpowiedzi od Ollama.")
+            print("No response received from Ollama.")
             return
 
-        print("\nOtrzymano odpowiedź od Ollama. Wyodrębniam kod Python...")
+        print("\nResponse received from Ollama. Extracting Python code...")
 
-        # Wyodrębnij kod Python z odpowiedzi
+        # Extract Python code from the response
         code = ollama.extract_python_code(response)
 
         if not code:
-            print("Nie udało się wyodrębnić kodu Python z odpowiedzi.")
-            print("Sprawdź plik 'ollama_response_debug.txt' lub 'ollama_raw_response.json' dla pełnej odpowiedzi.")
+            print("Failed to extract Python code from the response.")
+            print("Check the 'ollama_response_debug.txt' or 'ollama_raw_response.json' file for the full response.")
             return
 
-        print("\nWyodrębniony kod Python:")
+        print("\nExtracted Python code:")
         print("-" * 40)
         print(code)
         print("-" * 40)
 
-        # Zapisz kod do pliku w katalogu .pylama
+        # Save code to a file in the .pylama directory
         code_file = ollama.save_code_to_file(code, os.path.join(PACKAGE_DIR, 'generated_script.py'))
-        print(f"\nKod zapisany do pliku: {code_file}")
+        print(f"\nCode saved to file: {code_file}")
 
-        # Znajdź i zainstaluj zależności
+        # Find and install dependencies
         modules = dependency_manager.extract_imports(code)
         installed, missing = dependency_manager.check_dependencies(modules)
 
-        print(f"\nZnalezione moduły: {', '.join(modules) if modules else 'brak'}")
-        print(f"Zainstalowane moduły: {', '.join(installed) if installed else 'brak'}")
+        print(f"\nFound modules: {', '.join(modules) if modules else 'none'}")
+        print(f"Installed modules: {', '.join(installed) if installed else 'none'}")
 
         if missing:
-            print(f"Brakujące zależności: {', '.join(missing)}")
+            print(f"Missing dependencies: {', '.join(missing)}")
             if not dependency_manager.install_dependencies(missing):
-                print("Przerwano wykonywanie skryptu z powodu błędu instalacji zależności.")
+                print("Script execution aborted due to dependency installation error.")
                 return
         else:
-            print("Wszystkie zależności są już zainstalowane")
+            print("All dependencies are already installed")
 
-        # Automatycznie uruchom kod z debugowaniem
+        # Automatically run code with debugging
         ollama.run_code_with_debug(code_file, prompt, code)
 
     except Exception as e:
-        print(f"Wystąpił błąd: {e}")
+        print(f"An error occurred: {e}")
         import traceback
         traceback.print_exc()
 
     finally:
-        # Zatrzymaj Ollama jeśli została uruchomiona przez ten skrypt
+        # Stop Ollama if it was started by this script
         if 'ollama' in locals():
             ollama.stop_ollama()
 
 
 if __name__ == "__main__":
-    # Sprawdź czy skrypt jest uruchomiony bezpośrednio (nie zaimportowany)
-    # Najpierw zainstaluj podstawowe zależności
+    # Check if the script is run directly (not imported)
+    # First install basic dependencies
     ensure_basic_dependencies()
     main()

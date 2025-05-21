@@ -31,25 +31,25 @@ logger.addHandler(file_handler)
 logger.debug('DependencyManager initialized')
 
 class DependencyManager:
-    """Klasa do zarządzania zależnościami projektu."""
+    """Class for managing project dependencies."""
 
-    # Mapowanie specjalnych przypadków, gdzie nazwa modułu różni się od nazwy pakietu
+    # Mapping of special cases where the module name differs from the package name
     PACKAGE_MAPPING = {
         'PIL': 'pillow',
         'cv2': 'opencv-python',
         'sklearn': 'scikit-learn',
         'bs4': 'beautifulsoup4',
-        'webdriver': 'selenium',  # webdriver jest częścią selenium
-        'Image': 'Pillow',  # Image z PIL
+        'webdriver': 'selenium',  # webdriver is part of selenium
+        'Image': 'Pillow',  # Image from PIL
     }
 
     @staticmethod
     def extract_imports(code: str) -> List[str]:
-        """Wyodrębnij importowane moduły z kodu."""
-        # Usuń komentarze, aby uniknąć fałszywych trafień
+        """Extract imported modules from code."""
+        # Remove comments to avoid false positives
         code = re.sub(r'#.*?$', '', code, flags=re.MULTILINE)
 
-        # Regex do znalezienia importowanych modułów
+        # Regex to find imported modules
         import_patterns = [
             r'^\s*import\s+([a-zA-Z0-9_]+(?:\s*,\s*[a-zA-Z0-9_]+)*)',  # import numpy, os, sys
             r'^\s*from\s+([a-zA-Z0-9_.]+)\s+import',  # from numpy import array
@@ -61,10 +61,10 @@ class DependencyManager:
         for pattern in import_patterns:
             matches = re.finditer(pattern, code, re.MULTILINE)
             for match in matches:
-                # Dla każdego dopasowania, rozdziel po przecinkach i usuń białe znaki
+                # For each match, split by commas and remove whitespace
                 imported_modules = [m.strip() for m in match.group(1).split(',')]
                 for module_name in imported_modules:
-                    # Pobierz tylko główny moduł (np. dla 'selenium.webdriver' weź tylko 'selenium')
+                    # Get only the main module (e.g., for 'selenium.webdriver' take only 'selenium')
                     base_module = module_name.split('.')[0]
                     if base_module and base_module not in modules:
                         modules.add(base_module)
@@ -73,25 +73,25 @@ class DependencyManager:
 
     @staticmethod
     def get_installed_packages() -> Dict[str, str]:
-        """Pobierz listę zainstalowanych pakietów przy użyciu importlib.metadata."""
+        """Get a list of installed packages using importlib.metadata."""
         try:
-            # Pobierz wszystkie dystrybucje
+            # Get all distributions
             distributions = metadata.distributions()
 
-            # Utwórz słownik {nazwa: wersja}
+            # Create dictionary {name: version}
             installed_packages = {}
             for dist in distributions:
                 try:
-                    # W nowszych wersjach:
+                    # In newer versions:
                     name = dist.metadata['Name'].lower()
                     version = dist.version
                 except (AttributeError, KeyError):
                     try:
-                        # Alternatywne podejście:
+                        # Alternative approach:
                         name = dist.name.lower()
                         version = dist.version
                     except AttributeError:
-                        # Jeśli nic nie działa, spróbuj po prostu pobrać nazwę
+                        # If nothing works, just try to get the name
                         name = str(dist).lower()
                         version = "unknown"
 
@@ -108,24 +108,24 @@ class DependencyManager:
 
     @staticmethod
     def check_dependencies(modules: List[str]) -> Tuple[List[str], List[str]]:
-        """Sprawdź, które zależności są już zainstalowane, a których brakuje."""
+        """Check which dependencies are already installed and which are missing."""
         installed_packages = DependencyManager.get_installed_packages()
         installed = []
         missing = []
 
         for module in modules:
             try:
-                # Najpierw spróbuj zaimportować moduł
+                # First try to import the module
                 importlib.import_module(module)
                 installed.append(module)
                 continue
             except ImportError:
                 pass
 
-            # Sprawdź mapowanie specjalnych przypadków
+            # Check the mapping of special cases
             package_name = DependencyManager.PACKAGE_MAPPING.get(module, module)
 
-            # Sprawdź, czy pakiet jest zainstalowany (nawet jeśli nie można go zaimportować)
+            # Check if the package is installed (even if it cannot be imported)
             if package_name.lower() in installed_packages:
                 installed.append(module)
             else:
@@ -135,43 +135,43 @@ class DependencyManager:
 
     @staticmethod
     def install_dependencies(packages: List[str]) -> bool:
-        """Zainstaluj brakujące zależności."""
+        """Install missing dependencies."""
         if not packages:
             return True
 
-        # Usuń duplikaty i zmapuj nazwy modułów na nazwy pakietów
+        # Remove duplicates and map module names to package names
         unique_packages = []
         seen = set()
 
         for pkg in packages:
-            # Użyj zmapowanej nazwy pakietu jeśli istnieje, w przeciwnym razie użyj oryginalnej
+            # Use the mapped package name if it exists, otherwise use the original
             mapped_pkg = DependencyManager.PACKAGE_MAPPING.get(pkg, pkg)
             if mapped_pkg.lower() not in seen:
                 seen.add(mapped_pkg.lower())
                 unique_packages.append(mapped_pkg)
 
-        logger.info(f"Instalowanie zależności: {', '.join(unique_packages)}...")
+        logger.info(f"Installing dependencies: {', '.join(unique_packages)}...")
 
-        # Podziel instalację na pojedyncze pakiety, aby lepiej śledzić błędy
+        # Split installation into individual packages to better track errors
         success = True
         for pkg in unique_packages:
             try:
-                logger.info(f"Instalowanie {pkg}...")
+                logger.info(f"Installing {pkg}...")
                 subprocess.check_call(
                     [sys.executable, "-m", "pip", "install", pkg],
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE
                 )
-                logger.info(f"Zainstalowano {pkg} pomyślnie")
+                logger.info(f"Installed {pkg} successfully")
             except subprocess.CalledProcessError as e:
-                logger.error(f"Nie udało się zainstalować {pkg}: {str(e)}")
+                logger.error(f"Failed to install {pkg}: {str(e)}")
                 success = False
-                # Kontynuuj instalację pozostałych pakietów mimo błędu
+                # Continue installing remaining packages despite the error
                 continue
 
         if success:
-            logger.info("Wszystkie zależności zostały pomyślnie zainstalowane")
+            logger.info("All dependencies were successfully installed")
         else:
-            logger.warning("Wystąpiły błędy podczas instalacji niektórych zależności")
+            logger.warning("Errors occurred while installing some dependencies")
 
         return success

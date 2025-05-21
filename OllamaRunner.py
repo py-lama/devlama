@@ -50,7 +50,7 @@ if USE_DOCKER:
 
 
 class OllamaRunner:
-    """Klasa do uruchamiania Ollama i wykonywania wygenerowanego kodu."""
+    """Class for running Ollama and executing generated code."""
 
     def __init__(self, ollama_path: str = None, model: str = None):
         self.ollama_path = ollama_path or os.getenv('OLLAMA_PATH', 'ollama')
@@ -68,14 +68,14 @@ class OllamaRunner:
         self.docker_sandbox = None
         if self.use_docker:
             self.docker_sandbox = DockerSandbox()
-            logger.info("Używanie trybu Docker dla Ollama.")
+            logger.info("Using Docker mode for Ollama.")
 
     def start_ollama(self) -> None:
-        """Uruchom serwer Ollama jeśli nie jest już uruchomiony."""
+        """Start the Ollama server if it's not already running."""
         if self.use_docker:
-            # Uruchom Ollama w kontenerze Docker
+            # Run Ollama in Docker container
             if not self.docker_sandbox.start_container():
-                raise RuntimeError("Nie udało się uruchomić kontenera Docker z Ollama.")
+                raise RuntimeError("Failed to start Docker container with Ollama.")
             return
 
         try:
@@ -140,40 +140,65 @@ class OllamaRunner:
         else:
             formatted_prompt = prompt
             
-        logger.info(f"Wysyłanie zapytania do modelu {self.model}...")
+        logger.info(f"Sending query to model {self.model}...")
 
-        # Najpierw sprawdźmy, czy model istnieje i jest dostępny
+        # First, check if the model exists and is available
         try:
             tags_response = requests.get("http://localhost:11434/api/tags")
             models = tags_response.json().get("models", [])
-            model_exists = any(m.get("name").split(":")[0] == self.model for m in models)
+            
+            # Check for exact match first
+            model_exists = any(m.get("name") == self.model for m in models)
+            
+            # If no exact match, check if the model name is a prefix (without version)
+            if not model_exists:
+                matching_models = [m for m in models if m.get("name").split(":")[0] == self.model]
+                if matching_models:
+                    # Use the first matching model with full name including version
+                    self.model = matching_models[0].get("name")
+                    DOTT=":"
+                    logger.info(f"Found model matching prefix '{self.model.split(DOTT)[0]}': using full name '{self.model}'.")
+                    model_exists = True
 
             if not model_exists:
                 logger.warning(f"Model '{self.model}' is not installed. Available models:")
                 for model in models:
                     logger.info(f" - {model.get('name')}")
 
-                # Szukaj modelów alternatywnych z listy fallback
+                # Look for alternative models from the fallback list
                 found_fallback = False
                 for fallback_model in self.fallback_models:
-                    if fallback_model and any(m.get("name").split(":")[0] == fallback_model for m in models):
+                    if not fallback_model:
+                        continue
+                        
+                    # Check for exact match first
+                    exact_match = any(m.get("name") == fallback_model for m in models)
+                    if exact_match:
                         self.model = fallback_model
-                        logger.info(f"Używam modelu '{self.model}' zamiast tego.")
+                        logger.info(f"Using model '{self.model}' instead.")
+                        found_fallback = True
+                        break
+                        
+                    # If no exact match, check for prefix match
+                    matching_fallbacks = [m for m in models if m.get("name").split(":")[0] == fallback_model]
+                    if matching_fallbacks:
+                        self.model = matching_fallbacks[0].get("name")
+                        logger.info(f"Using model '{self.model}' instead.")
                         found_fallback = True
                         break
 
-                # Użyj pierwszego dostępnego, jeśli nie znaleziono w fallback
+                # Use the first available model if none found in fallback
                 if not found_fallback:
                     if models:
-                        self.model = models[0].get('name').split(":")[0]
-                        logger.info(f"Używam modelu '{self.model}' zamiast tego.")
+                        self.model = models[0].get('name')  # Use full name with version
+                        logger.info(f"Using model '{self.model}' instead.")
                     else:
-                        logger.error("Brak dostępnych modeli. Proszę zainstalować model za pomocą 'ollama pull <model>'.")
+                        logger.error("No available models. Please install a model using 'ollama pull <model>'.")
                         return ""
         except Exception as e:
-            logger.error(f"Nie można sprawdzić dostępnych modeli: {e}")
+            logger.error(f"Cannot check available models: {e}")
 
-        # Używamy API generate z wyłączonym streamingiem
+        # Use the generate API with streaming disabled
         data = {
             "model": self.model,
             "prompt": formatted_prompt,
