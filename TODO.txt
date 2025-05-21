@@ -6,3 +6,4 @@
 - zabezpiecz sandbox, aby nie psuł całej aplikacji, ale by uruchamiał w docker i tam zmienial, i mial dostep do logs
 - wygeneruj .env jesli nie istnieje z przykladowymi wartosicami dla zmiennych okreslaajcych srodowisko, punkt startowy, model, python-
 - porzykladowe testowy prompt,
+- rozwin dokumentacje o sandbox, dependency manager, registry, debugger, logger

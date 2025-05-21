@@ -7,12 +7,29 @@ import subprocess
 import sys
 import re
 from typing import List, Dict, Any, Tuple, Optional
+import logging
+from pathlib import Path
+from dotenv import load_dotenv
 
+# Konfiguracja logowania
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler('pylama.log')
+    ]
+)
+
+logger = logging.getLogger('pylama')
+
+# Załaduj zmienne środowiskowe
+load_dotenv()
 
 # Funkcja do instalacji podstawowych zależności
 def ensure_basic_dependencies():
     """Sprawdza i instaluje podstawowe zależności potrzebne do działania skryptu."""
-    basic_dependencies = ['setuptools', 'requests', 'importlib-metadata']
+    basic_dependencies = ['setuptools', 'requests', 'importlib-metadata', 'python-dotenv']
 
     for dep in basic_dependencies:
         try:
@@ -28,13 +45,15 @@ def ensure_basic_dependencies():
                 except ImportError:
                     # Dla starszych wersji Pythona
                     import importlib_metadata
+            elif dep == 'python-dotenv':
+                from dotenv import load_dotenv
         except ImportError:
-            print(f"Instalowanie podstawowej zależności: {dep}...")
+            logger.info(f"Instalowanie podstawowej zależności: {dep}...")
             try:
                 subprocess.check_call([sys.executable, "-m", "pip", "install", dep])
-                print(f"Zainstalowano {dep}")
+                logger.info(f"Zainstalowano {dep}")
             except subprocess.CalledProcessError:
-                print(f"Nie udało się zainstalować {dep}. Przerwanie.")
+                logger.error(f"Nie udało się zainstalować {dep}. Przerwanie.")
                 sys.exit(1)
 
 
@@ -53,27 +72,51 @@ except ImportError:
     # Dla starszych wersji Pythona
     import importlib_metadata as metadata
 
+# Importuj sandbox_docker, jeżeli używamy trybu Docker
+USE_DOCKER = os.getenv('USE_DOCKER', 'False').lower() in ('true', '1', 't')
+if USE_DOCKER:
+    try:
+        from sandbox import DockerSandbox
+    except ImportError:
+        logger.error("Nie można zaimportować modułu sandbox. Upewnij się, że plik sandbox.py jest dostępny.")
+        sys.exit(1)
+
 
 class OllamaRunner:
     """Klasa do uruchamiania Ollama i wykonywania wygenerowanego kodu."""
 
-    def __init__(self, ollama_path: str = "ollama", model: str = "llama3"):
-        self.ollama_path = ollama_path
-        self.model = model
+    def __init__(self, ollama_path: str = None, model: str = None):
+        self.ollama_path = ollama_path or os.getenv('OLLAMA_PATH', 'ollama')
+        self.model = model or os.getenv('OLLAMA_MODEL', 'llama3')
+        self.fallback_models = os.getenv('OLLAMA_FALLBACK_MODELS', '').split(',')
         self.ollama_process = None
+
         # Aktualizacja do prawidłowych endpointów API Ollama
         self.generate_api_url = "http://localhost:11434/api/generate"
         self.chat_api_url = "http://localhost:11434/api/chat"
         self.version_api_url = "http://localhost:11434/api/version"
 
+        # Konfiguracja Docker
+        self.use_docker = USE_DOCKER
+        self.docker_sandbox = None
+        if self.use_docker:
+            self.docker_sandbox = DockerSandbox()
+            logger.info("Używanie trybu Docker dla Ollama.")
+
     def start_ollama(self) -> None:
         """Uruchom serwer Ollama jeśli nie jest już uruchomiony."""
+        if self.use_docker:
+            # Uruchom Ollama w kontenerze Docker
+            if not self.docker_sandbox.start_container():
+                raise RuntimeError("Nie udało się uruchomić kontenera Docker z Ollama.")
+            return
+
         try:
             # Sprawdź czy Ollama już działa poprzez zapytanie o wersję
             response = requests.get(self.version_api_url)
-            print(f"Ollama już działa (wersja: {response.json().get('version', 'nieznana')})")
+            logger.info(f"Ollama już działa (wersja: {response.json().get('version', 'nieznana')})")
         except requests.exceptions.ConnectionError:
-            print("Uruchamianie serwera Ollama...")
+            logger.info("Uruchamianie serwera Ollama...")
             # Uruchom Ollama w tle
             self.ollama_process = subprocess.Popen(
                 [self.ollama_path, "serve"],
@@ -86,27 +129,32 @@ class OllamaRunner:
             # Sprawdź czy serwer faktycznie się uruchomił
             try:
                 response = requests.get(self.version_api_url)
-                print(f"Serwer Ollama uruchomiony (wersja: {response.json().get('version', 'nieznana')})")
+                logger.info(f"Serwer Ollama uruchomiony (wersja: {response.json().get('version', 'nieznana')})")
             except requests.exceptions.ConnectionError:
-                print("BŁĄD: Nie udało się uruchomić serwera Ollama.")
+                logger.error("BŁĄD: Nie udało się uruchomić serwera Ollama.")
                 if self.ollama_process:
-                    print("Szczegóły błędu:")
+                    logger.error("Szczegóły błędu:")
                     out, err = self.ollama_process.communicate(timeout=1)
-                    print(f"STDOUT: {out.decode('utf-8', errors='ignore')}")
-                    print(f"STDERR: {err.decode('utf-8', errors='ignore')}")
+                    logger.error(f"STDOUT: {out.decode('utf-8', errors='ignore')}")
+                    logger.error(f"STDERR: {err.decode('utf-8', errors='ignore')}")
                 raise RuntimeError("Nie udało się uruchomić serwera Ollama")
 
     def stop_ollama(self) -> None:
         """Zatrzymaj serwer Ollama jeśli został uruchomiony przez ten skrypt."""
+        if self.use_docker:
+            if self.docker_sandbox:
+                self.docker_sandbox.stop_container()
+            return
+
         if self.ollama_process:
-            print("Zatrzymywanie serwera Ollama...")
+            logger.info("Zatrzymywanie serwera Ollama...")
             self.ollama_process.terminate()
             self.ollama_process.wait()
-            print("Serwer Ollama zatrzymany")
+            logger.info("Serwer Ollama zatrzymany")
 
     def query_ollama(self, prompt: str) -> str:
         """Wyślij zapytanie do API Ollama i zwróć odpowiedź."""
-        print(f"Wysyłanie zapytania do modelu {self.model}...")
+        logger.info(f"Wysyłanie zapytania do modelu {self.model}...")
 
         # Najpierw sprawdźmy, czy model istnieje i jest dostępny
         try:
@@ -115,21 +163,31 @@ class OllamaRunner:
             model_exists = any(m.get("name").split(":")[0] == self.model for m in models)
 
             if not model_exists:
-                print(f"Model '{self.model}' nie jest zainstalowany. Dostępne modele:")
+                logger.info(f"Model '{self.model}' nie jest zainstalowany. Dostępne modele:")
                 for model in models:
-                    print(f" - {model.get('name')}")
+                    logger.info(f" - {model.get('name')}")
 
-                # Użyj pierwszego dostępnego modelu, jeśli istnieje
-                if models:
-                    self.model = models[0].get('name').split(":")[0]
-                    print(f"Używam modelu '{self.model}' zamiast tego.")
-                else:
-                    print("Brak dostępnych modeli. Proszę zainstalować model za pomocą 'ollama pull <model>'.")
-                    return ""
+                # Szukaj modelów alternatywnych z listy fallback
+                found_fallback = False
+                for fallback_model in self.fallback_models:
+                    if fallback_model and any(m.get("name").split(":")[0] == fallback_model for m in models):
+                        self.model = fallback_model
+                        logger.info(f"Używam modelu '{self.model}' zamiast tego.")
+                        found_fallback = True
+                        break
+
+                # Użyj pierwszego dostępnego, jeśli nie znaleziono w fallback
+                if not found_fallback:
+                    if models:
+                        self.model = models[0].get('name').split(":")[0]
+                        logger.info(f"Używam modelu '{self.model}' zamiast tego.")
+                    else:
+                        logger.error("Brak dostępnych modeli. Proszę zainstalować model za pomocą 'ollama pull <model>'.")
+                        return ""
         except Exception as e:
-            print(f"Nie można sprawdzić dostępnych modeli: {e}")
+            logger.error(f"Nie można sprawdzić dostępnych modeli: {e}")
 
-        # Użyj API generate z wyłączonym streamingiem
+        # Używamy API generate z wyłączonym streamingiem
         data = {
             "model": self.model,
             "prompt": prompt,
@@ -143,16 +201,17 @@ class OllamaRunner:
             response_json = response.json()
 
             # Zapisz surową odpowiedź do pliku dla debugowania
-            with open("ollama_raw_response.json", "w", encoding="utf-8") as f:
-                json.dump(response_json, f, indent=2)
+            if os.getenv('SAVE_RAW_RESPONSES', 'False').lower() in ('true', '1', 't'):
+                with open("ollama_raw_response.json", "w", encoding="utf-8") as f:
+                    json.dump(response_json, f, indent=2)
 
             return response_json.get("response", "")
         except Exception as e:
-            print(f"Błąd podczas komunikacji z API generate: {e}")
+            logger.error(f"Błąd podczas komunikacji z API generate: {e}")
 
             try:
                 # Spróbuj użyć /api/chat jako alternatywnego API
-                print("Próba użycia API chat...")
+                logger.info("Próba użycia API chat...")
                 chat_data = {
                     "model": self.model,
                     "messages": [{"role": "user", "content": prompt}],
@@ -164,15 +223,16 @@ class OllamaRunner:
                 chat_json = chat_response.json()
 
                 # Zapisz surową odpowiedź do pliku dla debugowania
-                with open("ollama_raw_chat_response.json", "w", encoding="utf-8") as f:
-                    json.dump(chat_json, f, indent=2)
+                if os.getenv('SAVE_RAW_RESPONSES', 'False').lower() in ('true', '1', 't'):
+                    with open("ollama_raw_chat_response.json", "w", encoding="utf-8") as f:
+                        json.dump(chat_json, f, indent=2)
 
                 # Ekstrakcja odpowiedzi z innego formatu
                 if "message" in chat_json and "content" in chat_json["message"]:
                     return chat_json["message"]["content"]
                 return ""
             except Exception as chat_e:
-                print(f"Błąd podczas komunikacji z API chat: {chat_e}")
+                logger.error(f"Błąd podczas komunikacji z API chat: {chat_e}")
                 return ""
 
     def extract_python_code(self, text: str) -> str:
@@ -207,10 +267,16 @@ class OllamaRunner:
             return '\n'.join(code_lines)
 
         # Jeśli wszystko inne zawiedzie, wypisz odpowiedź do pliku debug
-        with open("ollama_response_debug.txt", "w", encoding="utf-8") as f:
+        log_dir = os.getenv('LOG_DIR', './logs')
+        Path(log_dir).mkdir(parents=True, exist_ok=True)
+
+        timestamp = time.strftime("%Y%m%d-%H%M%S")
+        debug_file = os.path.join(log_dir, f"ollama_response_debug_{timestamp}.txt")
+
+        with open(debug_file, "w", encoding="utf-8") as f:
             f.write(text)
 
-        print("DEBUG: Zapisano pełną odpowiedź do pliku 'ollama_response_debug.txt'")
+        logger.info(f"DEBUG: Zapisano pełną odpowiedź do pliku '{debug_file}'")
         return ""
 
     def save_code_to_file(self, code: str, filename: str = "generated_script.py") -> str:
