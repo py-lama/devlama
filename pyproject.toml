@@ -2,11 +2,11 @@
 name = "pylama"
 version = "0.1.0"
 description = "Python code generation and execution using Ollama language models"
-authors = ["Your Name <your.email@example.com>"]
-license = "MIT"
+authors = ["Tom Sapletta <info@softreck.dev>"]
+license = "Apache"
 readme = "README.md"
-repository = "https://github.com/yourusername/py-lama"
-documentation = "https://github.com/yourusername/py-lama#readme"
+repository = "https://github.com/py-lama/pylama"
+documentation = "https://github.com/py-lama/pylama#readme"
 keywords = ["ai", "code-generation", "ollama", "python"]
 
 [tool.poetry.dependencies]

@@ -11,7 +11,7 @@ import importlib
 from importlib import metadata
 
 # Create .pylama directory if it doesn't exist
-PACKAGE_DIR = os.path.join(os.path.expanduser('~'), '.pylama')
+PACKAGE_DIR = os.path.join(os.path.expanduser('.'), '.pylama')
 os.makedirs(PACKAGE_DIR, exist_ok=True)
 
 # Konfiguracja logowania
