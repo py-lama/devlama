@@ -4,6 +4,39 @@
 
 PyLama is a Python tool that leverages Ollama's language models to generate and execute Python code. It simplifies the process of writing and running Python scripts by handling dependency management and code execution automatically. With the new template system, it generates higher quality, platform-aware code that's ready to run.
 
+## Using the Makefile
+
+PyLama includes a Makefile to simplify common development tasks:
+
+```bash
+# Set up the project (creates a virtual environment and installs dependencies)
+make setup
+
+# Run the API server (default port 8002)
+make run
+
+# Run the API server on a custom port
+make run PORT=8080
+
+# The run-port command is also available for backward compatibility
+make run-port PORT=8080
+
+# Run tests
+make test
+
+# Format code with black
+make format
+
+# Lint code with flake8
+make lint
+
+# Clean up project (remove __pycache__, etc.)
+make clean
+
+# Show all available commands
+make help
+```
+
 ## Project Structure and Dependencies
 
 PyLama is built on a modular architecture with three main components:
