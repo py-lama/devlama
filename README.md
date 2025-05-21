@@ -2,9 +2,106 @@
 
 # PyLama - Python Code Generation with Ollama
 
-PyLama is a Python tool that leverages Ollama's language models to generate and execute Python code. It simplifies the process of writing and running Python scripts by handling dependency management and code execution automatically. With the new template system, it generates higher quality, platform-aware code that's ready to run.
+PyLama is a Python tool that leverages Ollama's language models to generate and execute Python code. It simplifies the process of writing and running Python scripts by handling dependency management and code execution automatically. With the template system, it generates higher quality, platform-aware code that's ready to run.
 
-# PyLama Microservices Architecture
+## Features
+
+- **Real Ollama Integration**: Uses real Ollama models to generate high-quality Python code
+- **Mock Mode**: Supports a mock mode for testing without requiring Ollama
+- **Smart Model Selection**: Automatically selects the best available model
+- **Template System**: Generates code with awareness of platform, dependencies, and more
+- **Interactive Mode**: Provides an interactive CLI for model selection and code generation
+- **Code Execution**: Can execute generated code directly
+
+## Requirements
+
+- Python 3.8+
+- [Ollama](https://ollama.ai) installed and running (unless using mock mode)
+- One or more code generation models pulled in Ollama (e.g., `codellama:7b`, `phi3:latest`)
+
+## Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/py-lama/pylama.git
+cd pylama
+
+# Install dependencies
+pip install -e .
+```
+
+## Usage
+
+### Basic Usage
+
+```bash
+# Generate code using the default model
+pylama "create a function to calculate fibonacci numbers"
+
+# Generate and run code
+pylama -r "create a web server with Flask"
+
+# Save generated code to a file
+pylama -s "create a script to download files from URLs"
+
+# Use a specific model
+pylama --model codellama:7b "create a binary search tree implementation"
+
+# Use mock mode (no Ollama required)
+pylama --mock "print hello world"
+```
+
+### Interactive Mode
+
+```bash
+# Start interactive mode
+pylama -i
+
+# Start interactive mode with mock implementation
+pylama -i --mock
+```
+
+## Ollama Integration
+
+PyLama integrates with Ollama to provide high-quality code generation. By default, it will:
+
+1. Connect to the Ollama server running on `localhost:11434`
+2. Use the best available model for code generation
+3. Fall back to alternative models if the requested one isn't available
+
+### Setting Up Ollama
+
+```bash
+# Install Ollama (if not already installed)
+# See https://ollama.ai for installation instructions
+
+# Start the Ollama server
+ollama serve
+
+# Pull recommended models for code generation
+ollama pull codellama:7b
+ollama pull phi3:latest
+```
+
+### Environment Variables
+
+You can configure PyLama using environment variables:
+
+- `OLLAMA_PATH`: Path to the Ollama executable (default: `ollama`)
+- `OLLAMA_MODEL`: Default model to use (default: `codellama:7b`)
+- `OLLAMA_FALLBACK_MODELS`: Comma-separated list of fallback models
+
+## Mock Mode
+
+PyLama includes a mock mode that doesn't require Ollama to be installed or running. This is useful for testing or when you don't have access to Ollama.
+
+```bash
+pylama --mock "print hello world"
+```
+
+In mock mode, PyLama will return pre-defined code examples based on the prompt.
+
+## PyLama Microservices Architecture
 
 ## Overview
 
@@ -672,142 +769,6 @@ sequenceDiagram
     PyLama->>User: Display results
 ```
 
-## Usage
-
-### Basic Usage
-
-```bash
-python pylama.py
-```
-
-## Model Management (models.py)
-
-- **Automatic Environment & Dependency Setup:**
-  - Running `models.py` will auto-create a `.venv` and install required dependencies (`requests`, `bs4`, `python-dotenv`) if missing.
-  - No manual pip/venv setup required—just run the script.
-- **Model List Updating:**
-  - Models are fetched directly from the [Ollama library](https://ollama.com/library) (HTML scraping), not from a static JSON.
-  - Only coding-related models up to 7B parameters are shown.
-  - Use the interactive CLI to update the list (`u`), install by number, or quit (`q`).
-- **Immediate Feedback:**
-  - Installed models are listed at startup for quick reference.
-
-## Python Sandbox (sandbox package)
-
-- **Modular Architecture:**
-  - Refactored into specialized components for better maintainability and organization:
-    - `code_analyzer.py`: Analyzes Python code and detects dependencies
-    - `dependency_manager.py`: Manages package dependencies and installations
-    - `python_sandbox.py`: Executes Python code safely in a local environment
-    - `docker_sandbox.py`: Executes Python code in a Docker container
-    - `sandbox_manager.py`: Manages different sandbox types
-    - `utils.py`: Provides utility functions for the sandbox package
-- **Automatic Dependency Management:**
-  - The sandbox analyzes Python code, detects imports, and installs missing packages automatically (locally or in Docker).
-- **Safe & Flexible Execution:**
-  - Run code locally or in a Docker container for isolation (choose with `use_docker=True/False`).
-  - Handles syntax errors and runtime exceptions with clear error messages.
-  - Execution timeout can be set to avoid hanging code.
-- **Backward Compatibility:**
-  - Original `sandbox.py` serves as a compatibility layer for existing code.
-- **Usage Example:**
-  ```python
-  # Using the new modular structure
-  from sandbox.python_sandbox import PythonSandbox
-  sandbox = PythonSandbox(use_docker=False)
-  result = sandbox.run_code('import numpy as np\nprint(np.arange(5))')
-  print(result['stdout'])
-  
-  # Using the compatibility layer (for existing code)
-  from sandbox import run_code
-  result = run_code('import numpy as np\nprint(np.arange(5))')
-  print(result['stdout'])
-  ```
-
-## Project Structure
-
-PyLama has been restructured into a modular architecture with three main components:
-
-### Architecture Overview
-
-```mermaid
-graph TD
-    User[User] -->|Prompt| PyLama[PyLama Core]
-    PyLama -->|Model Management| Pyllm[Pyllm Package]
-    PyLama -->|Code Execution| PyBox[PyBox Package]
-    Pyllm -->|API Calls| Ollama[Ollama API]
-    Ollama -->|Generated Code| Pyllm
-    Pyllm -->|Code| PyLama
-    PyLama -->|Code to Execute| PyBox
-    PyBox -->|Execution Results| PyLama
-    PyLama -->|Results| User
-    
-    subgraph "PyLama Components"
-        PyLama
-        Pyllm
-        PyBox
-    end
-```
-
-### Component Structure
-
-```
-┌─────────────────────────────────┐
-│           PyLama Core           │
-├─────────────────────────────────┤
-│ ┌─────────┐      ┌───────────┐ │
-│ │ CLI     │      │ Templates │ │
-│ └─────────┘      └───────────┘ │
-│ ┌─────────────────────────────┐ │
-│ │      Code Generation        │ │
-│ └─────────────────────────────┘ │
-└───────────────┬─────────────────┘
-                │
-    ┌───────────┴───────────┐
-    │                       │
-┌───▼───────────┐   ┌──────▼─────────┐
-│  Pyllm Package │   │ PyBox Package  │
-├────────────────┤   ├────────────────┤
-│ ┌────────────┐ │   │ ┌────────────┐ │
-│ │ Models     │ │   │ │ Sandboxes  │ │
-│ └────────────┘ │   │ └────────────┘ │
-│ ┌────────────┐ │   │ ┌────────────┐ │
-│ │ API Client │ │   │ │ Analyzers  │ │
-│ └────────────┘ │   │ └────────────┘ │
-└────────────────┘   └────────────────┘
-```
-
-### Components Details
-
-1. **Core PyLama** - The main application
-   - `pylama.py`: Main script for the application
-   - `DependencyManager.py`: Manages Python package dependencies
-   - `OllamaRunner.py`: Handles interaction with the Ollama API
-   - `templates.py`: Contains templates for code generation
-   - `cli.py`: Command-line interface for the application
-
-2. **PyBox Package** - Sandbox for safe code execution
-   - `code_analyzer.py`: Analyzes Python code and detects dependencies
-   - `dependency_manager.py`: Manages package dependencies and installations
-   - `python_sandbox.py`: Executes Python code safely in a local environment
-   - `docker_sandbox.py`: Executes Python code in a Docker container
-   - `sandbox_manager.py`: Manages different sandbox types
-   - `utils.py`: Provides utility functions for the sandbox
-
-3. **Pyllm Package** - Model management for LLMs
-   - `models.py`: Handles model discovery, installation, and configuration
-   - Functions for model management: `get_models()`, `get_default_model()`, `set_default_model()`, etc.
-
-### Package Dependencies
-
-The modular architecture allows each component to be developed, tested, and maintained independently:
-
-- **PyLama Core** depends on both PyBox and Pyllm packages
-- **PyBox** is independent and can be used in other projects for safe code execution
-- **Pyllm** is independent and can be used in other projects for LLM model management
-
-This separation of concerns makes the codebase more maintainable and allows for better testing and development workflows.
-
 ## Advanced Usage
 
 ### Using PyBox for Code Execution
@@ -1243,5 +1204,3 @@ Poniżej orientacyjne wymagania sprzętowe dla różnych rozmiarów modeli:
   - A: Run `models.py` and press `u` in the menu.
 - **Q: How do I run code with sandbox.py?**
   - A: See the usage example above. Dependencies are managed automatically.
-
-```

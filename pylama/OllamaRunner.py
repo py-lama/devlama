@@ -54,8 +54,9 @@ class OllamaRunner:
 
     def __init__(self, ollama_path: str = None, model: str = None, mock_mode: bool = False):
         self.ollama_path = ollama_path or os.getenv('OLLAMA_PATH', 'ollama')
-        self.model = model or os.getenv('OLLAMA_MODEL', 'codellama:7b')  # Changed default from llama3 to codellama:7b
-        self.fallback_models = os.getenv('OLLAMA_FALLBACK_MODELS', '').split(',')
+        # Set default model with fallbacks to ensure we use an available model
+        self.model = model or os.getenv('OLLAMA_MODEL', 'codellama:7b')
+        self.fallback_models = os.getenv('OLLAMA_FALLBACK_MODELS', 'codellama:7b,phi3:latest,tinyllama:latest').split(',')
         self.ollama_process = None
         self.mock_mode = mock_mode
         # Update to the correct Ollama API endpoints for v0.7.0
@@ -70,6 +71,7 @@ class OllamaRunner:
         if self.use_docker:
             self.docker_sandbox = DockerSandbox()
             logger.info("Using Docker mode for Ollama.")
+        self.original_model_specified = model is not None
 
     def start_ollama(self) -> None:
         """Start the Ollama server if it's not already running."""
@@ -154,6 +156,21 @@ class OllamaRunner:
                 if model_base in available:
                     logger.info(f"Using model {available} instead of {self.model}")
                     self.model = available
+                    return True
+            
+            # Only use fallbacks if the model wasn't explicitly specified
+            if not hasattr(self, 'original_model_specified') or not self.original_model_specified:
+                # Try fallback models if primary model not available
+                for fallback in self.fallback_models:
+                    if fallback in available_models:
+                        logger.info(f"Primary model {self.model} not found. Using fallback model {fallback}")
+                        self.model = fallback
+                        return True
+                        
+                # If we still don't have a model, use the first available one
+                if available_models:
+                    self.model = available_models[0]
+                    logger.info(f"Using available model {self.model}")
                     return True
                     
             # Model not found
