@@ -10,17 +10,23 @@ from dotenv import load_dotenv
 from DependencyManager import DependencyManager
 from OllamaRunner import OllamaRunner
 
+# Create .pylama directory
+PACKAGE_DIR = os.path.join(os.path.expanduser('~'), '.pylama')
+os.makedirs(PACKAGE_DIR, exist_ok=True)
+
 # Konfiguracja logowania
+log_file = os.path.join(PACKAGE_DIR, 'pylama.log')
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler('pylama.log')
+        logging.FileHandler(log_file)
     ]
 )
 
 logger = logging.getLogger('pylama')
+logger.info(f'Logi zapisywane w: {log_file}')
 
 # Załaduj zmienne środowiskowe
 load_dotenv()
@@ -110,8 +116,8 @@ def main():
         print(code)
         print("-" * 40)
 
-        # Zapisz kod do pliku
-        code_file = ollama.save_code_to_file(code)
+        # Zapisz kod do pliku w katalogu .pylama
+        code_file = ollama.save_code_to_file(code, os.path.join(PACKAGE_DIR, 'generated_script.py'))
         print(f"\nKod zapisany do pliku: {code_file}")
 
         # Znajdź i zainstaluj zależności

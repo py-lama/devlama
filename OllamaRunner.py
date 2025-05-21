@@ -9,17 +9,23 @@ import importlib
 import logging
 from typing import List, Dict, Any, Tuple, Optional
 
+# Create .pylama directory if it doesn't exist
+PACKAGE_DIR = os.path.join(os.path.expanduser('~'), '.pylama')
+os.makedirs(PACKAGE_DIR, exist_ok=True)
+
 # Konfiguracja logowania
+log_file = os.path.join(PACKAGE_DIR, 'pylama_ollama.log')
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler('pylama.log')
+        logging.FileHandler(log_file)
     ]
 )
 
-logger = logging.getLogger('pylama')
+logger = logging.getLogger('pylama.ollama')
+logger.info(f'Logi Ollama zapisywane w: {log_file}')
 
 # Użyj importlib.metadata zamiast pkg_resources
 try:
@@ -159,8 +165,10 @@ class OllamaRunner:
 
             # Zapisz surową odpowiedź do pliku dla debugowania
             if os.getenv('SAVE_RAW_RESPONSES', 'False').lower() in ('true', '1', 't'):
-                with open("ollama_raw_response.json", "w", encoding="utf-8") as f:
+                debug_file = os.path.join(PACKAGE_DIR, "ollama_raw_response.json")
+                with open(debug_file, "w", encoding="utf-8") as f:
                     json.dump(response_json, f, indent=2)
+                logger.debug(f'Zapisano surową odpowiedź do {debug_file}')
 
             return response_json.get("response", "")
         except Exception as e:
@@ -181,8 +189,10 @@ class OllamaRunner:
 
                 # Zapisz surową odpowiedź do pliku dla debugowania
                 if os.getenv('SAVE_RAW_RESPONSES', 'False').lower() in ('true', '1', 't'):
-                    with open("ollama_raw_chat_response.json", "w", encoding="utf-8") as f:
+                    debug_file = os.path.join(PACKAGE_DIR, "ollama_raw_chat_response.json")
+                    with open(debug_file, "w", encoding="utf-8") as f:
                         json.dump(chat_json, f, indent=2)
+                    logger.debug(f'Zapisano surową odpowiedź czatu do {debug_file}')
 
                 # Ekstrakcja odpowiedzi z innego formatu
                 if "message" in chat_json and "content" in chat_json["message"]:
@@ -224,11 +234,11 @@ class OllamaRunner:
             return '\n'.join(code_lines)
 
         # Jeśli wszystko inne zawiedzie, wypisz odpowiedź do pliku debug
-        log_dir = os.getenv('LOG_DIR', './logs')
-        Path(log_dir).mkdir(parents=True, exist_ok=True)
+        debug_dir = os.path.join(PACKAGE_DIR, 'debug')
+        os.makedirs(debug_dir, exist_ok=True)
 
         timestamp = time.strftime("%Y%m%d-%H%M%S")
-        debug_file = os.path.join(log_dir, f"ollama_response_debug_{timestamp}.txt")
+        debug_file = os.path.join(debug_dir, f"ollama_response_debug_{timestamp}.txt")
 
         with open(debug_file, "w", encoding="utf-8") as f:
             f.write(text)
@@ -236,10 +246,19 @@ class OllamaRunner:
         logger.info(f"DEBUG: Zapisano pełną odpowiedź do pliku '{debug_file}'")
         return ""
 
-    def save_code_to_file(self, code: str, filename: str = "generated_script.py") -> str:
+    def save_code_to_file(self, code: str, filename: str = None) -> str:
         """Zapisz wygenerowany kod do pliku i zwróć ścieżkę do pliku."""
+        if filename is None:
+            timestamp = time.strftime("%Y%m%d_%H%M%S")
+            filename = os.path.join(PACKAGE_DIR, f"generated_script_{timestamp}.py")
+        
+        # Upewnij się, że katalog docelowy istnieje
+        os.makedirs(os.path.dirname(filename), exist_ok=True)
+        
         with open(filename, "w", encoding="utf-8") as f:
             f.write(code)
+        
+        logger.info(f'Zapisano skrypt do pliku: {filename}')
         return os.path.abspath(filename)
 
     def run_code_with_debug(self, code_file: str, original_prompt: str, original_code: str) -> bool:
