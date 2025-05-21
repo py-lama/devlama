@@ -81,7 +81,13 @@ def get_example_prompt(example_name):
         "web_server": "create a simple web server with HTTP server, include import for http.server and BaseHTTPRequestHandler"
     }
     
-    base_name = example_name.stem
+    # Handle both Path objects and strings
+    if hasattr(example_name, 'stem'):
+        base_name = example_name.stem
+    else:
+        # If it's a string, remove the .py extension if present
+        base_name = example_name.replace('.py', '')
+    
     return prompts.get(base_name, f"create a {base_name.replace('_', ' ')} program")
 
 

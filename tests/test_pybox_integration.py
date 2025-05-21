@@ -12,14 +12,16 @@ from unittest.mock import patch, MagicMock
 # Add the parent directory to sys.path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Import PyBox wrapper
+# Import PyBox wrapper and related modules
 from pylama.pybox_wrapper import PythonSandbox, DockerSandbox
+from pybox.code_analyzer import CodeAnalyzer
+from pybox.dependency_manager import DependencyManager
 
 
 @pytest.fixture
 def mock_code_analyzer():
     """Mock the CodeAnalyzer class."""
-    with patch('pybox.pybox.code_analyzer.CodeAnalyzer') as mock:
+    with patch('pybox.code_analyzer.CodeAnalyzer') as mock:
         analyzer_instance = MagicMock()
         analyzer_instance.analyze_code.return_value = {
             'imports': {'http': 'standard_library', 'requests': 'third_party'},
@@ -39,7 +41,7 @@ def mock_code_analyzer():
 @pytest.fixture
 def mock_dependency_manager():
     """Mock the DependencyManager class."""
-    with patch('pybox.pybox.dependency_manager.DependencyManager') as mock:
+    with patch('pybox.dependency_manager.DependencyManager') as mock:
         manager_instance = MagicMock()
         manager_instance.analyze_dependencies.return_value = {
             'imports': {'http': 'standard_library', 'requests': 'third_party'},
@@ -143,7 +145,7 @@ def test_docker_sandbox_initialization():
 def test_code_analyzer_improvements(mock_code_analyzer):
     """Test the improvements to the code analyzer for handling submodules."""
     # Import the code analyzer directly
-    from pybox.pybox.code_analyzer import CodeAnalyzer
+    from pybox.code_analyzer import CodeAnalyzer
     
     # Create a code analyzer instance
     analyzer = CodeAnalyzer()
@@ -175,7 +177,7 @@ def test_code_analyzer_improvements(mock_code_analyzer):
 def test_dependency_manager_improvements(mock_dependency_manager):
     """Test the improvements to the dependency manager for handling submodules."""
     # Import the dependency manager directly
-    from pybox.pybox.dependency_manager import DependencyManager
+    from pybox.dependency_manager import DependencyManager
     
     # Create a dependency manager instance
     manager = DependencyManager()

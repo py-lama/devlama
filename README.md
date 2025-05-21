@@ -157,9 +157,9 @@ For development, all three packages (PyLama, PyLLM, PyBox) should be installed i
 
 ```bash
 # Clone the repositories
-git clone https://github.com/username/py-lama.git
-git clone https://github.com/username/pyllm.git
-git clone https://github.com/username/pybox.git
+git clone https://github.com/py-lama/pylama.git
+git clone https://github.com/py-lama/pyllm.git
+git clone https://github.com/py-lama/pybox.git
 
 # Install in development mode
 cd py-lama/pylama

@@ -78,8 +78,8 @@ def test_get_example_prompt():
     # Test default example
     assert 'hello world' in get_example_prompt('default')
     
-    # Test unknown example
-    assert 'unknown_example' in get_example_prompt('unknown_example')
+    # Test unknown example - should return a generic prompt with the example name
+    assert 'create a unknown example program' == get_example_prompt('unknown_example')
 
 
 def test_add_main_for_web_server():
