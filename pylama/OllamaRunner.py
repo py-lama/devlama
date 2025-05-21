@@ -31,21 +31,21 @@ logger.addHandler(file_handler)
 
 logger.debug('OllamaRunner initialized')
 
-# Użyj importlib.metadata zamiast pkg_resources
+# Use importlib.metadata instead of pkg_resources
 try:
     # Python 3.8+
     from importlib import metadata
 except ImportError:
-    # Dla starszych wersji Pythona
+    # For older Python versions
     import importlib_metadata as metadata
 
-# Importuj sandbox, jeżeli używamy trybu Docker
+# Import sandbox if we're using Docker mode
 USE_DOCKER = os.getenv('USE_DOCKER', 'False').lower() in ('true', '1', 't')
 if USE_DOCKER:
     try:
         from sandbox import DockerSandbox
     except ImportError:
-        logger.error("Nie można zaimportować modułu sandbox. Upewnij się, że plik sandbox.py jest dostępny.")
+        logger.error("Cannot import sandbox module. Make sure the sandbox.py file is available.")
         sys.exit(1)
 
 
@@ -162,210 +162,50 @@ class OllamaRunner:
             # Default example
             return self._load_example_from_file('default.py', prompt=formatted_prompt)
 
-    def _generate_web_server_example(self) -> str:
-        """Generate a simple web server example."""
-        return """
-from http.server import HTTPServer, BaseHTTPRequestHandler
-
-class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.send_header('Content-type', 'text/html')
-        self.end_headers()
-        self.wfile.write(b"""<!DOCTYPE html>
-<html>
-<head>
-    <title>Simple Web Server</title>
-</head>
-<body>
-    <h1>Hello, World!</h1>
-    <p>This is a simple web server created with Python.</p>
-</body>
-</html>""")
-
-def run_server(port=8000):
-    server_address = ('', port)
-    httpd = HTTPServer(server_address, SimpleHTTPRequestHandler)
-    print(f"Server running on port {port}...")
-    httpd.serve_forever()
-
-if __name__ == '__main__':
-    run_server()
-"""
-    
-    def _generate_file_io_example(self) -> str:
-        """Generate a simple file I/O example."""
-        return """
-def write_to_file(filename, content):
-    """Write content to a file."""
-    with open(filename, 'w') as file:
-        file.write(content)
-    print(f"Content written to {filename}")
-
-def read_from_file(filename):
-    """Read content from a file."""
-    try:
-        with open(filename, 'r') as file:
-            content = file.read()
-        print(f"Content read from {filename}")
-        return content
-    except FileNotFoundError:
-        print(f"File {filename} not found")
-        return None
-
-# Example usage
-if __name__ == '__main__':
-    # Write to a file
-    write_to_file('example.txt', 'Hello, World!\nThis is a sample file.')
-    
-    # Read from the file
-    content = read_from_file('example.txt')
-    if content:
-        print("File content:")
-        print(content)
-"""
-    
-    def _generate_api_example(self) -> str:
-        """Generate a simple API request example."""
-        return """
-import requests
-
-def get_data_from_api(url):
-    """Get data from an API."""
-    try:
-        response = requests.get(url)
-        response.raise_for_status()  # Raise an exception for HTTP errors
-        return response.json()
-    except requests.exceptions.RequestException as e:
-        print(f"Error making API request: {e}")
-        return None
-
-def post_data_to_api(url, data):
-    """Post data to an API."""
-    try:
-        response = requests.post(url, json=data)
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.RequestException as e:
-        print(f"Error making API request: {e}")
-        return None
-
-# Example usage
-if __name__ == '__main__':
-    # Get data from a public API
-    api_url = 'https://jsonplaceholder.typicode.com/posts/1'
-    result = get_data_from_api(api_url)
-    
-    if result:
-        print("API Response:")
-        print(f"Title: {result['title']}")
-        print(f"Body: {result['body']}")
+    def _load_example_from_file(self, filename, prompt=None) -> str:
+        """Load an example from a file in the examples directory.
         
-    # Post data to the API
-    post_data = {
-        'title': 'New Post',
-        'body': 'This is the content of the new post.',
-        'userId': 1
-    }
-    post_result = post_data_to_api('https://jsonplaceholder.typicode.com/posts', post_data)
-    
-    if post_result:
-        print("\nPost Response:")
-        print(f"Created post with ID: {post_result['id']}")
-"""
-    
-    def _generate_database_example(self) -> str:
-        """Generate a simple database example."""
-        return """
-import sqlite3
+        Args:
+            filename: The name of the file to load from the examples directory
+            prompt: Optional prompt to include in the example
+            
+        Returns:
+            The content of the example file
+        """
+        # Get the path to the examples directory
+        examples_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'examples')
+        example_path = os.path.join(examples_dir, filename)
+        
+        try:
+            with open(example_path, 'r') as f:
+                content = f.read()
+                
+            # Replace the placeholder in default.py if a prompt is provided
+            if prompt and filename == 'default.py':
+                content = content.replace('your task description', prompt)
+                
+            return content
+        except Exception as e:
+            logger.error(f"Error loading example from {example_path}: {e}")
+            return f"# Error loading example: {str(e)}
 
-def create_database(db_name):
-    """Create a SQLite database and a sample table."""
-    conn = sqlite3.connect(db_name)
-    cursor = conn.cursor()
-    
-    # Create a table
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY,
-        name TEXT NOT NULL,
-        email TEXT UNIQUE NOT NULL,
-        age INTEGER
-    )
-    ''')
-    
-    conn.commit()
-    conn.close()
-    print(f"Database {db_name} created with users table")
-
-def insert_user(db_name, name, email, age):
-    """Insert a user into the database."""
-    conn = sqlite3.connect(db_name)
-    cursor = conn.cursor()
-    
-    try:
-        cursor.execute(
-            "INSERT INTO users (name, email, age) VALUES (?, ?, ?)",
-            (name, email, age)
-        )
-        conn.commit()
-        print(f"User {name} added to database")
-    except sqlite3.IntegrityError as e:
-        print(f"Error: {e}")
-    finally:
-        conn.close()
-
-def get_all_users(db_name):
-    """Get all users from the database."""
-    conn = sqlite3.connect(db_name)
-    cursor = conn.cursor()
-    
-    cursor.execute("SELECT * FROM users")
-    users = cursor.fetchall()
-    
-    conn.close()
-    return users
-
-# Example usage
-if __name__ == '__main__':
-    db_name = 'example.db'
-    
-    # Create the database and table
-    create_database(db_name)
-    
-    # Insert some users
-    insert_user(db_name, 'Alice', 'alice@example.com', 30)
-    insert_user(db_name, 'Bob', 'bob@example.com', 25)
-    insert_user(db_name, 'Charlie', 'charlie@example.com', 35)
-    
-    # Get and display all users
-    users = get_all_users(db_name)
-    print("\nAll Users:")
-    for user in users:
-        print(f"ID: {user[0]}, Name: {user[1]}, Email: {user[2]}, Age: {user[3]}")
-"""
-    
-    def _generate_default_example(self, prompt) -> str:
-        """Generate a default example based on the prompt."""
-        return f"""
-# Python code example for: {prompt}
+# Here's a simple example instead:
 
 def main():
-    """Main function that demonstrates the requested functionality."""
-    print("Hello, World!")
-    print(f"This is a simple example for: {prompt}")
-    
-    # Add your code here to implement the requested functionality
-    result = f"Example implementation for {prompt}"
-    return result
+    print(\"Hello, World!\")
+    return \"Success\"
 
 if __name__ == '__main__':
-    output = main()
-    print(f"Result: {output}")
-"""
+    main()"
+            
+    # The old example methods have been replaced by the _load_example_from_file method
+    
+    # All example methods have been replaced by the _load_example_from_file method
 
-            try:
-                # Spróbuj użyć /api/chat jako alternatywnego API
+    def try_chat_api(self, formatted_prompt):
+        """Try using the chat API as an alternative."""
+        try:
+            # Spróbuj użyć /api/chat jako alternatywnego API
                 logger.info("Próba użycia API chat...")
                 chat_data = {
                     "model": self.model,

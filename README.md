@@ -4,6 +4,184 @@
 
 PyLama is a Python tool that leverages Ollama's language models to generate and execute Python code. It simplifies the process of writing and running Python scripts by handling dependency management and code execution automatically. With the new template system, it generates higher quality, platform-aware code that's ready to run.
 
+## Project Structure and Dependencies
+
+PyLama is built on a modular architecture with three main components:
+
+### Architecture Overview
+
+```
++----------------+     +----------------+     +----------------+
+|                |     |                |     |                |
+|     PyLama     |---->|     PyLLM     |     |     PyBox      |
+|                |     |                |     |                |
++----------------+     +----------------+     +----------------+
+        |                                            ^
+        |                                            |
+        +--------------------------------------------+
+```
+
+### Component Relationships (Mermaid Diagram)
+
+```mermaid
+graph TD
+    A[PyLama] -->|Uses for code generation| B[PyLLM]
+    A -->|Uses for code execution| C[PyBox]
+    B -->|Connects to| D[Ollama API]
+    C -->|Executes code in| E[Python Sandbox]
+    C -->|Optional execution in| F[Docker Sandbox]
+    A -->|Provides templates for| G[Code Generation]
+    G -->|Creates| H[Runnable Python Code]
+    H -->|Executed in| E
+```
+
+### Core Components
+
+1. **PyLama Package** - Main application
+   - Provides CLI interface for code generation
+   - Manages templates for different code generation scenarios
+   - Coordinates between PyLLM and PyBox
+
+2. **PyLLM Package** - LLM integration
+   - Handles communication with Ollama API
+   - Manages model selection and configuration
+   - Processes prompts and extracts code from responses
+
+3. **PyBox Package** - Sandbox for code execution
+   - Provides safe execution environments (Python and Docker)
+   - Manages dependencies for generated code
+   - Analyzes code for security and performance
+
+### Directory Structure
+
+```
+pylama/
+├── pylama/              # Main package directory
+│   ├── __init__.py     # Package initialization
+│   ├── cli.py          # Command-line interface
+│   ├── pylama.py       # Core functionality
+│   ├── OllamaRunner.py # Ollama API integration
+│   ├── templates.py    # Template management
+│   ├── dependency_utils.py # Dependency utilities
+│   └── examples/       # Example code templates
+│       ├── web_server.py
+│       ├── file_io.py
+│       ├── api_request.py
+│       ├── database.py
+│       └── default.py
+├── tests/              # Test directory
+│   ├── __init__.py
+│   ├── test_templates.py
+│   ├── test_cli.py
+│   └── test_pylama.py
+├── pyproject.toml      # Project configuration
+└── setup.py            # Installation script
+```
+
+### Module Interactions
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant CLI as cli.py
+    participant Core as pylama.py
+    participant Templates as templates.py
+    participant Ollama as OllamaRunner.py
+    participant PyBox as PyBox Package
+    participant PyLLM as PyLLM Package
+    
+    User->>CLI: pylama "create web server"
+    CLI->>Core: generate_code(prompt)
+    Core->>Templates: get_template(prompt)
+    Templates-->>Core: formatted_prompt
+    Core->>Ollama: generate(formatted_prompt)
+    Ollama->>PyLLM: get_models()
+    PyLLM-->>Ollama: available_models
+    Ollama->>PyLLM: query_model(prompt)
+    PyLLM-->>Ollama: generated_code
+    Ollama-->>Core: generated_code
+    Core->>PyBox: execute_code(code)
+    PyBox-->>Core: execution_result
+    Core-->>CLI: execution_result
+    CLI-->>User: Display result
+```
+
+### Implementation Details
+
+#### PyLama Core (pylama.py)
+
+The core module coordinates all functionality:
+
+- **check_ollama()**: Verifies Ollama is running
+- **generate_code()**: Generates Python code from prompts
+- **execute_code()**: Executes the generated code
+- **save_code_to_file()**: Saves code to a file
+
+#### Template System (templates.py)
+
+Provides templates for different code generation scenarios:
+
+- **basic**: Simple code generation
+- **platform_aware**: Adapts code to the current platform
+- **dependency_aware**: Includes necessary dependencies
+- **testable**: Includes test functions
+- **secure**: Adds security checks
+- **performance**: Optimizes for performance
+- **pep8**: Follows PEP 8 style guidelines
+
+#### Dependency Management
+
+PyLama uses a sophisticated dependency management system:
+
+1. **Direct Dependencies**:
+   - **PyLama** depends on core Python libraries and utilities like `requests` and `python-dotenv`
+   - Development dependencies include `pytest`, `black`, and `flake8`
+
+2. **External Package Dependencies**:
+   - **PyLLM**: Used for model management and LLM integration
+   - **PyBox**: Used for code execution and sandbox functionality
+
+3. **Dynamic Import System**:
+   - PyLama uses dynamic imports to locate and use PyLLM and PyBox
+   - The system first tries to find packages in the standard Python path
+   - If not found, it looks for them in the parent directory (development mode)
+   - This approach allows flexibility in both development and production environments
+
+### Installation Process
+
+PyLama can be installed in two ways:
+
+#### 1. Development Mode
+
+For development, all three packages (PyLama, PyLLM, PyBox) should be installed in development mode:
+
+```bash
+# Clone the repositories
+git clone https://github.com/username/py-lama.git
+git clone https://github.com/username/pyllm.git
+git clone https://github.com/username/pybox.git
+
+# Install in development mode
+cd py-lama/pylama
+pip install -e .
+cd ../../pyllm
+pip install -e .
+cd ../pybox
+pip install -e .
+```
+
+This setup allows changes in any package to be immediately available to the others.
+
+#### 2. Production Installation
+
+For end users, PyLama can be installed directly from PyPI:
+
+```bash
+pip install pylama
+```
+
+This will install PyLama along with its dependencies, including PyLLM and PyBox.
+
 ## Examples
 
 ```bash
