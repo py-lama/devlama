@@ -1,0 +1,5 @@
+
+- do core powinien byc przypisany logger a jako nowa paczka sqlogger do przechowwyania logow i innych danych z debugowania kodu, wraz z plikami kodu w formie latwej do zarzadzania bez potrzeby uzywania systemu plikow,
+- stworz dodatkowy projekt, ktory bedzie zachowywal sie jak wirtualna maszyna z wirtualnym SSH ale z plikami w SQL z fs bazujacy na RAM-memory w celu szybkiego debugowania
+- tworzenie sandbox dla python z dostepem do danych w sqlite i operowanie na zapytaniach jak do bazy SQL dla potrzeb logow, konwersacji, kodu, plikow, itp
+- panel pokazujacy wszystkie dane sql na stronie www ze wszystkim mi rekordami, pozwalajac na analize komunikatow, plikow, srodowiska, danych, chat

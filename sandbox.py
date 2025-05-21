@@ -1,30 +1,67 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+"""
+PyLama Sandbox - Automatyczne środowisko do uruchamiania dowolnego kodu Python
+
+Ten moduł zapewnia automatyczne środowisko do uruchamiania kodu Python z zarządzaniem
+zależnościami i integracją z Ollama Runner. Pozwala na szybkie tworzenie środowiska
+do dowolnego kodu Python, automatycznie wykrywając i instalując wymagane zależności.
+
+Główne funkcje:
+1. Analiza kodu Python i wykrywanie importów za pomocą modułu ast
+2. Automatyczna instalacja brakujących pakietów
+3. Bezpieczne środowisko wykonawcze oparte na Docker
+"""
+
 import os
-import subprocess
 import sys
+import subprocess
 import tempfile
 import shutil
 import logging
 import time
 import traceback
+import random
+import json
+import re
+import importlib
+import importlib.util
+import inspect
+import ast
+import uuid
 from pathlib import Path
-from typing import Optional, Dict, List, Tuple, Any, Union
-from dotenv import load_dotenv
+from typing import Optional, Dict, List, Tuple, Any, Union, Set, Callable
 
-# Initialize logger
+# Konfiguracja loggera
+logging_level = os.getenv('LOGGING_LEVEL', 'INFO')
+logging.basicConfig(
+    level=getattr(logging, logging_level),
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
-# Common imports that will be added to the sandbox environment
-COMMON_IMPORTS = """
-# Standard library imports
-import sys
-import traceback
-import importlib.util
-from typing import Dict, Any, Optional, Tuple, List, Union
+# Próba importu pkg_resources, ale obsługa przypadku, gdy nie jest dostępny
+try:
+    import pkg_resources
 
-# Dependency mapping from import name to PyPI package name
+    HAS_PKG_RESOURCES = True
+except ImportError:
+    HAS_PKG_RESOURCES = False
+    logger.warning("Moduł pkg_resources nie jest dostępny. Niektóre funkcje mogą być ograniczone.")
+
+# Próba importu dotenv, ale obsługa przypadku, gdy nie jest dostępny
+try:
+    from dotenv import load_dotenv
+
+    HAS_DOTENV = True
+    # Załaduj zmienne środowiskowe z pliku .env, jeśli istnieje
+    load_dotenv()
+except ImportError:
+    HAS_DOTENV = False
+    logger.warning("Moduł python-dotenv nie jest dostępny. Zmienne środowiskowe z pliku .env nie zostaną załadowane.")
+
+# Mapowanie zależności - nazwa importu do nazwy pakietu PyPI
 DEPENDENCY_MAP = {
     # Web and Browser Automation
     'selenium': 'selenium',
@@ -32,7 +69,7 @@ DEPENDENCY_MAP = {
     'webdriver_manager': 'webdriver-manager',
     'pyautogui': 'pyautogui',
     'playwright': 'playwright',
-    
+
     # Data Analysis
     'numpy': 'numpy',
     'pandas': 'pandas',
@@ -43,7 +80,7 @@ DEPENDENCY_MAP = {
     'tensorflow': 'tensorflow',
     'torch': 'torch',
     'keras': 'keras',
-    
+
     # Web Development
     'flask': 'flask',
     'django': 'django',
@@ -52,7 +89,7 @@ DEPENDENCY_MAP = {
     'aiohttp': 'aiohttp',
     'bs4': 'beautifulsoup4',
     'lxml': 'lxml',
-    
+
     # Utilities
     'dotenv': 'python-dotenv',
     'PIL': 'pillow',
@@ -62,481 +99,348 @@ DEPENDENCY_MAP = {
     'tqdm': 'tqdm',
 }
 
-# Initialize package availability dictionary
-PACKAGE_AVAILABILITY = {}
 
-# Try to import common packages and check their availability
-for pkg in DEPENDENCY_MAP.keys():
-    try:
-        # Convert package name to main module name (e.g., bs4.BeautifulSoup -> bs4)
-        main_pkg = pkg.split('.')[0]
-        if main_pkg not in PACKAGE_AVAILABILITY:
-            importlib.import_module(main_pkg)
-            PACKAGE_AVAILABILITY[main_pkg] = True
-    except ImportError:
-        PACKAGE_AVAILABILITY[main_pkg] = False
+class CodeAnalyzer:
+    """Klasa do analizy kodu Python i wykrywania importowanych modułów."""
 
-# Add HAS_* flags for commonly used packages
-for pkg in ['selenium', 'pyautogui', 'pandas', 'numpy', 'tensorflow', 'torch']:
-    has_pkg = PACKAGE_AVAILABILITY.get(pkg, False)
-    globals()['HAS_' + pkg.upper()] = has_pkg
+    def __init__(self):
+        self.standard_libs = self._get_standard_libs()
+        self.dependency_map = DEPENDENCY_MAP
 
+    def _get_standard_libs(self) -> Set[str]:
+        """Zwraca zbiór nazw modułów biblioteki standardowej Python."""
+        # Lista popularnych modułów biblioteki standardowej
+        return {
+            'abc', 'argparse', 'array', 'ast', 'asyncio', 'base64', 'binascii', 'builtins',
+            'calendar', 'collections', 'concurrent', 'configparser', 'contextlib', 'copy',
+            'csv', 'ctypes', 'datetime', 'decimal', 'difflib', 'dis', 'email', 'enum',
+            'errno', 'fcntl', 'filecmp', 'fnmatch', 'functools', 'gc', 'getopt', 'getpass',
+            'gettext', 'glob', 'gzip', 'hashlib', 'heapq', 'hmac', 'html', 'http',
+            'importlib', 'inspect', 'io', 'ipaddress', 'itertools', 'json', 'keyword',
+            'linecache', 'locale', 'logging', 'lzma', 'math', 'mimetypes', 'mmap',
+            'multiprocessing', 'netrc', 'numbers', 'operator', 'os', 'pathlib', 'pickle',
+            'pkgutil', 'platform', 'pprint', 'pwd', 'pydoc', 'queue', 'random', 're',
+            'reprlib', 'resource', 'select', 'shelve', 'shlex', 'shutil', 'signal',
+            'site', 'smtplib', 'socket', 'socketserver', 'sqlite3', 'ssl', 'stat',
+            'string', 'struct', 'subprocess', 'sys', 'sysconfig', 'tarfile', 'tempfile',
+            'textwrap', 'threading', 'time', 'timeit', 'token', 'tokenize', 'traceback',
+            'types', 'typing', 'unicodedata', 'unittest', 'urllib', 'uuid', 'warnings',
+            'weakref', 'webbrowser', 'xml', 'xmlrpc', 'zipfile', 'zipimport', 'zlib',
+            # Dodane moduły, które często są traktowane jako zewnętrzne, ale są standardowe
+            'datetime', 'email', 'html', 'http', 'logging', 'math', 'multiprocessing',
+            'unittest', 'urllib', 'xml'
+        }
 
-def get_chrome_options(headless: bool = True):
-    """Configure Chrome options for Selenium.
-
-    Args:
-        headless (bool): Whether to run Chrome in headless mode
-
-    Returns:
-        Options: Configured Chrome options
-    """
-    options = Options()
-    if headless:
-        options.add_argument('--headless')
-        options.add_argument('--no-sandbox')
-        options.add_argument('--disable-dev-shm-usage')
-        options.add_argument('--disable-gpu')
-        options.add_argument('--window-size=1920,1080')
-    options.add_experimental_option("excludeSwitches", ["enable-automation"])
-    options.add_experimental_option('useAutomationExtension', False)
-    return options
-
-
-def install_package(package_name: str) -> bool:
-    """Install a Python package using pip.
-
-    Args:
-        package_name (str): Name of the package to install
-
-    Returns:
-        bool: True if installation was successful, False otherwise
-    """
-    try:
-        import subprocess
-        import sys
-        subprocess.check_call([sys.executable, "-m", "pip", "install", package_name])
-        return True
-    except Exception as e:
-        print("Failed to install " + package_name + ": " + str(e), file=sys.stderr)
-        return False
-
-def ensure_dependencies(import_names: Union[str, list]) -> bool:
-    """Ensure that the specified packages are available, installing them if necessary.
-
-    Args:
-        import_names (Union[str, list]): Single import name or list of import names
-
-    Returns:
-        bool: True if all dependencies are available or successfully installed
-    """
-
-    if isinstance(import_names, str):
-        import_names = [import_names]
-    
-    all_available = True
-    
-    for import_name in import_names:
-        main_pkg = import_name.split('.')[0]
-        
-        # Check if already available
-        if PACKAGE_AVAILABILITY.get(main_pkg, False):
-            continue
-            
-        # Try to import to verify
-        try:
-            importlib.import_module(main_pkg)
-            PACKAGE_AVAILABILITY[main_pkg] = True
-            continue
-        except ImportError:
-            pass
-            
-        # Try to install the package
-        pypi_name = DEPENDENCY_MAP.get(import_name)
-        if not pypi_name:
-            pypi_name = DEPENDENCY_MAP.get(main_pkg, main_pkg)
-            
-        print(f"Installing required package: {pypi_name}")
-        if install_package(pypi_name):
-            try:
-                importlib.import_module(main_pkg)
-                PACKAGE_AVAILABILITY[main_pkg] = True
-                print(f"Successfully installed and imported {main_pkg}")
-            except ImportError:
-                print(
-                    f"Failed to import {main_pkg} after installation",
-                    file=sys.stderr
-                )
-                all_available = False
-        else:
-            all_available = False
-    
-    return all_available
-
-# Web automation utilities
-if PACKAGE_AVAILABILITY.get('selenium', False):
-    from selenium import webdriver
-    from selenium.webdriver.chrome.service import Service
-    from selenium.webdriver.chrome.options import Options
-    from selenium.webdriver.common.by import By
-    from selenium.webdriver.support.ui import WebDriverWait
-    from selenium.webdriver.support import expected_conditions as EC
-    
-    if PACKAGE_AVAILABILITY.get('webdriver_manager', False):
-        from webdriver_manager.chrome import ChromeDriverManager
-    
-    def init_webdriver(headless: bool = True, max_retries: int = 3) -> webdriver.Chrome:
-        """Initialize and return a Selenium WebDriver instance with retry logic.
-        
-        Args:
-            headless: Whether to run the browser in headless mode
-            max_retries: Maximum number of retry attempts
-        
-        Returns:
-            WebDriver: Configured WebDriver instance
-        
-        Raises:
-            RuntimeError: If WebDriver initialization fails after all retries
+    def analyze_code(self, code: str) -> Dict[str, List[str]]:
         """
-        if not ensure_dependencies(['selenium']):
-            raise ImportError("Selenium is required but could not be installed.")
-        
-        options = get_chrome_options(headless)
-        last_error = None
-        
-        for attempt in range(1, max_retries + 1):
-            try:
-                logger.info(f'Initializing WebDriver (attempt {attempt}/{max_retries})')
-                
-                if PACKAGE_AVAILABILITY.get('webdriver_manager', False):
-                    service = Service(ChromeDriverManager().install())
-                    driver = webdriver.Chrome(service=service, options=options)
-                else:
-                    driver = webdriver.Chrome(options=options)
-                
-                # Set reasonable timeouts
-                driver.set_page_load_timeout(30)
-                driver.set_script_timeout(30)
-                driver.implicitly_wait(10)
-                
-                logger.info('WebDriver initialized successfully')
-                return driver
-                
-            except Exception as e:
-                last_error = e
-                logger.warning(f'WebDriver initialization attempt {attempt} failed: {str(e)}')
-                if attempt < max_retries:
-                    time.sleep(2 ** attempt)  # Exponential backoff
-        
-        error_msg = f'Failed to initialize WebDriver after {max_retries} attempts: {str(last_error)}'
-        logger.error(error_msg)
-        raise RuntimeError(error_msg) from last_error
-    
-    def take_screenshot(driver: webdriver.Chrome, path: Optional[str] = None) -> str:
-        """Take a screenshot of the current browser window.
-        
+        Analizuje kod Python i wykrywa importowane moduły.
+
         Args:
-            driver: Selenium WebDriver instance
-            path: Path to save the screenshot. If None, saves to a timestamped file in ~/.pylama/screenshots
-            
+            code: Kod Python do analizy.
+
         Returns:
-            str: Absolute path where the screenshot was saved
-            
-        Raises:
-            ValueError: If the provided path has an invalid extension
-            RuntimeError: If the screenshot cannot be saved
+            Słownik z listami modułów podzielonych na kategorie.
         """
         try:
-            if path:
-                # Ensure the path has a .png extension
-                if not path.lower().endswith('.png'):
-                    raise ValueError("Screenshot path must have a .png extension")
-                
-                # Convert to absolute path and create directories
-                abs_path = os.path.abspath(path)
-                os.makedirs(os.path.dirname(abs_path), exist_ok=True)
+            tree = ast.parse(code)
+        except SyntaxError as e:
+            logger.error(f"Błąd składni w kodzie: {e}")
+            return {
+                'standard_library': [],
+                'third_party': [],
+                'unknown': []
+            }
+
+        imports = set()
+
+        # Wyszukaj wszystkie importy w kodzie
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for name in node.names:
+                    imports.add(name.name.split('.')[0])  # Pobierz główną nazwę modułu
+            elif isinstance(node, ast.ImportFrom):
+                if node.module:  # Ignoruj 'from . import x'
+                    imports.add(node.module.split('.')[0])  # Pobierz główną nazwę modułu
+
+        # Podziel importy na kategorie
+        standard_library = []
+        third_party = []
+        unknown = []
+
+        for module_name in imports:
+            if module_name in self.standard_libs:
+                standard_library.append(module_name)
+            elif module_name in DEPENDENCY_MAP:
+                third_party.append(module_name)
             else:
-                # Use default directory in user's home folder
-                screenshot_dir = os.path.expanduser('~/.pylama/screenshots')
-                os.makedirs(screenshot_dir, exist_ok=True)
-                
-                # Generate filename with timestamp and random string for uniqueness
-                timestamp = time.strftime('%Y%m%d_%H%M%S')
-                random_str = ''.join(random.choices('abcdefghijklmnopqrstuvwxyz0123456789', k=6))
-                filename = f'screenshot_{timestamp}_{random_str}.png'
-                abs_path = os.path.join(screenshot_dir, filename)
-            
-            logger.debug(f'Attempting to save screenshot to: {abs_path}')
-            
-            # Take the screenshot
-            driver.save_screenshot(abs_path)
-            
-            # Verify the screenshot was saved
-            if not os.path.exists(abs_path):
-                raise RuntimeError(f'Screenshot file was not created at {abs_path}')
-                
-            file_size = os.path.getsize(abs_path)
-            if file_size == 0:
-                os.remove(abs_path)  # Clean up empty file
-                raise RuntimeError('Screenshot file is empty')
-                
-            logger.info(f'Screenshot saved successfully: {abs_path} ({file_size} bytes)')
-            return abs_path
-            
-        except Exception as e:
-            error_msg = f'Error taking screenshot: {str(e)}'
-            logger.error(error_msg, exc_info=True)
-            raise RuntimeError(error_msg) from e
-    
-    def capture_webpage_screenshot(url: str, output_path: Optional[str] = None, 
-                                   wait_time: int = 5, max_retries: int = 2) -> str:
-        """Capture a screenshot of a webpage with retry logic.
-        
-        Args:
-            url: URL of the webpage to capture
-            output_path: Path to save the screenshot. If None, a default path is used
-            wait_time: Seconds to wait for the page to load before taking the screenshot
-            max_retries: Maximum number of retry attempts
-            
-        Returns:
-            str: Absolute path where the screenshot was saved
-            
-        Raises:
-            ValueError: If the URL is invalid
-            RuntimeError: If the screenshot cannot be captured after all retries
+                # Jeśli nie jest to moduł standardowy ani znany zewnętrzny, zakładamy, że jest zewnętrzny
+                third_party.append(module_name)
+
+        return {
+            'standard_library': standard_library,
+            'third_party': third_party,
+            'unknown': unknown
+        }
+
+    def _categorize_import(self, module_name: str, imports: Dict[str, List[str]]) -> None:
         """
-        if not url or not isinstance(url, str) or not url.startswith(('http://', 'https://')):
-            raise ValueError(f'Invalid URL: {url}')
-        
-        driver = None
-        last_error = None
-        
-        for attempt in range(1, max_retries + 1):
-            try:
-                logger.info(f'Capture attempt {attempt}/{max_retries} for {url}')
-                
-                # Initialize WebDriver
-                driver = init_webdriver()
-                
-                # Navigate to the URL
-                logger.debug(f'Loading URL: {url}')
-                driver.get(url)
-                
-                # Wait for the page to load
-                logger.debug(f'Waiting {wait_time} seconds for page to load')
-                time.sleep(wait_time)
-                
-                # Take the screenshot
-                screenshot_path = take_screenshot(driver, output_path)
-                logger.info(f'Successfully captured screenshot: {screenshot_path}')
-                return screenshot_path
-                
-            except Exception as e:
-                last_error = e
-                logger.warning(f'Attempt {attempt} failed: {str(e)}')
-                
-                # Clean up failed attempt
-                if driver:
-                    try:
-                        driver.quit()
-                    except:
-                        pass
-                    driver = None
-                    
-                if attempt < max_retries:
-                    retry_delay = wait_time * 2  # Exponential backoff
-                    logger.info(f'Retrying in {retry_delay} seconds...')
-                    time.sleep(retry_delay)
-                    
-        # If we get here, all attempts failed
-        error_msg = f'Failed to capture screenshot after {max_retries} attempts: {str(last_error)}'
-        logger.error(error_msg)
-        raise RuntimeError(error_msg) from last_error
-        
-        finally:
-            # Ensure driver is always closed
-            if driver:
-                try:
-                    driver.quit()
-                except Exception as e:
-                    logger.warning(f'Error closing WebDriver: {str(e)}')
-            raise ImportError("Selenium is required but could not be installed.")
-        
-        options = get_chrome_options(headless)
-        last_error = None
-        
-    Raises:
-        ValueError: If the provided path has an invalid extension
-        RuntimeError: If the screenshot cannot be saved
-    """
-    try:
-        if path:
-            # Ensure the path has a .png extension
-            if not path.lower().endswith('.png'):
-                raise ValueError("Screenshot path must have a .png extension")
-            
-            # Convert to absolute path and create directories
-            abs_path = os.path.abspath(path)
-            os.makedirs(os.path.dirname(abs_path), exist_ok=True)
+        Kategoryzuje importowany moduł jako standardowy, zewnętrzny lub nieznany.
+
+        Args:
+            module_name: Nazwa importowanego modułu
+            imports: Słownik do aktualizacji
+        """
+        # Wyodrębnij główny moduł (np. z "numpy.random" wyodrębnij "numpy")
+        main_module = module_name.split('.')[0]
+
+        # Sprawdź, czy moduł jest już w jednej z kategorii
+        for category in imports.values():
+            if main_module in category:
+                return
+
+        # Kategoryzuj moduł
+        if main_module in self.standard_library:
+            imports['standard_library'].append(main_module)
+        elif main_module in self.dependency_map or any(
+                module_name.startswith(dep + '.') for dep in self.dependency_map):
+            imports['third_party'].append(main_module)
         else:
-            # Use default directory in user's home folder
-            screenshot_dir = os.path.expanduser('~/.pylama/screenshots')
-            os.makedirs(screenshot_dir, exist_ok=True)
-            
-            # Generate filename with timestamp and random string for uniqueness
-            timestamp = time.strftime('%Y%m%d_%H%M%S')
-            random_str = ''.join(random.choices('abcdefghijklmnopqrstuvwxyz0123456789', k=6))
-            filename = f'screenshot_{timestamp}_{random_str}.png'
-            abs_path = os.path.join(screenshot_dir, filename)
-        
-        logger.debug(f'Attempting to save screenshot to: {abs_path}')
-        
-        # Take the screenshot
-        driver.save_screenshot(abs_path)
-        
-        # Verify the screenshot was saved
-        if not os.path.exists(abs_path):
-            raise RuntimeError(f'Screenshot file was not created at {abs_path}')
-            
-        file_size = os.path.getsize(abs_path)
-        if file_size == 0:
-            os.remove(abs_path)  # Clean up empty file
-            raise RuntimeError('Screenshot file is empty')
-            
-        logger.info(f'Screenshot saved successfully: {abs_path} ({file_size} bytes)')
-        return abs_path
-        
-    except Exception as e:
-        error_msg = f'Error taking screenshot: {str(e)}'
-        logger.error(error_msg, exc_info=True)
-        raise RuntimeError(error_msg) from e
-
-def capture_webpage_screenshot(url: str, output_path: Optional[str] = None, 
-                             wait_time: int = 5, max_retries: int = 2) -> str:
-    """Capture a screenshot of a webpage with retry logic.
-    
-    Args:
-        url: URL of the webpage to capture
-        output_path: Path to save the screenshot. If None, a default path is used
-        wait_time: Seconds to wait for the page to load before taking the screenshot
-        max_retries: Maximum number of retry attempts
-        
-    Returns:
-        str: Absolute path where the screenshot was saved
-        
-    Raises:
-        ValueError: If the URL is invalid
-        RuntimeError: If the screenshot cannot be captured after all retries
-    """
-    if not url or not isinstance(url, str) or not url.startswith(('http://', 'https://')):
-        raise ValueError(f'Invalid URL: {url}')
-    
-    driver = None
-    last_error = None
-    
-    for attempt in range(1, max_retries + 1):
-        try:
-            logger.info(f'Capture attempt {attempt}/{max_retries} for {url}')
-            
-            # Initialize WebDriver
-            driver = init_webdriver()
-            
-            # Navigate to the URL
-            logger.debug(f'Loading URL: {url}')
-            driver.get(url)
-            
-            # Wait for the page to load
-            logger.debug(f'Waiting {wait_time} seconds for page to load')
-            time.sleep(wait_time)
-            
-            # Take the screenshot
-            screenshot_path = take_screenshot(driver, output_path)
-            logger.info(f'Successfully captured screenshot: {screenshot_path}')
-            return screenshot_path
-            
-        except Exception as e:
-            last_error = e
-            logger.warning(f'Attempt {attempt} failed: {str(e)}')
-            
-            # Clean up failed attempt
-            if driver:
-                try:
-                    driver.quit()
-                except:
-                    pass
-                driver = None
-                
-            if attempt < max_retries:
-                retry_delay = wait_time * 2  # Exponential backoff
-                logger.info(f'Retrying in {retry_delay} seconds...')
-                time.sleep(retry_delay)
-                
-    # If we get here, all attempts failed
-    error_msg = f'Failed to capture screenshot after {max_retries} attempts: {str(last_error)}'
-    logger.error(error_msg)
-    raise RuntimeError(error_msg) from last_error
-    
-    finally:
-        # Ensure driver is always closed
-        if driver:
+            # Sprawdź, czy moduł jest zainstalowany
             try:
-                driver.quit()
-            except Exception as e:
-                logger.warning(f'Error closing WebDriver: {str(e)}')
+                importlib.util.find_spec(main_module)
+                imports['third_party'].append(main_module)
+            except (ImportError, ModuleNotFoundError):
+                imports['unknown'].append(main_module)
 
-# Konfiguracja logowania
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler('sandbox.log')
-    ]
-)
-
-logger = logging.getLogger('sandbox_docker')
-
-# Załaduj zmienne środowiskowe z pliku .env
-load_dotenv()
-
-
-class DockerSandbox:
-    """Klasa do uruchamiania kodu w bezpiecznym środowisku Docker."""
-
-    def __init__(self, headless: bool = True):
-        """Inicjalizacja środowiska sandbox.
-        
-        Args:
-            headless: Czy uruchamiać przeglądarkę w trybie bezgłowym (domyślnie: True)
+    def get_required_packages(self, imports: Dict[str, List[str]]) -> List[str]:
         """
-        self.docker_image = os.getenv('DOCKER_IMAGE', 'python:3.9-slim')
-        self.container_name = os.getenv('DOCKER_CONTAINER_NAME', 'pylama-sandbox')
-        self.docker_port = os.getenv('DOCKER_PORT', '11434')
-        self.log_dir = os.path.abspath(os.getenv('LOG_DIR', './logs'))
-        self.output_dir = os.path.abspath(os.getenv('OUTPUT_DIR', './output'))
-        self.headless = headless
-        
-        # Upewnij się, że katalogi istnieją
-        os.makedirs(self.log_dir, exist_ok=True)
-        os.makedirs(self.output_dir, exist_ok=True)
-        
-        # Sprawdź, czy Docker jest zainstalowany
-        self._check_docker_installation()
-        
-        # Konfiguracja WebDrivera
-        self._setup_webdriver()
-        
-        logger.info(f"Zainicjalizowano DockerSandbox (image: {self.docker_image}, headless: {self.headless})")
+        Zwraca listę pakietów PyPI wymaganych przez kod.
 
-        # Upewnij się, że katalogi istnieją
-        Path(self.log_dir).mkdir(parents=True, exist_ok=True)
-        Path(self.output_dir).mkdir(parents=True, exist_ok=True)
+        Args:
+            imports: Słownik z importami podzielonymi na kategorie.
 
-        # Sprawdź, czy Docker jest zainstalowany
-        self._check_docker_installation()
+        Returns:
+            Lista nazw pakietów PyPI.
+        """
+        required_packages = []
 
-    def _check_docker_installation(self) -> None:
-        """Sprawdza, czy Docker jest zainstalowany i dostępny."""
+        # Dodaj pakiety zewnętrzne
+        for module in imports.get('third_party', []):
+            if module in self.dependency_map:
+                required_packages.append(self.dependency_map[module])
+            else:
+                # Jeśli nie ma mapowania, zakładamy, że nazwa pakietu jest taka sama jak nazwa modułu
+                required_packages.append(module)
+
+        # Dodaj pakiety z unknown (może być ryzykowne, ale spróbujemy)
+        for module in imports.get('unknown', []):
+            if module in self.dependency_map:
+                required_packages.append(self.dependency_map[module])
+            else:
+                # Sprawdź, czy istnieje pakiet o takiej nazwie w PyPI
+                required_packages.append(module)
+
+        return list(set(required_packages))  # Usuń duplikaty
+
+
+class DependencyManager:
+    """Klasa do zarządzania zależnościami pakietów Python."""
+
+    def __init__(self):
+        """Inicjalizacja menedżera zależności."""
+        self.code_analyzer = CodeAnalyzer()
+        self.installed_packages = self._get_installed_packages()
+        # Dodatkowe mapowanie dla popularnych pakietów, które mogą być trudne do wykrycia
+        self.additional_mappings = {
+            'np': 'numpy',
+            'pd': 'pandas',
+            'plt': 'matplotlib',
+            'tf': 'tensorflow',
+            'torch': 'torch',
+            'cv2': 'opencv-python',
+            'sk': 'scikit-learn',
+            'sklearn': 'scikit-learn',
+            'bs4': 'beautifulsoup4',
+            'requests': 'requests',
+            'django': 'django',
+            'flask': 'flask',
+            'sqlalchemy': 'sqlalchemy',
+            'pytest': 'pytest',
+            'unittest': None,  # Moduł standardowy
+            'json': None,  # Moduł standardowy
+            'os': None,  # Moduł standardowy
+            'sys': None,  # Moduł standardowy
+            'math': None  # Moduł standardowy
+        }
+
+    def _get_installed_packages(self) -> Dict[str, str]:
+        """Zwraca słownik zainstalowanych pakietów z ich wersjami."""
+        installed = {}
+
+        if HAS_PKG_RESOURCES:
+            # Użyj pkg_resources, jeśli jest dostępny
+            try:
+                for package in pkg_resources.working_set:
+                    installed[package.key] = package.version
+            except Exception as e:
+                logger.warning(f"Nie udało się pobrać listy zainstalowanych pakietów: {e}")
+        else:
+            # Alternatywna metoda, jeśli pkg_resources nie jest dostępny
+            try:
+                # Użyj pip do pobrania listy zainstalowanych pakietów
+                result = subprocess.run(
+                    [sys.executable, '-m', 'pip', 'list', '--format=json'],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    check=True
+                )
+
+                if result.returncode == 0 and result.stdout.strip():
+                    packages = json.loads(result.stdout)
+                    for package in packages:
+                        name = package.get('name', '').lower()
+                        version = package.get('version', '')
+                        if name and version:
+                            installed[name] = version
+            except Exception as e:
+                logger.warning(f"Nie udało się pobrać listy zainstalowanych pakietów przez pip: {e}")
+
+        return installed
+
+    def analyze_dependencies(self, code: str) -> Dict[str, Any]:
+        """
+        Analizuje kod Python i wykrywa zależności.
+
+        Args:
+            code: Kod Python do analizy.
+
+        Returns:
+            Słownik z informacjami o zależnościach.
+        """
+        try:
+            # Analizuj kod i wykryj importy
+            imports = self.code_analyzer.analyze_code(code)
+
+            # Pobierz wymagane pakiety na podstawie importów
+            required_packages = self.code_analyzer.get_required_packages(imports)
+
+            # Dodatkowa analiza kodu dla wykrycia aliasowanych importów
+            for alias, package in self.additional_mappings.items():
+                if package and f"{alias}." in code and package not in required_packages:
+                    required_packages.append(package)
+
+            # Sprawdź, które pakiety są już zainstalowane
+            installed = []
+            missing = []
+
+            for package in required_packages:
+                if package in self.installed_packages:
+                    installed.append(package)
+                else:
+                    missing.append(package)
+
+            return {
+                'imports': imports,
+                'required_packages': required_packages,
+                'installed_packages': installed,
+                'missing_packages': missing,
+                'installed_packages_count': len(installed)
+            }
+        except Exception as e:
+            logger.error(f"Błąd podczas analizy zależności: {e}")
+            return {
+                'imports': {},
+                'required_packages': [],
+                'installed_packages': [],
+                'missing_packages': [],
+                'installed_packages_count': 0,
+                'error': str(e)
+            }
+
+    def install_package(self, package_name: str) -> bool:
+        """
+        Instaluje pakiet Python za pomocą pip.
+
+        Args:
+            package_name: Nazwa pakietu do zainstalowania
+
+        Returns:
+            True, jeśli instalacja się powiodła, False w przeciwnym razie
+        """
+        try:
+            logger.info(f"Instalowanie pakietu: {package_name}")
+            subprocess.check_call(
+                [sys.executable, "-m", "pip", "install", package_name],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
+            # Aktualizuj słownik zainstalowanych pakietów
+            self.installed_packages = self._get_installed_packages()
+            return True
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Błąd podczas instalacji pakietu {package_name}: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Nieoczekiwany błąd podczas instalacji pakietu {package_name}: {e}")
+            return False
+
+    def ensure_dependencies(self, code: str) -> Dict[str, Any]:
+        """
+        Analizuje kod i instaluje brakujące zależności.
+
+        Args:
+            code: Kod Python do analizy
+
+        Returns:
+            Słownik z informacjami o zależnościach i wynikach instalacji
+        """
+        # Analizuj zależności
+        dependencies = self.analyze_dependencies(code)
+
+        # Instaluj brakujące pakiety
+        installation_results = []
+        for package in dependencies['missing_packages']:
+            success = self.install_package(package)
+            installation_results.append({
+                'package': package,
+                'success': success
+            })
+
+        # Aktualizuj słownik zainstalowanych pakietów
+        dependencies['installed_packages'] = [
+            {'name': package, 'version': self.installed_packages.get(package.lower(), 'unknown')}
+            for package in dependencies['required_packages']
+            if package.lower() in self.installed_packages
+        ]
+        dependencies['installation_results'] = installation_results
+
+        return dependencies
+
+
+class DockerEnvironment:
+    """Zarządza środowiskiem Docker do uruchamiania kodu Python."""
+
+    def __init__(self, image_name: str = None, container_name: str = None):
+        """
+        Inicjalizacja środowiska Docker.
+
+        Args:
+            image_name: Nazwa obrazu Docker (domyślnie: python:3.9-slim)
+            container_name: Nazwa kontenera (domyślnie: pylama-sandbox-{uuid})
+        """
+        self.image_name = image_name or os.getenv('DOCKER_IMAGE', 'python:3.9-slim')
+        self.container_name = container_name or os.getenv('DOCKER_CONTAINER_NAME',
+                                                          f'pylama-sandbox-{uuid.uuid4().hex[:8]}')
+        self.check_docker_installation()
+
+    def check_docker_installation(self) -> bool:
+        """
+        Sprawdza, czy Docker jest zainstalowany i dostępny.
+
+        Returns:
+            True, jeśli Docker jest dostępny, False w przeciwnym razie
+        """
         try:
             result = subprocess.run(
                 ['docker', '--version'],
@@ -549,15 +453,21 @@ class DockerSandbox:
             if result.returncode != 0:
                 logger.error("Docker nie jest prawidłowo zainstalowany.")
                 logger.error(f"Błąd: {result.stderr}")
-                raise RuntimeError("Docker nie jest zainstalowany lub dostępny.")
+                return False
 
             logger.info(f"Docker zainstalowany: {result.stdout.strip()}")
+            return True
         except FileNotFoundError:
             logger.error("Docker nie jest zainstalowany lub nie jest dostępny w ścieżce systemowej.")
-            raise RuntimeError("Docker nie jest zainstalowany.")
+            return False
 
     def is_container_running(self) -> bool:
-        """Sprawdza, czy kontener Docker jest już uruchomiony."""
+        """
+        Sprawdza, czy kontener Docker jest już uruchomiony.
+
+        Returns:
+            True, jeśli kontener jest uruchomiony, False w przeciwnym razie
+        """
         try:
             result = subprocess.run(
                 ['docker', 'ps', '--filter', f'name={self.container_name}', '--format', '{{.Names}}'],
@@ -573,7 +483,12 @@ class DockerSandbox:
             return False
 
     def start_container(self) -> bool:
-        """Uruchamia kontener Docker z Ollama, jeśli nie jest już uruchomiony."""
+        """
+        Uruchamia kontener Docker, jeśli nie jest już uruchomiony.
+
+        Returns:
+            True, jeśli kontener został uruchomiony lub już działa, False w przypadku błędu
+        """
         if self.is_container_running():
             logger.info(f"Kontener '{self.container_name}' już działa.")
             return True
@@ -583,67 +498,58 @@ class DockerSandbox:
         try:
             # Najpierw sprawdź, czy obrazu nie trzeba pobrać
             result = subprocess.run(
-                ['docker', 'image', 'inspect', self.docker_image],
+                ['docker', 'image', 'inspect', self.image_name],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 check=False
             )
 
             if result.returncode != 0:
-                logger.info(f"Pobieranie obrazu Docker '{self.docker_image}'...")
+                logger.info(f"Pobieranie obrazu Docker '{self.image_name}'...")
                 pull_result = subprocess.run(
-                    ['docker', 'pull', self.docker_image],
+                    ['docker', 'pull', self.image_name],
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     check=True,
                     text=True
                 )
-                logger.info(f"Obraz Docker pobrany: {self.docker_image}")
+                logger.info(f"Obraz Docker pobrany: {self.image_name}")
 
-            # Uruchom kontener
+            # Utwórz i uruchom kontener
             run_result = subprocess.run(
                 [
                     'docker', 'run',
                     '--name', self.container_name,
                     '-d',  # Uruchom w tle
-                    '-p', f'{self.docker_port}:11434',  # Przekierowanie portu
                     '--rm',  # Usuń kontener po zatrzymaniu
-                    '-v', f'{os.path.abspath(self.output_dir)}:/output',  # Montowanie katalogu wyjściowego
-                    self.docker_image
+                    '-v', f"{os.getcwd()}:/app",  # Zamontuj bieżący katalog jako /app
+                    '-w', '/app',  # Ustaw katalog roboczy na /app
+                    self.image_name,
+                    'tail', '-f', '/dev/null'  # Utrzymuj kontener uruchomiony
                 ],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                check=False,
+                check=True,
                 text=True
             )
 
-            if run_result.returncode != 0:
-                logger.error(f"Błąd podczas uruchamiania kontenera: {run_result.stderr}")
-                return False
-
-            # Daj kontenerowi czas na uruchomienie
-            logger.info("Czekanie na uruchomienie kontenera...")
-            time.sleep(5)
-
-            # Sprawdź czy faktycznie działa
-            if self.is_container_running():
-                logger.info(f"Kontener '{self.container_name}' uruchomiony pomyślnie.")
-                return True
-            else:
-                logger.error("Kontener nie uruchomił się poprawnie.")
-                return False
-
+            logger.info(f"Kontener '{self.container_name}' uruchomiony.")
+            return True
         except subprocess.CalledProcessError as e:
-            logger.error(f"Błąd podczas uruchamiania kontenera Docker: {e}")
-            logger.error(f"STDOUT: {e.stdout}")
+            logger.error(f"Błąd podczas uruchamiania kontenera: {e}")
             logger.error(f"STDERR: {e.stderr}")
             return False
         except Exception as e:
-            logger.error(f"Nieoczekiwany błąd: {e}")
+            logger.error(f"Nieoczekiwany błąd podczas uruchamiania kontenera: {e}")
             return False
 
     def stop_container(self) -> bool:
-        """Zatrzymuje kontener Docker, jeśli jest uruchomiony."""
+        """
+        Zatrzymuje kontener Docker, jeśli jest uruchomiony.
+
+        Returns:
+            True, jeśli kontener został zatrzymany lub nie był uruchomiony, False w przypadku błędu
+        """
         if not self.is_container_running():
             logger.info(f"Kontener '{self.container_name}' nie jest uruchomiony.")
             return True
@@ -651,7 +557,7 @@ class DockerSandbox:
         logger.info(f"Zatrzymywanie kontenera '{self.container_name}'...")
 
         try:
-            result = subprocess.run(
+            subprocess.run(
                 ['docker', 'stop', self.container_name],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
@@ -663,355 +569,303 @@ class DockerSandbox:
             return True
         except subprocess.CalledProcessError as e:
             logger.error(f"Błąd podczas zatrzymywania kontenera: {e}")
-            logger.error(f"STDOUT: {e.stdout}")
-            logger.error(f"STDERR: {e.stderr}")
             return False
         except Exception as e:
-            logger.error(f"Nieoczekiwany błąd: {e}")
+            logger.error(f"Nieoczekiwany błąd podczas zatrzymywania kontenera: {e}")
             return False
 
-    def _setup_webdriver(self):
-        """Konfiguruje WebDrivera do użycia w kontenerze."""
-        self.chrome_options = [
-            '--no-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-gpu',
-            '--window-size=1920,1080',
-            '--disable-extensions',
-            '--disable-software-rasterizer',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
-            '--no-zygote',
-            '--single-process',
-            '--disable-notifications',
-        ]
-        
-        if self.headless:
-            self.chrome_options.append('--headless')
-    
-    def _get_docker_run_command(self, command: str) -> List[str]:
-        """Tworzy komendę do uruchomienia w kontenerze Docker."""
-        cmd = [
-            'docker', 'exec',
-            '-e', 'PYTHONUNBUFFERED=1',
-            '-e', f'DISPLAY=:99',
-            '-w', '/app',
-            self.container_name
-        ]
-        
-        if isinstance(command, str):
-            cmd.extend(['sh', '-c', command])
-        else:
-            cmd.extend(command)
-            
-        return cmd
-    
-    def _install_dependencies_in_container(self):
-        """Instaluje wymagane zależności w kontenerze."""
-        logger.info("Instalowanie zależności w kontenerze...")
-        
-        # Aktualizacja pakietów i instalacja wymaganych zależności systemowych
-        commands = [
-            'apt-get update',
-            'apt-get install -y wget gnupg2 unzip xvfb \
-                libxss1 libappindicator1 libindicator7 fonts-liberation \
-                libasound2 libatk-bridge2.0-0 libatk1.0-0 libatspi2.0-0 \
-                libcups2 libdbus-1-3 libdrm2 libgbm1 libgtk-3-0 libnspr4 \
-                libnss3 libx11-xcb1 libxcb-dri3-0 libxcomposite1 \
-                libxdamage1 libxext6 libxfixes3 libxrandr2 libxshmfence1',
-            'wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -',
-            'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list',
-            'apt-get update',
-            'apt-get install -y google-chrome-stable',
-            'pip install --upgrade pip',
-            'pip install selenium webdriver-manager pyautogui pillow',
-            'mkdir -p /app/output',
-            'chmod -R 777 /app/output'
-        ]
-        
-        for cmd in commands:
-            try:
-                subprocess.run(
-                    self._get_docker_run_command(cmd),
-                    check=True,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    timeout=300
-                )
-            except subprocess.CalledProcessError as e:
-                logger.error(f"Błąd podczas instalacji zależności: {e.stderr.decode()}")
-                raise
-    
-    def execute_code(self, code: str, timeout: int = 300) -> Tuple[bool, str, str]:
-        """Wykonuje kod Pythona w kontenerze Docker.
+    def run_code(self, code: str, timeout: int = 60) -> Dict[str, Any]:
+        """
+        Uruchamia kod Python w kontenerze Docker.
 
         Args:
-            code: Kod Python do wykonania
-            timeout: Limit czasu wykonania w sekundach (domyślnie 300s)
-            
+            code: Kod Python do uruchomienia
+            timeout: Limit czasu wykonania w sekundach
+
         Returns:
-            Krotka (sukces, stdout, stderr)
+            Słownik z wynikami wykonania kodu
         """
-        # Przygotuj kod do wykonania
-        chrome_options_str = ' '.join([f'"{opt}"' for opt in self.chrome_options])
-        
-        wrapped_code = f"""
-import sys
-import os
-import traceback
-from pathlib import Path
+        # Upewnij się, że kontener jest uruchomiony
+        if not self.is_container_running() and not self.start_container():
+            return {
+                'success': False,
+                'stdout': '',
+                'stderr': 'Nie udało się uruchomić kontenera Docker',
+                'error': 'ContainerStartError'
+            }
 
-# Dodaj katalog wyjściowy do ścieżki
-sys.path.append('/app')
+        # Utwórz tymczasowy plik z kodem
+        with tempfile.NamedTemporaryFile(suffix='.py', mode='w', delete=False) as temp_file:
+            temp_file_path = temp_file.name
+            temp_file.write(code)
 
-# Ustaw zmienne środowiskowe
-os.environ['DISPLAY'] = ':99'
-os.environ['PYTHONUNBUFFERED'] = '1'
-
-# Uruchom Xvfb w tle
-import subprocess
-xvfb_process = subprocess.Popen(['Xvfb', ':99', '-screen', '0', '1920x1080x24'])
-try:
-    # Importy
-    from selenium import webdriver
-    from selenium.webdriver.chrome.service import Service
-    from selenium.webdriver.chrome.options import Options
-    from webdriver_manager.chrome import ChromeDriverManager
-    import pyautogui
-    
-    # Konfiguracja opcji Chrome
-    options = Options()
-    for opt in [{chrome_options_str}]:
-        options.add_argument(opt)
-    
-    # Inicjalizacja WebDrivera
-    try:
-        service = Service(ChromeDriverManager().install())
-        driver = webdriver.Chrome(service=service, options=options)
-    except Exception as e:
-        print(f"Błąd podczas inicjalizacji WebDrivera: {e}")
-        driver = webdriver.Chrome(options=options)
-    
-    # Uruchom kod użytkownika
-    try:
-        # Kod użytkownika
-        {code}
-        
-        # Jeśli wykonanie dotarło tutaj, zakładamy sukces
-        sys.exit(0)
-    except Exception as e:
-        print(f"Błąd podczas wykonywania kodu: {e}")
-        traceback.print_exc()
-        sys.exit(1)
-    finally:
         try:
-            driver.quit()
-        except:
-            pass
-finally:
-    # Zakończ proces Xvfb
-    xvfb_process.terminate()
-    xvfb_process.wait()
-"""
+            # Kopiuj plik do kontenera
+            copy_result = subprocess.run(
+                ['docker', 'cp', temp_file_path, f"{self.container_name}:/app/temp_script.py"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True,
+                text=True
+            )
 
-        # Przygotuj katalog tymczasowy
-        with tempfile.TemporaryDirectory() as temp_dir:
-            script_path = os.path.join(temp_dir, 'script.py')
-            
-            # Zapisz skrypt do pliku
-            with open(script_path, 'w', encoding='utf-8') as f:
-                f.write(wrapped_code)
-            
-            # Uruchom kontener, jeśli nie jest uruchomiony
-            if not self.is_container_running():
-                self.start_container()
-            
+            # Uruchom kod w kontenerze
+            run_result = subprocess.run(
+                [
+                    'docker', 'exec',
+                    '-e', 'PYTHONUNBUFFERED=1',
+                    self.container_name,
+                    'python', '/app/temp_script.py'
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=timeout,
+                text=True
+            )
+
+            return {
+                'success': run_result.returncode == 0,
+                'stdout': run_result.stdout,
+                'stderr': run_result.stderr,
+                'return_code': run_result.returncode
+            }
+        except subprocess.TimeoutExpired:
+            return {
+                'success': False,
+                'stdout': '',
+                'stderr': f'Przekroczono limit czasu wykonania ({timeout}s)',
+                'error': 'TimeoutError'
+            }
+        except subprocess.CalledProcessError as e:
+            return {
+                'success': False,
+                'stdout': e.stdout if hasattr(e, 'stdout') else '',
+                'stderr': e.stderr if hasattr(e, 'stderr') else str(e),
+                'error': 'ExecutionError'
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'stdout': '',
+                'stderr': str(e),
+                'error': type(e).__name__
+            }
+        finally:
+            # Usuń tymczasowy plik
             try:
-                # Skopiuj skrypt do kontenera
-                subprocess.run(
-                    ['docker', 'cp', script_path, f"{self.container_name}:/app/script.py"],
-                    check=True
-                )
-                
-                # Wykonaj skrypt w kontenerze
-                result = subprocess.run(
-                    self._get_docker_run_command('python script.py'),
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    timeout=timeout
-                )
-                
-                # Zapisz logi
-                timestamp = time.strftime("%Y%m%d-%H%M%S")
-                log_file = os.path.join(self.log_dir, f"execution-{timestamp}.log")
-                
-                with open(log_file, 'w', encoding='utf-8') as f:
-                    f.write(f"=== KOD ===\n{code}\n\n")
-                    f.write(f"=== STDOUT ===\n{result.stdout}\n\n")
-                    f.write(f"=== STDERR ===\n{result.stderr}\n\n")
-                    f.write(f"=== STATUS ===\n{'Sukces' if result.returncode == 0 else 'Błąd'} (kod wyjścia: {result.returncode})")
-                
-                return result.returncode == 0, result.stdout, result.stderr
-                
-            except subprocess.TimeoutExpired:
-                return False, "", f"Przekroczony limit czasu wykonania ({timeout}s)"
-            except subprocess.CalledProcessError as e:
-                return False, e.stdout or "", e.stderr or "Nieznany błąd"
-            except Exception as e:
-                return False, "", f"Błąd podczas wykonywania kodu: {str(e)}")
+                os.unlink(temp_file_path)
+            except:
                 pass
 
-    def install_dependencies(self, packages: List[str]) -> Tuple[bool, str, str]:
+            # Usuń plik z kontenera
+            try:
+                subprocess.run(
+                    ['docker', 'exec', self.container_name, 'rm', '-f', '/app/temp_script.py'],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    check=False
+                )
+            except:
+                pass
+
+
+class PythonSandbox:
+    """Główna klasa do uruchamiania kodu Python w bezpiecznym środowisku."""
+
+    def __init__(self, use_docker: bool = True):
         """
-        Instaluje zależności w kontenerze Docker.
+        Inicjalizacja środowiska sandbox.
 
         Args:
-            packages: Lista pakietów do zainstalowania
-
-        Returns:
-            Tuple zawierający (sukces, stdout, stderr)
+            use_docker: Czy używać Docker do uruchamiania kodu
         """
-        if not packages:
-            return True, "", ""
+        self.use_docker = use_docker
+        self.dependency_manager = DependencyManager()
 
-        if not self.is_container_running():
-            if not self.start_container():
-                return False, "", "Nie udało się uruchomić kontenera Docker."
+        if use_docker:
+            self.docker_env = DockerEnvironment()
+        else:
+            self.docker_env = None
 
-        try:
-            packages_str = ' '.join(packages)
-            install_cmd = f"pip install {packages_str}"
-
-            run_result = subprocess.run(
-                [
-                    'docker', 'exec',
-                    self.container_name,
-                    'bash', '-c', install_cmd
-                ],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                check=False,
-                text=True,
-                timeout=180  # Dłuższy timeout dla instalacji pakietów
-            )
-
-            success = run_result.returncode == 0
-            stdout = run_result.stdout
-            stderr = run_result.stderr
-
-            # Zapisz logi
-            timestamp = time.strftime("%Y%m%d-%H%M%S")
-            log_file = os.path.join(self.log_dir, f"pip-install-{timestamp}.log")
-
-            with open(log_file, 'w', encoding='utf-8') as f:
-                f.write(f"=== INSTALACJA PAKIETÓW ===\n{packages_str}\n\n")
-                f.write(f"=== STDOUT ===\n{stdout}\n\n")
-                f.write(f"=== STDERR ===\n{stderr}\n\n")
-                f.write(f"=== STATUS ===\n{'Sukces' if success else 'Błąd'} (kod wyjścia: {run_result.returncode})")
-
-            if success:
-                logger.info(f"Pakiety zainstalowane pomyślnie: {packages_str}")
-            else:
-                logger.error(f"Błąd podczas instalacji pakietów: {stderr}")
-
-            return success, stdout, stderr
-
-        except subprocess.TimeoutExpired:
-            return False, "", "Przekroczony limit czasu instalacji pakietów (180s)"
-        except Exception as e:
-            logger.error(f"Błąd podczas instalacji pakietów: {e}")
-            return False, "", str(e)
-
-    def pull_ollama_model(self, model_name: str) -> Tuple[bool, str, str]:
+    def run_code(self, code: str, install_dependencies: bool = True, timeout: int = 60) -> Dict[str, Any]:
         """
-        Pobiera model Ollama w kontenerze Docker.
+        Uruchamia kod Python w bezpiecznym środowisku.
 
         Args:
-            model_name: Nazwa modelu do pobrania
+            code: Kod Python do uruchomienia
+            install_dependencies: Czy automatycznie instalować zależności
+            timeout: Limit czasu wykonania w sekundach
 
         Returns:
-            Tuple zawierający (sukces, stdout, stderr)
+            Słownik z wynikami wykonania kodu i informacjami o zależnościach
         """
-        if not self.is_container_running():
-            if not self.start_container():
-                return False, "", "Nie udało się uruchomić kontenera Docker."
+        result = {
+            'code': code,
+            'dependencies': None,
+            'execution': None
+        }
+
+        # Analizuj i zainstaluj zależności, jeśli potrzeba
+        if install_dependencies:
+            dependencies = self.dependency_manager.ensure_dependencies(code)
+            result['dependencies'] = dependencies
+
+        # Uruchom kod
+        if self.use_docker and self.docker_env:
+            execution_result = self.docker_env.run_code(code, timeout)
+        else:
+            execution_result = self._run_code_locally(code, timeout)
+
+        result['execution'] = execution_result
+        return result
+
+    def _run_code_locally(self, code: str, timeout: int = 60) -> Dict[str, Any]:
+        """
+        Uruchamia kod Python lokalnie (bez Docker).
+
+        Args:
+            code: Kod Python do uruchomienia
+            timeout: Limit czasu wykonania w sekundach
+
+        Returns:
+            Słownik z wynikami wykonania kodu
+        """
+        # Utwórz tymczasowy plik z kodem
+        with tempfile.NamedTemporaryFile(suffix='.py', mode='w', delete=False) as temp_file:
+            temp_file_path = temp_file.name
+            temp_file.write(code)
 
         try:
-            run_result = subprocess.run(
-                [
-                    'docker', 'exec',
-                    self.container_name,
-                    'ollama', 'pull', model_name
-                ],
+            # Uruchom kod w nowym procesie
+            process = subprocess.run(
+                [sys.executable, temp_file_path],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                check=False,
-                text=True,
-                timeout=600  # Dłuższy timeout dla pobierania modelu (10 minut)
+                timeout=timeout,
+                text=True
             )
 
-            success = run_result.returncode == 0
-            stdout = run_result.stdout
-            stderr = run_result.stderr
-
-            # Zapisz logi
-            timestamp = time.strftime("%Y%m%d-%H%M%S")
-            log_file = os.path.join(self.log_dir, f"ollama-pull-{model_name}-{timestamp}.log")
-
-            with open(log_file, 'w', encoding='utf-8') as f:
-                f.write(f"=== POBIERANIE MODELU ===\n{model_name}\n\n")
-                f.write(f"=== STDOUT ===\n{stdout}\n\n")
-                f.write(f"=== STDERR ===\n{stderr}\n\n")
-                f.write(f"=== STATUS ===\n{'Sukces' if success else 'Błąd'} (kod wyjścia: {run_result.returncode})")
-
-            if success:
-                logger.info(f"Model '{model_name}' pobrany pomyślnie.")
-            else:
-                logger.error(f"Błąd podczas pobierania modelu '{model_name}': {stderr}")
-
-            return success, stdout, stderr
-
+            return {
+                'success': process.returncode == 0,
+                'stdout': process.stdout,
+                'stderr': process.stderr,
+                'return_code': process.returncode
+            }
         except subprocess.TimeoutExpired:
-            return False, "", f"Przekroczony limit czasu pobierania modelu '{model_name}' (600s)"
+            return {
+                'success': False,
+                'stdout': '',
+                'stderr': f'Przekroczono limit czasu wykonania ({timeout}s)',
+                'error': 'TimeoutError'
+            }
         except Exception as e:
-            logger.error(f"Błąd podczas pobierania modelu: {e}")
-            return False, "", str(e)
+            return {
+                'success': False,
+                'stdout': '',
+                'stderr': str(e),
+                'error': type(e).__name__
+            }
+        finally:
+            # Usuń tymczasowy plik
+            try:
+                os.unlink(temp_file_path)
+            except:
+                pass
 
 
 # Przykład użycia
+def main():
+    # Definiowanie przykładowych kodów jako zmienne
+    # Przykład 1: Kod z zewnętrznymi zależnościami (numpy, pandas)
+    example_code = "print('Hello, world!')\n"
+    example_code += "import numpy as np\n\n"
+    example_code += "# Przykład użycia NumPy\n"
+    example_code += "arr = np.array([1, 2, 3, 4, 5])\n"
+    example_code += "print(f'Tablica NumPy: {arr}')\n"
+    example_code += "print(f'Średnia: {np.mean(arr)}')\n\n"
+    example_code += "# Przykład użycia pandas\n"
+    example_code += "import pandas as pd\n"
+    example_code += "df = pd.DataFrame({\n"
+    example_code += "    'A': [1, 2, 3, 4, 5],\n"
+    example_code += "    'B': [10, 20, 30, 40, 50]\n"
+    example_code += "})\n"
+    example_code += "print('\\nDataFrame pandas:')\n"
+    example_code += "print(df)\n"
+    example_code += "print(f'Średnia kolumny A: {df[\"A\"].mean()}')"
+
+    # Przykład 2: Kod bez zewnętrznych zależności
+    simple_code = "import os\n"
+    simple_code += "import sys\n"
+    simple_code += "import math\n\n"
+    simple_code += "print('Informacje o systemie:')\n"
+    simple_code += "print(f'System operacyjny: {os.name}')\n"
+    simple_code += "print(f'Wersja Pythona: {sys.version}')\n"
+    simple_code += "print(f'Katalog bieżący: {os.getcwd()}')\n\n"
+    simple_code += "# Przykład obliczeń matematycznych\n"
+    simple_code += "print('\\nObliczenia matematyczne:')\n"
+    simple_code += "print(f'Pi: {math.pi}')\n"
+    simple_code += "print(f'Pierwiastek z 16: {math.sqrt(16)}')\n"
+    simple_code += "print(f'Silnia z 5: {math.factorial(5)}')"
+
+    # Funkcja do wyświetlania wyników
+    def display_results(result, title):
+        print(f"\n=== {title} ===")
+        print("Wyniki analizy zależności:")
+        print(f"  Wymagane pakiety: {', '.join(result.get('required_packages', []))}" if result.get(
+            'required_packages') else "  Wymagane pakiety: brak")
+        print(f"  Zainstalowane pakiety: {result.get('installed_packages_count', 0)}")
+        print(f"  Brakujące pakiety: {', '.join(result.get('missing_packages', []))}" if result.get(
+            'missing_packages') else "  Brakujące pakiety: brak")
+
+        print("\nWyniki wykonania kodu:")
+        print(f"  Sukces: {result.get('success', False)}")
+        print(f"  Standardowe wyjście:\n{result.get('stdout', '')}")
+        if result.get('stderr'):
+            print(f"  Standardowe wyjście błędów:\n{result.get('stderr', '')}")
+
+    # Utwórz sandbox i uruchom kod z zewnętrznymi zależnościami
+    print("\n=== Test 1: Uruchamianie kodu z zewnętrznymi zależnościami (numpy, pandas) ===")
+    sandbox = PythonSandbox(use_docker=True)
+    result = sandbox.run_code(example_code)
+    display_results(result, "Wyniki dla kodu z zewnętrznymi zależnościami")
+
+    # Uruchom kod bez zewnętrznych zależności
+    print("\n=== Test 2: Uruchamianie kodu bez zewnętrznych zależności ===")
+    result = sandbox.run_code(simple_code)
+    display_results(result, "Wyniki dla kodu bez zewnętrznych zależności")
+
+    # Przykład 3: Kod z błędem składni
+    code_with_syntax_error = "print('Ten kod zawiera błąd składni')\n"
+    code_with_syntax_error += "if True:\n"
+    code_with_syntax_error += "    print('Ten kod jest poprawny')\n"
+    code_with_syntax_error += "else\n"  # Celowo brakuje dwukropka po else
+    code_with_syntax_error += "    print('Brakuje dwukropka po else')"
+
+    # Przykład 4: Kod z błędem wykonania
+    code_with_runtime_error = "print('Ten kod zawiera błąd wykonania')\n"
+    code_with_runtime_error += "x = 10 / 0  # Dzielenie przez zero\n"
+    code_with_runtime_error += "print('Ta linia nie zostanie wykonana')"
+
+    # Tworzymy instancję sandboxa tylko raz
+    sandbox = PythonSandbox(use_docker=True)
+
+    # Uruchamianie testów
+    print("\n=== Test 1: Uruchamianie kodu z zewnętrznymi zależnościami (numpy, pandas) ===")
+    result = sandbox.run_code(example_code)
+    display_results(result, "Wyniki dla kodu z zewnętrznymi zależnościami")
+
+    print("\n=== Test 2: Uruchamianie kodu bez zewnętrznych zależności ===")
+    result = sandbox.run_code(simple_code)
+    display_results(result, "Wyniki dla kodu bez zewnętrznych zależności")
+
+    print("\n=== Test 3: Uruchamianie kodu z błędem składni ===")
+    result = sandbox.run_code(code_with_syntax_error)
+    display_results(result, "Wyniki dla kodu z błędem składni")
+
+    print("\n=== Test 4: Uruchamianie kodu z błędem wykonania ===")
+    result = sandbox.run_code(code_with_runtime_error)
+    display_results(result, "Wyniki dla kodu z błędem wykonania")
+
+
 if __name__ == "__main__":
-    sandbox = DockerSandbox()
-
-    try:
-        # Uruchom kontener
-        if not sandbox.start_container():
-            sys.exit(1)
-
-        # Testowy kod Python
-        test_code = """
-import os
-import platform
-import sys
-
-print("=== Informacje o środowisku ===")
-print(f"Python: {sys.version}")
-print(f"Platforma: {platform.platform()}")
-print(f"Katalogi: {os.listdir('/')}")
-print("=== Koniec ===")
-"""
-
-        # Wykonaj kod
-        success, stdout, stderr = sandbox.execute_code(test_code)
-
-        print("\n=== Wyniki testu ===")
-        print(f"Sukces: {success}")
-        print(f"STDOUT:\n{stdout}")
-
-        if stderr:
-            print(f"STDERR:\n{stderr}")
-
-    finally:
-        # Zatrzymaj kontener
-        sandbox.stop_container()
+    main()
