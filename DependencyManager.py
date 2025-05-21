@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from typing import List, Dict, Any, Tuple, Optional
 import os
@@ -8,7 +9,17 @@ import sys
 import re
 import importlib
 from importlib import metadata
-import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler('dependency_manager.log')
+    ]
+)
+logger = logging.getLogger('DependencyManager')
 
 class DependencyManager:
     """Klasa do zarządzania zależnościami projektu."""

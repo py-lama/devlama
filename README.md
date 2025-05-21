@@ -20,8 +20,8 @@ PyLama is a Python tool that leverages Ollama's language models to generate and 
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/py-lama.git
-   cd py-lama/pylama
+   git clone https://github.com/py-lama/pylama.git
+   cd pylama
    ```
 
 2. Install the required Python packages:

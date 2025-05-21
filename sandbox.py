@@ -8,9 +8,71 @@ import tempfile
 import shutil
 import logging
 import time
+import traceback
 from pathlib import Path
-from typing import Optional, Dict, List, Tuple, Any
+from typing import Optional, Dict, List, Tuple, Any, Union
 from dotenv import load_dotenv
+
+# Common imports that will be added to the sandbox environment
+COMMON_IMPORTS = """
+# Standard library imports
+import sys
+import traceback
+
+# Web automation imports
+try:
+    from selenium import webdriver
+    from selenium.webdriver.chrome.service import Service
+    from selenium.webdriver.chrome.options import Options
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
+    from webdriver_manager.chrome import ChromeDriverManager
+    HAS_SELENIUM = True
+except ImportError:
+    HAS_SELENIUM = False
+
+try:
+    import pyautogui
+    HAS_PYAUTOGUI = True
+except ImportError:
+    HAS_PYAUTOGUI = False
+
+# Configure Chrome options
+def get_chrome_options(headless=True):
+    options = Options()
+    if headless:
+        options.add_argument('--headless')
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
+        options.add_argument('--disable-gpu')
+        options.add_argument('--window-size=1920,1080')
+    options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    options.add_experimental_option('useAutomationExtension', False)
+    return options
+
+# Initialize WebDriver
+def init_webdriver(headless=True):
+    if not HAS_SELENIUM:
+        raise ImportError("Selenium is not installed. Please install it with: pip install selenium webdriver-manager")
+    
+    options = get_chrome_options(headless)
+    
+    try:
+        # Try to use webdriver-manager to handle the driver
+        service = Service(ChromeDriverManager().install())
+        driver = webdriver.Chrome(service=service, options=options)
+        return driver
+    except Exception as e:
+        print(f"Error initializing WebDriver: {e}")
+        # Fallback to system ChromeDriver if available
+        try:
+            driver = webdriver.Chrome(options=options)
+            return driver
+        except Exception as e:
+            print(f"Fallback WebDriver initialization failed: {e}")
+            raise
+"""
 
 # Konfiguracja logowania
 logging.basicConfig(
@@ -31,13 +93,30 @@ load_dotenv()
 class DockerSandbox:
     """Klasa do uruchamiania kodu w bezpiecznym środowisku Docker."""
 
-    def __init__(self):
-        """Inicjalizacja środowiska sandbox."""
-        self.docker_image = os.getenv('DOCKER_IMAGE', 'ollama/ollama:latest')
+    def __init__(self, headless: bool = True):
+        """Inicjalizacja środowiska sandbox.
+        
+        Args:
+            headless: Czy uruchamiać przeglądarkę w trybie bezgłowym (domyślnie: True)
+        """
+        self.docker_image = os.getenv('DOCKER_IMAGE', 'python:3.9-slim')
         self.container_name = os.getenv('DOCKER_CONTAINER_NAME', 'pylama-sandbox')
         self.docker_port = os.getenv('DOCKER_PORT', '11434')
-        self.log_dir = os.getenv('LOG_DIR', './logs')
-        self.output_dir = os.getenv('OUTPUT_DIR', './output')
+        self.log_dir = os.path.abspath(os.getenv('LOG_DIR', './logs'))
+        self.output_dir = os.path.abspath(os.getenv('OUTPUT_DIR', './output'))
+        self.headless = headless
+        
+        # Upewnij się, że katalogi istnieją
+        os.makedirs(self.log_dir, exist_ok=True)
+        os.makedirs(self.output_dir, exist_ok=True)
+        
+        # Sprawdź, czy Docker jest zainstalowany
+        self._check_docker_installation()
+        
+        # Konfiguracja WebDrivera
+        self._setup_webdriver()
+        
+        logger.info(f"Zainicjalizowano DockerSandbox (image: {self.docker_image}, headless: {self.headless})")
 
         # Upewnij się, że katalogi istnieją
         Path(self.log_dir).mkdir(parents=True, exist_ok=True)
@@ -181,80 +260,197 @@ class DockerSandbox:
             logger.error(f"Nieoczekiwany błąd: {e}")
             return False
 
-    def execute_code(self, code: str, timeout: int = 30) -> Tuple[bool, str, str]:
-        """
-        Wykonuje kod Python w kontenerze Docker.
+    def _setup_webdriver(self):
+        """Konfiguruje WebDrivera do użycia w kontenerze."""
+        self.chrome_options = [
+            '--no-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--window-size=1920,1080',
+            '--disable-extensions',
+            '--disable-software-rasterizer',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--no-zygote',
+            '--single-process',
+            '--disable-notifications',
+        ]
+        
+        if self.headless:
+            self.chrome_options.append('--headless')
+    
+    def _get_docker_run_command(self, command: str) -> List[str]:
+        """Tworzy komendę do uruchomienia w kontenerze Docker."""
+        cmd = [
+            'docker', 'exec',
+            '-e', 'PYTHONUNBUFFERED=1',
+            '-e', f'DISPLAY=:99',
+            '-w', '/app',
+            self.container_name
+        ]
+        
+        if isinstance(command, str):
+            cmd.extend(['sh', '-c', command])
+        else:
+            cmd.extend(command)
+            
+        return cmd
+    
+    def _install_dependencies_in_container(self):
+        """Instaluje wymagane zależności w kontenerze."""
+        logger.info("Instalowanie zależności w kontenerze...")
+        
+        # Aktualizacja pakietów i instalacja wymaganych zależności systemowych
+        commands = [
+            'apt-get update',
+            'apt-get install -y wget gnupg2 unzip xvfb \
+                libxss1 libappindicator1 libindicator7 fonts-liberation \
+                libasound2 libatk-bridge2.0-0 libatk1.0-0 libatspi2.0-0 \
+                libcups2 libdbus-1-3 libdrm2 libgbm1 libgtk-3-0 libnspr4 \
+                libnss3 libx11-xcb1 libxcb-dri3-0 libxcomposite1 \
+                libxdamage1 libxext6 libxfixes3 libxrandr2 libxshmfence1',
+            'wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -',
+            'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list',
+            'apt-get update',
+            'apt-get install -y google-chrome-stable',
+            'pip install --upgrade pip',
+            'pip install selenium webdriver-manager pyautogui pillow',
+            'mkdir -p /app/output',
+            'chmod -R 777 /app/output'
+        ]
+        
+        for cmd in commands:
+            try:
+                subprocess.run(
+                    self._get_docker_run_command(cmd),
+                    check=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    timeout=300
+                )
+            except subprocess.CalledProcessError as e:
+                logger.error(f"Błąd podczas instalacji zależności: {e.stderr.decode()}")
+                raise
+    
+    def execute_code(self, code: str, timeout: int = 300) -> Tuple[bool, str, str]:
+        """Wykonuje kod Pythona w kontenerze Docker.
 
         Args:
             code: Kod Python do wykonania
-            timeout: Limit czasu wykonania w sekundach
-
+            timeout: Limit czasu wykonania w sekundach (domyślnie 300s)
+            
         Returns:
-            Tuple zawierający (sukces, stdout, stderr)
+            Krotka (sukces, stdout, stderr)
         """
-        if not self.is_container_running():
-            if not self.start_container():
-                return False, "", "Nie udało się uruchomić kontenera Docker."
+        # Przygotuj kod do wykonania
+        chrome_options_str = ' '.join([f'"{opt}"' for opt in self.chrome_options])
+        
+        wrapped_code = f"""
+import sys
+import os
+import traceback
+from pathlib import Path
 
-        # Utwórz tymczasowy plik z kodem
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as temp_file:
-            temp_file.write(code)
-            temp_filename = temp_file.name
+# Dodaj katalog wyjściowy do ścieżki
+sys.path.append('/app')
 
+# Ustaw zmienne środowiskowe
+os.environ['DISPLAY'] = ':99'
+os.environ['PYTHONUNBUFFERED'] = '1'
+
+# Uruchom Xvfb w tle
+import subprocess
+xvfb_process = subprocess.Popen(['Xvfb', ':99', '-screen', '0', '1920x1080x24'])
+try:
+    # Importy
+    from selenium import webdriver
+    from selenium.webdriver.chrome.service import Service
+    from selenium.webdriver.chrome.options import Options
+    from webdriver_manager.chrome import ChromeDriverManager
+    import pyautogui
+    
+    # Konfiguracja opcji Chrome
+    options = Options()
+    for opt in [{chrome_options_str}]:
+        options.add_argument(opt)
+    
+    # Inicjalizacja WebDrivera
+    try:
+        service = Service(ChromeDriverManager().install())
+        driver = webdriver.Chrome(service=service, options=options)
+    except Exception as e:
+        print(f"Błąd podczas inicjalizacji WebDrivera: {e}")
+        driver = webdriver.Chrome(options=options)
+    
+    # Uruchom kod użytkownika
+    try:
+        # Kod użytkownika
+        {code}
+        
+        # Jeśli wykonanie dotarło tutaj, zakładamy sukces
+        sys.exit(0)
+    except Exception as e:
+        print(f"Błąd podczas wykonywania kodu: {e}")
+        traceback.print_exc()
+        sys.exit(1)
+    finally:
         try:
-            # Kopiuj plik do kontenera
-            container_filename = f"/tmp/{os.path.basename(temp_filename)}"
-            copy_result = subprocess.run(
-                ['docker', 'cp', temp_filename, f"{self.container_name}:{container_filename}"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                check=False,
-                text=True
-            )
+            driver.quit()
+        except:
+            pass
+finally:
+    # Zakończ proces Xvfb
+    xvfb_process.terminate()
+    xvfb_process.wait()
+"""
 
-            if copy_result.returncode != 0:
-                return False, "", f"Błąd podczas kopiowania pliku do kontenera: {copy_result.stderr}"
-
-            # Wykonaj kod w kontenerze
-            run_result = subprocess.run(
-                [
-                    'docker', 'exec',
-                    self.container_name,
-                    'python3', container_filename
-                ],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                check=False,
-                text=True,
-                timeout=timeout
-            )
-
-            success = run_result.returncode == 0
-            stdout = run_result.stdout
-            stderr = run_result.stderr
-
-            # Zapisz logi
-            timestamp = time.strftime("%Y%m%d-%H%M%S")
-            log_file = os.path.join(self.log_dir, f"execution-{timestamp}.log")
-
-            with open(log_file, 'w', encoding='utf-8') as f:
-                f.write(f"=== KOD ===\n{code}\n\n")
-                f.write(f"=== STDOUT ===\n{stdout}\n\n")
-                f.write(f"=== STDERR ===\n{stderr}\n\n")
-                f.write(f"=== STATUS ===\n{'Sukces' if success else 'Błąd'} (kod wyjścia: {run_result.returncode})")
-
-            return success, stdout, stderr
-
-        except subprocess.TimeoutExpired:
-            return False, "", f"Przekroczony limit czasu wykonania ({timeout}s)"
-        except Exception as e:
-            logger.error(f"Błąd podczas wykonywania kodu: {e}")
-            return False, "", str(e)
-        finally:
-            # Usuń tymczasowy plik
+        # Przygotuj katalog tymczasowy
+        with tempfile.TemporaryDirectory() as temp_dir:
+            script_path = os.path.join(temp_dir, 'script.py')
+            
+            # Zapisz skrypt do pliku
+            with open(script_path, 'w', encoding='utf-8') as f:
+                f.write(wrapped_code)
+            
+            # Uruchom kontener, jeśli nie jest uruchomiony
+            if not self.is_container_running():
+                self.start_container()
+            
             try:
-                os.unlink(temp_filename)
-            except Exception:
+                # Skopiuj skrypt do kontenera
+                subprocess.run(
+                    ['docker', 'cp', script_path, f"{self.container_name}:/app/script.py"],
+                    check=True
+                )
+                
+                # Wykonaj skrypt w kontenerze
+                result = subprocess.run(
+                    self._get_docker_run_command('python script.py'),
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    timeout=timeout
+                )
+                
+                # Zapisz logi
+                timestamp = time.strftime("%Y%m%d-%H%M%S")
+                log_file = os.path.join(self.log_dir, f"execution-{timestamp}.log")
+                
+                with open(log_file, 'w', encoding='utf-8') as f:
+                    f.write(f"=== KOD ===\n{code}\n\n")
+                    f.write(f"=== STDOUT ===\n{result.stdout}\n\n")
+                    f.write(f"=== STDERR ===\n{result.stderr}\n\n")
+                    f.write(f"=== STATUS ===\n{'Sukces' if result.returncode == 0 else 'Błąd'} (kod wyjścia: {result.returncode})")
+                
+                return result.returncode == 0, result.stdout, result.stderr
+                
+            except subprocess.TimeoutExpired:
+                return False, "", f"Przekroczony limit czasu wykonania ({timeout}s)"
+            except subprocess.CalledProcessError as e:
+                return False, e.stdout or "", e.stderr or "Nieznany błąd"
+            except Exception as e:
+                return False, "", f"Błąd podczas wykonywania kodu: {str(e)}")
                 pass
 
     def install_dependencies(self, packages: List[str]) -> Tuple[bool, str, str]:
