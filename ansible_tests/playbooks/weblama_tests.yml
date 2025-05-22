@@ -1,0 +1,50 @@
+---
+# WebLama component tests
+
+- name: WebLama Tests
+  hosts: local
+  gather_facts: no
+  vars:
+    weblama_url: "{{ lookup('env', 'WEBLAMA_URL') | default('http://localhost:8081', true) }}"
+    test_output_dir: "{{ playbook_dir }}/../test-reports"
+  
+  tasks:
+    - name: Test WebLama health endpoint
+      uri:
+        url: "{{ weblama_url }}/health"
+        method: GET
+        status_code: 200
+      register: weblama_health_result
+      
+    - name: Verify WebLama health result
+      assert:
+        that:
+          - weblama_health_result.status == 200
+        fail_msg: "WebLama health check failed"
+        success_msg: "WebLama health check successful"
+      
+    - name: Test WebLama files endpoint
+      uri:
+        url: "{{ weblama_url }}/api/files"
+        method: GET
+        status_code: 200
+      register: weblama_files_result
+      
+    - name: Verify WebLama files result
+      assert:
+        that:
+          - weblama_files_result.status == 200
+          - weblama_files_result.json is defined
+          - weblama_files_result.json.status is defined
+          - weblama_files_result.json.files is defined
+        fail_msg: "WebLama files retrieval failed"
+        success_msg: "WebLama files retrieval successful"
+      
+    - name: Save WebLama test results
+      copy:
+        content: "{{ weblama_files_result | to_nice_json }}"
+        dest: "{{ test_output_dir }}/weblama_test_results.json"
+      
+    - name: Display WebLama test summary
+      debug:
+        msg: "WebLama tests completed successfully"

@@ -1,0 +1,69 @@
+---
+# APILama component tests
+
+- name: APILama Tests
+  hosts: local
+  gather_facts: no
+  vars:
+    apilama_url: "{{ lookup('env', 'APILAMA_URL') | default('http://localhost:8080', true) }}"
+    test_output_dir: "{{ playbook_dir }}/../test-reports"
+  
+  tasks:
+    - name: Test APILama execute endpoint
+      uri:
+        url: "{{ apilama_url }}/api/execute"
+        method: POST
+        body_format: json
+        body:
+          code: "print('Hello from APILama!')"
+          language: "python"
+        status_code: 200
+      register: apilama_execute_result
+      
+    - name: Verify APILama execution result
+      assert:
+        that:
+          - apilama_execute_result.status == 200
+          - apilama_execute_result.json.output is defined
+          - "'Hello from APILama!' in apilama_execute_result.json.output"
+        fail_msg: "APILama code execution failed"
+        success_msg: "APILama code execution successful"
+      
+    - name: Test APILama models endpoint
+      uri:
+        url: "{{ apilama_url }}/api/models"
+        method: GET
+        status_code: 200
+      register: apilama_models_result
+      
+    - name: Verify APILama models result
+      assert:
+        that:
+          - apilama_models_result.status == 200
+          - apilama_models_result.json is defined
+        fail_msg: "APILama models retrieval failed"
+        success_msg: "APILama models retrieval successful"
+      
+    - name: Test APILama files endpoint
+      uri:
+        url: "{{ apilama_url }}/api/files"
+        method: GET
+        status_code: 200
+      register: apilama_files_result
+      
+    - name: Verify APILama files result
+      assert:
+        that:
+          - apilama_files_result.status == 200
+          - apilama_files_result.json is defined
+        fail_msg: "APILama files retrieval failed"
+        success_msg: "APILama files retrieval successful"
+      
+    - name: Save APILama test results
+      copy:
+        content: "{{ apilama_execute_result | to_nice_json }}"
+        dest: "{{ test_output_dir }}/apilama_test_results.json"
+      
+    - name: Display APILama test summary
+      debug:
+        msg: "APILama tests completed successfully"
