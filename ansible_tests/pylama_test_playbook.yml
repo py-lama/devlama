@@ -1,0 +1,33 @@
+---
+# PyLama Test Playbook
+# This playbook tests all endpoints of the PyLama service
+
+- name: Test PyLama Endpoints
+  hosts: localhost
+  gather_facts: false
+  vars:
+    pylama_base_url: "{{ lookup('env', 'PYLAMA_URL') | default('http://localhost:8002', true) }}"
+    test_model: "llama3"
+    test_prompt: "What is artificial intelligence?"
+  
+  tasks:
+    # Health Check Tests
+    - name: Test Health Check Endpoint
+      uri:
+        url: "{{ pylama_base_url }}/health"
+        method: GET
+        return_content: yes
+        status_code: 200
+      register: health_result
+      failed_when: health_result.json.status != "healthy"
+
+    - name: Display Health Check Result
+      debug:
+        var: health_result.json
+
+    # Include test files for different service endpoints
+    - name: Include Model Operations Tests
+      include_tasks: model_operations_tests.yml
+
+    - name: Include Query Operations Tests
+      include_tasks: query_operations_tests.yml

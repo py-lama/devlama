@@ -1,0 +1,77 @@
+---
+# Query Operations Tests
+# Tests all query-related endpoints in PyLama
+
+- name: Test Query Operations - Basic Query
+  uri:
+    url: "{{ pylama_base_url }}/query"
+    method: POST
+    body_format: json
+    body:
+      prompt: "{{ test_prompt }}"
+      model: "{{ test_model }}"
+      temperature: 0.7
+    status_code: 200
+  register: basic_query_result
+  failed_when: basic_query_result.json is not defined or 'response' not in basic_query_result.json
+
+- name: Display Basic Query Result
+  debug:
+    var: basic_query_result.json
+    verbosity: 1
+
+- name: Test Query Operations - Query with System Prompt
+  uri:
+    url: "{{ pylama_base_url }}/query"
+    method: POST
+    body_format: json
+    body:
+      prompt: "{{ test_prompt }}"
+      model: "{{ test_model }}"
+      temperature: 0.5
+      system_prompt: "You are a helpful AI assistant that provides concise answers."
+    status_code: 200
+  register: system_prompt_query_result
+  failed_when: system_prompt_query_result.json is not defined or 'response' not in system_prompt_query_result.json
+
+- name: Display System Prompt Query Result
+  debug:
+    var: system_prompt_query_result.json
+    verbosity: 1
+
+- name: Test Query Operations - Query with Max Tokens
+  uri:
+    url: "{{ pylama_base_url }}/query"
+    method: POST
+    body_format: json
+    body:
+      prompt: "{{ test_prompt }}"
+      model: "{{ test_model }}"
+      temperature: 0.7
+      max_tokens: 50
+    status_code: 200
+  register: max_tokens_query_result
+  failed_when: max_tokens_query_result.json is not defined or 'response' not in max_tokens_query_result.json
+
+- name: Display Max Tokens Query Result
+  debug:
+    var: max_tokens_query_result.json
+    verbosity: 1
+
+- name: Test Query Operations - Error Handling (Invalid Model)
+  uri:
+    url: "{{ pylama_base_url }}/query"
+    method: POST
+    body_format: json
+    body:
+      prompt: "{{ test_prompt }}"
+      model: "nonexistent_model_123"
+      temperature: 0.7
+    status_code: 500
+  register: invalid_model_result
+  ignore_errors: yes
+
+- name: Display Invalid Model Result
+  debug:
+    var: invalid_model_result
+    verbosity: 1

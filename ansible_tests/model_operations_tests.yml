@@ -1,0 +1,44 @@
+---
+# Model Operations Tests
+# Tests all model-related endpoints in PyLama
+
+- name: Test Model Operations - List Models
+  uri:
+    url: "{{ pylama_base_url }}/models"
+    method: GET
+    return_content: yes
+    status_code: 200
+  register: list_models_result
+  failed_when: list_models_result.json is not defined or 'models' not in list_models_result.json
+
+- name: Display List Models Result
+  debug:
+    var: list_models_result.json
+
+- name: Test Model Operations - Pull Model
+  uri:
+    url: "{{ pylama_base_url }}/models/pull"
+    method: POST
+    body_format: json
+    body:
+      model_name: "{{ test_model }}"
+    status_code: 200
+  register: pull_model_result
+  failed_when: pull_model_result.json.success is not defined or not pull_model_result.json.success
+
+- name: Display Pull Model Result
+  debug:
+    var: pull_model_result.json
+
+- name: Verify Model Was Pulled
+  uri:
+    url: "{{ pylama_base_url }}/models"
+    method: GET
+    return_content: yes
+    status_code: 200
+  register: verify_model_result
+  failed_when: test_model not in (verify_model_result.json.models | map(attribute='name') | list)
+
+- name: Display Verification Result
+  debug:
+    var: verify_model_result.json

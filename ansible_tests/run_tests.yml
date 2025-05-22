@@ -1,0 +1,9 @@
+---
+# Run all PyLama API tests
+
+- name: Run PyLama API Tests
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Run PyLama API Tests
+      include_tasks: pylama_test_playbook.yml
