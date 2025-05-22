@@ -11,6 +11,7 @@ import logging
 
 from .ecosystem_manager import start_ecosystem, stop_ecosystem, open_weblama_in_browser
 from .service_utils import print_ecosystem_status, view_service_logs
+from .log_manager import collect_logs, start_log_collector, stop_log_collector, view_logs
 
 logger = logging.getLogger(__name__)
 
@@ -65,8 +66,44 @@ Main function for the ecosystem management CLI.
     
     # Logs command
     logs_parser = subparsers.add_parser("logs", help="View logs for a service")
-    logs_parser.add_argument("service", choices=["pybox", "pyllm", "shellama", "apilama", "pylama", "weblama"],
-                           help="Service to view logs for")
+    logs_parser.add_argument("service", choices=["pybox", "pyllm", "shellama", "apilama", "pylama", "weblama", "all"],
+                           help="Service to view logs for (use 'all' to view logs from all services)")
+    logs_parser.add_argument("--level", choices=["debug", "info", "warning", "error", "critical"],
+                           help="Filter logs by level")
+    logs_parser.add_argument("--limit", type=int, default=50,
+                           help="Maximum number of logs to display")
+    logs_parser.add_argument("--json", action="store_true",
+                           help="Output logs in JSON format")
+    
+    # Collect logs command
+    collect_parser = subparsers.add_parser("collect-logs", help="Collect logs from services and import them into LogLama")
+    collect_parser.add_argument("--services", nargs="+",
+                              choices=["pybox", "pyllm", "shellama", "apilama", "pylama", "weblama"],
+                              help="Services to collect logs from (default: all)")
+    collect_parser.add_argument("--verbose", "-v", action="store_true",
+                              help="Show verbose output")
+    
+    # Log collector daemon commands
+    collector_parser = subparsers.add_parser("log-collector", help="Manage the log collector daemon")
+    collector_subparsers = collector_parser.add_subparsers(dest="collector_command", help="Log collector command")
+    
+    # Start log collector command
+    start_collector_parser = collector_subparsers.add_parser("start", help="Start the log collector daemon")
+    start_collector_parser.add_argument("--services", nargs="+",
+                                      choices=["pybox", "pyllm", "shellama", "apilama", "pylama", "weblama"],
+                                      help="Services to collect logs from (default: all)")
+    start_collector_parser.add_argument("--interval", "-i", type=int, default=300,
+                                      help="Collection interval in seconds (default: 300)")
+    start_collector_parser.add_argument("--verbose", "-v", action="store_true",
+                                      help="Show verbose output")
+    start_collector_parser.add_argument("--foreground", "-f", action="store_true",
+                                      help="Run in the foreground instead of as a daemon")
+    
+    # Stop log collector command
+    collector_subparsers.add_parser("stop", help="Stop the log collector daemon")
+    
+    # Status log collector command
+    collector_subparsers.add_parser("status", help="Check the status of the log collector daemon")
     
     # Open command
     open_parser = subparsers.add_parser("open", help="Open WebLama in a web browser")
@@ -158,7 +195,81 @@ Main function for the ecosystem management CLI.
         print_ecosystem_status()
     
     elif args.command == "logs":
-        view_service_logs(args.service)
+        if args.service == "all":
+            # Use LogLama to view logs from all services
+            view_logs(component=None, level=args.level, limit=args.limit, json_output=args.json)
+        else:
+            # Use the traditional service log viewer for individual services
+            view_service_logs(args.service)
+    
+    elif args.command == "collect-logs":
+        # Collect logs from services and import them into LogLama
+        services = args.services if args.services else None
+        results = collect_logs(components=services, verbose=args.verbose)
+        
+        # Print results
+        if results:
+            total_count = sum(results.values())
+            print(f"Collected {total_count} logs from {len(results)} services:")
+            for service, count in results.items():
+                print(f"  {service}: {count} records")
+        else:
+            print("No logs were collected. Make sure LogLama is installed and configured properly.")
+    
+    elif args.command == "log-collector":
+        # Handle log collector commands
+        if args.collector_command == "start":
+            # Start the log collector
+            services = args.services if args.services else None
+            success = start_log_collector(
+                components=services,
+                interval=args.interval,
+                verbose=args.verbose,
+                background=not args.foreground
+            )
+            
+            if success:
+                if not args.foreground:
+                    print("Log collector started successfully in the background.")
+                    print("Logs are being collected from all PyLama components.")
+            else:
+                print("Failed to start log collector. Make sure LogLama is installed and configured properly.")
+        
+        elif args.collector_command == "stop":
+            # Stop the log collector
+            success = stop_log_collector()
+            
+            if success:
+                print("Log collector stopped successfully.")
+            else:
+                print("Failed to stop log collector. It may not be running or there was an error.")
+        
+        elif args.collector_command == "status":
+            # Check the status of the log collector
+            import os
+            from pathlib import Path
+            from .config import ROOT_DIR
+            
+            # Try to find the PID file
+            log_dir = Path(os.path.join(ROOT_DIR, 'logs'))
+            pid_file = log_dir / 'collector.pid'
+            
+            if pid_file.exists():
+                # Read the PID from the file
+                with open(pid_file, 'r') as f:
+                    pid = int(f.read().strip())
+                
+                # Check if the process is running
+                try:
+                    os.kill(pid, 0)  # Signal 0 doesn't kill the process, just checks if it exists
+                    print(f"Log collector is running with PID {pid}")
+                except OSError:
+                    print("Log collector is not running (stale PID file)")
+            else:
+                print("Log collector is not running")
+        
+        else:
+            print("Please specify a log collector command: start, stop, or status")
     
     elif args.command == "open":
         # Use custom host/port if provided, otherwise use defaults

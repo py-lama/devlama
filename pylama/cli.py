@@ -285,13 +285,49 @@ def main():
     
     # Logs command
     logs_parser = subparsers.add_parser("logs", help="View logs for a service")
-    logs_parser.add_argument("service", choices=["pybox", "pyllm", "shellama", "apilama", "pylama", "weblama"],
-                           help="Service to view logs for")
+    logs_parser.add_argument("service", choices=["pybox", "pyllm", "shellama", "apilama", "pylama", "weblama", "all"],
+                           help="Service to view logs for (use 'all' to view logs from all services)")
+    logs_parser.add_argument("--level", choices=["debug", "info", "warning", "error", "critical"],
+                           help="Filter logs by level")
+    logs_parser.add_argument("--limit", type=int, default=50,
+                           help="Maximum number of logs to display")
+    logs_parser.add_argument("--json", action="store_true",
+                           help="Output logs in JSON format")
     
     # Open command
     open_parser = subparsers.add_parser("open", help="Open WebLama in a web browser")
     open_parser.add_argument("--port", type=int, help="Custom port to use (default: 9081)")
     open_parser.add_argument("--host", type=str, help="Custom host to use (default: 127.0.0.1)")
+    
+    # Collect logs command
+    collect_parser = subparsers.add_parser("collect-logs", help="Collect logs from services and import them into LogLama")
+    collect_parser.add_argument("--services", nargs="+",
+                              choices=["pybox", "pyllm", "shellama", "apilama", "pylama", "weblama"],
+                              help="Services to collect logs from (default: all)")
+    collect_parser.add_argument("--verbose", "-v", action="store_true",
+                              help="Show verbose output")
+    
+    # Log collector daemon commands
+    collector_parser = subparsers.add_parser("log-collector", help="Manage the log collector daemon")
+    collector_subparsers = collector_parser.add_subparsers(dest="collector_command", help="Log collector command")
+    
+    # Start log collector command
+    start_collector_parser = collector_subparsers.add_parser("start", help="Start the log collector daemon")
+    start_collector_parser.add_argument("--services", nargs="+",
+                                      choices=["pybox", "pyllm", "shellama", "apilama", "pylama", "weblama"],
+                                      help="Services to collect logs from (default: all)")
+    start_collector_parser.add_argument("--interval", "-i", type=int, default=300,
+                                      help="Collection interval in seconds (default: 300)")
+    start_collector_parser.add_argument("--verbose", "-v", action="store_true",
+                                      help="Show verbose output")
+    start_collector_parser.add_argument("--foreground", "-f", action="store_true",
+                                      help="Run in the foreground instead of as a daemon")
+    
+    # Stop log collector command
+    collector_subparsers.add_parser("stop", help="Stop the log collector daemon")
+    
+    # Status log collector command
+    collector_subparsers.add_parser("status", help="Check the status of the log collector daemon")
     
     # For backwards compatibility, add -i/--interactive flag to the main parser
     parser.add_argument("-i", "--interactive", action="store_true", help="Run in interactive mode")
@@ -302,7 +338,7 @@ def main():
     logger.info("Application started")
     
     # Handle ecosystem management commands
-    if args.command in ["start", "stop", "restart", "status", "logs", "open"]:
+    if args.command in ["start", "stop", "restart", "status", "logs", "open", "collect-logs", "log-collector"]:
         from .ecosystem import main as ecosystem_main
         # Re-parse the arguments for the ecosystem management command
         sys.argv[0] = "pylama-ecosystem"  # Change the program name for help messages
