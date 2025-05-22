@@ -60,6 +60,17 @@ def init_logging():
     # Ensure log directory exists
     os.makedirs(log_dir, exist_ok=True)
     
+    # Ensure database table exists before logging starts
+    if db_enabled:
+        try:
+            from loglama.handlers.sqlite_handler import SQLiteHandler
+            handler = SQLiteHandler(db_path)
+            # The handler will create the table in its __init__ method
+            # We don't need to keep this handler, as configure_logging will create its own
+            del handler
+        except Exception as e:
+            print(f"Error initializing database for logging: {e}")
+    
     # Configure logging
     logger = configure_logging(
         name='pylama',
