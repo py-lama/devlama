@@ -28,9 +28,15 @@ PyLama is a Python tool that leverages Ollama's language models to generate and 
 git clone https://github.com/py-lama/pylama.git
 cd pylama
 
-# Install dependencies
-pip install -e .
+# Create a virtual environment (recommended)
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies in development mode
+pip install -e .  # This is important! Always install in development mode before starting
 ```
+
+> **IMPORTANT**: Always run `pip install -e .` before starting any project in the PyLama ecosystem. This ensures all dependencies are properly installed and the package is available in development mode.
 
 ## Usage
 
@@ -605,6 +611,63 @@ make clean
 # Show all available commands
 make help
 ```
+
+## Docker Testing Infrastructure
+
+The PyLama ecosystem includes a comprehensive Docker testing infrastructure for all components. This allows for isolated testing of individual components as well as integration testing across the entire ecosystem.
+
+### Docker Test Files
+
+Each component (PyLama, PyBox, PyLLM, APILama, WebLama) includes the following Docker testing files:
+
+- **Dockerfile.test**: Defines the test environment with all necessary dependencies
+- **docker-compose.test.yml**: Configures the test services with proper networking and dependencies
+- **run_docker_tests.sh**: Provides a convenient script to build, run, and manage the Docker test environment
+
+### Running Docker Tests
+
+To run tests using the Docker infrastructure:
+
+```bash
+# Build and run all tests
+./run_docker_tests.sh --build --run-tests
+
+# Start in interactive mode
+./run_docker_tests.sh --interactive
+
+# Start all services in the PyLama ecosystem
+./run_docker_tests.sh --full-stack
+
+# Run integration tests with all services
+./run_docker_tests.sh --integration
+
+# Run Ansible tests for comprehensive integration testing
+./run_docker_tests.sh --ansible-tests
+
+# Stop containers
+./run_docker_tests.sh --stop
+
+# Clean up containers and volumes
+./run_docker_tests.sh --clean
+```
+
+### Ansible Integration Tests
+
+The PyLama ecosystem includes Ansible playbooks for comprehensive integration testing:
+
+- **ansible_tests/playbooks/**: Contains test playbooks for each component
+- **ansible_tests/inventory/**: Defines the inventory for local testing
+- **ansible_tests/templates/**: Includes templates for generating test reports
+
+These tests verify that all components work together correctly, testing endpoints and interactions between services.
+
+### Benefits of Docker Testing
+
+1. **Isolated Environment**: Tests run in a clean, isolated environment
+2. **Reproducibility**: Tests produce consistent results across different systems
+3. **Integration Testing**: Easily test interactions between multiple services
+4. **CI/CD Ready**: Docker tests can be integrated into continuous integration pipelines
+5. **Mock Services**: Components can use mock implementations for faster testing
 
 ## Project Structure and Dependencies
 
