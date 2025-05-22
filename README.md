@@ -198,18 +198,18 @@ ollama serve
 If Ollama is running but still timing out, try increasing the timeout:
 
 ```bash
-export OLLAMA_TIMEOUT=60
+export OLLAMA_TIMEOUT=120  # Recommended for larger models like Bielik
 ```
 
-Or the model might be too large for your system. Try using a smaller model:
+Note: PyLama now automatically increases the timeout to 120 seconds for Bielik models, but you may need to set this manually for other large models.
 
-```bash
-pylama --model tinyllama:latest "your prompt"
-```
+### Duplicate Model Downloads
 
-### Special Models (SpeakLeash/Bielik)
+If you notice that PyLama is downloading the same model multiple times:
 
-If you're having trouble with SpeakLeash/Bielik models, see the detailed guide in `BIELIK.txt` for manual installation steps and troubleshooting.
+1. For SpeakLeash/Bielik models, PyLama now automatically detects existing installations
+2. For other models, ensure you're using the exact same model name each time
+3. Check your Ollama installation with `ollama list` to see all installed models
 
 ## Mock Mode
 
