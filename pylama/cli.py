@@ -244,7 +244,7 @@ def main():
     )
     
     # Ecosystem management commands
-    from .ecosystem import main as ecosystem_main
+    from .ecosystem.cli import main as ecosystem_main
     
     # Start command
     start_parser = subparsers.add_parser("start", help="Start the PyLama ecosystem")

@@ -49,6 +49,14 @@ Start a service.
     elif service == "pylama":
         cmd = ["python", "-m", "pylama", "serve", "--port", str(port)]
     elif service == "weblama":
+        # For WebLama, we need to set the API_URL environment variable
+        # to point to the APILama service
+        api_port = DEFAULT_PORTS['apilama']
+        env = os.environ.copy()
+        env['API_URL'] = f"http://{host}:{api_port}"
+        env['PORT'] = str(port)
+        env['HOST'] = host
+        logger.info(f"Setting WebLama API_URL to {env['API_URL']}")
         cmd = ["npm", "start"]
     else:
         logger.error(f"Unknown service: {service}")
@@ -58,12 +66,24 @@ Start a service.
     log_file = LOGS_DIR / f"{service}.log"
     with open(log_file, "a") as f:
         # Start the process
-        process = subprocess.Popen(
-            cmd,
-            stdout=f,
-            stderr=subprocess.STDOUT,
-            preexec_fn=os.setsid,  # Create a new process group
-        )
+        if service == "weblama":
+            # Use the environment variables we set for WebLama
+            process = subprocess.Popen(
+                cmd,
+                stdout=f,
+                stderr=subprocess.STDOUT,
+                preexec_fn=os.setsid,  # Create a new process group
+                env=env,  # Use the environment with API_URL set
+                cwd=service_dir  # Ensure we're in the right directory
+            )
+        else:
+            # For other services, use the standard approach
+            process = subprocess.Popen(
+                cmd,
+                stdout=f,
+                stderr=subprocess.STDOUT,
+                preexec_fn=os.setsid,  # Create a new process group
+            )
     
     # Save the PID
     pid_file = LOGS_DIR / f"{service}.pid"
