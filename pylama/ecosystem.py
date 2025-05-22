@@ -84,14 +84,24 @@ def start_service(service, service_dir, port, host):
     logger.info(f"Starting {service} on port {port}...")
     
     # Check if port is in use
-    for proc in psutil.process_iter(['pid', 'name', 'connections']):
-        try:
-            for conn in proc.connections(kind='inet'):
-                if conn.laddr.port == port:
-                    logger.warning(f"Port {port} is already in use by PID {proc.pid}. {service} may not start correctly.")
-                    break
-        except (psutil.AccessDenied, psutil.NoSuchProcess):
-            pass
+    try:
+        for proc in psutil.process_iter(['pid', 'name']):
+            try:
+                for conn in proc.connections(kind='inet'):
+                    if hasattr(conn, 'laddr') and hasattr(conn.laddr, 'port') and conn.laddr.port == port:
+                        logger.warning(f"Port {port} is already in use by PID {proc.pid}. {service} may not start correctly.")
+                        break
+            except (psutil.AccessDenied, psutil.NoSuchProcess, AttributeError):
+                pass
+    except ValueError:
+        # If connections attribute is not supported, use a simpler approach
+        logger.info(f"Checking if port {port} is in use (simplified method)...")
+        import socket
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        result = sock.connect_ex((host, port))
+        if result == 0:
+            logger.warning(f"Port {port} is already in use. {service} may not start correctly.")
+        sock.close()
     
     os.chdir(service_dir)
     
@@ -147,23 +157,39 @@ def stop_service(service):
     """Stop a service."""
     pid_file = LOGS_DIR / f"{service}.pid"
     if pid_file.exists():
-        with open(pid_file, "r") as f:
-            pid = int(f.read().strip())
-        
-        logger.info(f"Stopping {service} (PID: {pid})...")
         try:
-            os.killpg(os.getpgid(pid), signal.SIGTERM)
-        except ProcessLookupError:
-            logger.warning(f"Process {pid} not found. It may have already terminated.")
+            with open(pid_file, "r") as f:
+                pid = int(f.read().strip())
+            
+            logger.info(f"Stopping {service} (PID: {pid})...")
+            try:
+                # First try to terminate the process group
+                try:
+                    os.killpg(os.getpgid(pid), signal.SIGTERM)
+                except (ProcessLookupError, OSError):
+                    logger.warning(f"Process group for {pid} not found. Trying direct process termination.")
+                    # Fallback to terminating just the process
+                    try:
+                        os.kill(pid, signal.SIGTERM)
+                    except (ProcessLookupError, OSError):
+                        logger.warning(f"Process {pid} not found. It may have already terminated.")
+            except Exception as e:
+                logger.error(f"Error stopping {service}: {e}")
         except Exception as e:
-            logger.error(f"Error stopping {service}: {e}")
+            logger.error(f"Error reading PID file for {service}: {e}")
         
-        # Remove PID file
-        pid_file.unlink(missing_ok=True)
+        # Remove PID file regardless of whether termination was successful
+        try:
+            pid_file.unlink(missing_ok=True)
+        except Exception as e:
+            logger.error(f"Error removing PID file for {service}: {e}")
         
         # Remove from processes dictionary
         if service in processes:
-            del processes[service]
+            try:
+                del processes[service]
+            except Exception as e:
+                logger.error(f"Error removing {service} from processes dictionary: {e}")
         
         logger.info(f"{service} stopped")
     else:
@@ -255,18 +281,33 @@ def get_ecosystem_status():
     for service in DEFAULT_PORTS.keys():
         pid_file = LOGS_DIR / f"{service}.pid"
         if pid_file.exists():
-            with open(pid_file, "r") as f:
-                pid = int(f.read().strip())
-            
-            # Check if the process is running
             try:
-                process = psutil.Process(pid)
-                if process.is_running():
-                    status[service] = {"status": "running", "pid": pid}
-                else:
-                    status[service] = {"status": "not running", "pid": pid, "note": "stale PID file"}
-            except psutil.NoSuchProcess:
-                status[service] = {"status": "not running", "pid": pid, "note": "stale PID file"}
+                with open(pid_file, "r") as f:
+                    pid = int(f.read().strip())
+                
+                # Check if the process is running
+                try:
+                    # First try using psutil
+                    try:
+                        process = psutil.Process(pid)
+                        if process.is_running():
+                            status[service] = {"status": "running", "pid": pid}
+                        else:
+                            status[service] = {"status": "not running", "pid": pid, "note": "stale PID file"}
+                    except (psutil.NoSuchProcess, AttributeError):
+                        # Fallback to checking process existence using os.kill with signal 0
+                        # This just tests if the process exists without actually sending a signal
+                        try:
+                            os.kill(pid, 0)
+                            status[service] = {"status": "running", "pid": pid}
+                        except OSError:
+                            status[service] = {"status": "not running", "pid": pid, "note": "stale PID file"}
+                except Exception as e:
+                    logger.warning(f"Error checking process status for {service}: {e}")
+                    status[service] = {"status": "unknown", "pid": pid, "note": str(e)}
+            except Exception as e:
+                logger.warning(f"Error reading PID file for {service}: {e}")
+                status[service] = {"status": "unknown", "note": "invalid PID file"}
         else:
             status[service] = {"status": "not running"}
     
