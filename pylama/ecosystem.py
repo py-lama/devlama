@@ -293,7 +293,7 @@ def start_ecosystem(components=None, use_docker=False, open_browser=False, auto_
                 logger.warning(f"The following ports are still in use after stopping Docker: {still_busy}")
                 
                 # Find available ports for all services
-                new_ports = find_available_ports_for_all_services()
+                new_ports = find_available_ports_for_all_services(DEFAULT_PORTS, DEFAULT_HOST)
                 if new_ports:
                     logger.info(f"Using new ports: {new_ports}")
                     # Update ports dictionary with new values
