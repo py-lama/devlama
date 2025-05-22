@@ -2,7 +2,7 @@
 
 FROM python:3.9-slim
 
-LABEL maintainer="PyLama Team <info@example.com>"
+LABEL maintainer="Tom Sapletta <info@example.com>"
 LABEL version="1.0.0"
 LABEL description="Testing environment for PyLama ecosystem integration"
 

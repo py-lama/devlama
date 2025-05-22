@@ -66,7 +66,7 @@ Find an available port by incrementing the base port by the specified increment 
     return None
 
 
-def find_available_ports_for_all_services(ports_dict, host='127.0.0.1', increment=10):
+def find_available_ports_for_all_services(ports_dict, host='127.0.0.1', port_increment=10):
     """
 Find available ports for all services by incrementing all ports by the same amount.
     """
@@ -83,7 +83,7 @@ Find available ports for all services by incrementing all ports by the same amou
     # Some ports are busy, try incrementing all ports by the same amount
     for i in range(1, 10):  # Try up to 9 increments
         new_ports = {}
-        increment_amount = i * increment
+        increment_amount = i * port_increment
         all_available = True
         
         for service, port in ports_dict.items():

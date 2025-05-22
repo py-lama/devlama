@@ -11,7 +11,9 @@ import subprocess
 import logging
 import webbrowser
 
-from .config import ROOT_DIR, DEFAULT_HOST, DEFAULT_PORTS, ensure_logs_dir
+from .config import (ROOT_DIR, DEFAULT_HOST, DEFAULT_PORTS, ensure_logs_dir,
+                 DEBUG_MODE, AUTO_ADJUST_PORTS, PORT_INCREMENT, API_URL,
+                 DOCKER_NETWORK, DOCKER_IMAGE_PREFIX, create_example_env_file)
 from .port_utils import is_port_in_use, find_available_ports_for_all_services, check_service_availability
 from .service_utils import start_service, stop_service, get_ecosystem_status
 
@@ -35,11 +37,46 @@ Open WebLama in the default web browser.
         return False
 
 
-def start_ecosystem(components=None, use_docker=False, open_browser=False, auto_adjust_ports=True):
+def initialize_configuration():
+    """
+Initialize the PyLama ecosystem configuration.
+
+This function ensures that all necessary directories exist and configuration files are available.
+    """
+    # Ensure logs directory exists
+    ensure_logs_dir()
+    
+    # Create example .env file if it doesn't exist
+    env_example_path = ROOT_DIR / 'env.example'
+    if not env_example_path.exists():
+        create_example_env_file(env_example_path)
+        logger.info(f"Created example configuration file at {env_example_path}")
+        logger.info(f"Copy this file to .env and modify as needed")
+    
+    # Log debug information if in debug mode
+    if DEBUG_MODE:
+        logger.setLevel(logging.DEBUG)
+        logger.debug("Debug mode enabled")
+
+
+def start_ecosystem(components=None, use_docker=False, open_browser=False, auto_adjust_ports=None):
     """
 Start the PyLama ecosystem.
+
+Args:
+    components: List of components to start. If None, starts all components.
+    use_docker: Whether to use Docker to start the ecosystem.
+    open_browser: Whether to open WebLama in the browser after starting.
+    auto_adjust_ports: Whether to automatically adjust ports if they are in use.
+                       If None, uses the value from the environment configuration.
     """
-    ensure_logs_dir()
+    # Initialize configuration
+    initialize_configuration()
+    
+    # Use environment configuration if auto_adjust_ports is not specified
+    if auto_adjust_ports is None:
+        auto_adjust_ports = AUTO_ADJUST_PORTS
+        logger.info(f"Using auto_adjust_ports={auto_adjust_ports} from environment configuration")
     
     # Check if any ports are in use and stop Docker containers if needed
     if auto_adjust_ports:
@@ -68,13 +105,15 @@ Start the PyLama ecosystem.
             if still_busy:
                 logger.warning(f"The following ports are still in use after stopping Docker: {still_busy}")
                 
-                # Find available ports for all services
-                new_ports = find_available_ports_for_all_services(DEFAULT_PORTS, DEFAULT_HOST)
+                # Find available ports for all services using the configured PORT_INCREMENT
+                logger.info(f"Using port increment of {PORT_INCREMENT} from configuration")
+                new_ports = find_available_ports_for_all_services(DEFAULT_PORTS, DEFAULT_HOST, port_increment=PORT_INCREMENT)
                 if new_ports:
                     logger.info(f"Using new ports: {new_ports}")
                     # Update ports dictionary with new values
                     for service, port in new_ports.items():
                         DEFAULT_PORTS[service] = port
+                    logger.info(f"Updated ports configuration: {DEFAULT_PORTS}")
                 else:
                     logger.error("Could not find available ports. Some services may fail to start.")
     
