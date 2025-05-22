@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PyLama Ecosystem Test Report</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+        h1, h2, h3 {
+            margin-top: 0;
+        }
+        .summary {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 5px solid #4CAF50;
+        }
+        .component {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 5px solid #2196F3;
+        }
+        .success {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        .failure {
+            color: #f44336;
+            font-weight: bold;
+        }
+        .test-result {
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #fff;
+            border-radius: 3px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .test-result h4 {
+            margin-top: 0;
+            margin-bottom: 5px;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-pass {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .status-fail {
+            background-color: #f44336;
+            color: white;
+        }
+        .status-skip {
+            background-color: #FFC107;
+            color: black;
+        }
+        footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 10px;
+            border-top: 1px solid #eee;
+            font-size: 12px;
+            color: #777;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 3px;
+            overflow-x: auto;
+        }
+        .timestamp {
+            font-size: 14px;
+            color: #777;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>PyLama Ecosystem Test Report</h1>
+            <div class="timestamp">Generated on: {{ ansible_date_time.date }} at {{ ansible_date_time.time }}</div>
+        </header>
+
+        <section class="summary">
+            <h2>Test Summary</h2>
+            <p>
+                <strong>PyBox:</strong> <span class="{% if pybox_health.status == 200 %}success{% else %}failure{% endif %}">{% if pybox_health.status == 200 %}PASS{% else %}FAIL{% endif %}</span><br>
+                <strong>PyLLM:</strong> <span class="{% if pyllm_health.status == 200 %}success{% else %}failure{% endif %}">{% if pyllm_health.status == 200 %}PASS{% else %}FAIL{% endif %}</span><br>
+                <strong>APILama:</strong> <span class="{% if apilama_health.status == 200 %}success{% else %}failure{% endif %}">{% if apilama_health.status == 200 %}PASS{% else %}FAIL{% endif %}</span><br>
+                <strong>WebLama:</strong> <span class="{% if weblama_health.status == 200 %}success{% else %}failure{% endif %}">{% if weblama_health.status == 200 %}PASS{% else %}FAIL{% endif %}</span><br>
+                <strong>PyLama:</strong> <span class="{% if pylama_health.status == 200 %}success{% else %}failure{% endif %}">{% if pylama_health.status == 200 %}PASS{% else %}FAIL{% endif %}</span>
+            </p>
+        </section>
+
+        <section class="component">
+            <h2>PyBox Tests</h2>
+            <div class="test-result">
+                <h4>Code Execution Test</h4>
+                <span class="status-badge {% if pybox_execute_result.status == 200 %}status-pass{% else %}status-fail{% endif %}">
+                    {% if pybox_execute_result.status == 200 %}PASS{% else %}FAIL{% endif %}
+                </span>
+                <p>{{ pybox_execute_result.json.output | default('No output available') }}</p>
+            </div>
+            <div class="test-result">
+                <h4>History Retrieval Test</h4>
+                <span class="status-badge {% if pybox_history_result.status == 200 %}status-pass{% else %}status-fail{% endif %}">
+                    {% if pybox_history_result.status == 200 %}PASS{% else %}FAIL{% endif %}
+                </span>
+            </div>
+        </section>
+
+        <section class="component">
+            <h2>PyLLM Tests</h2>
+            <div class="test-result">
+                <h4>Completion Test</h4>
+                <span class="status-badge {% if pyllm_complete_result.status == 200 %}status-pass{% else %}status-fail{% endif %}">
+                    {% if pyllm_complete_result.status == 200 %}PASS{% else %}FAIL{% endif %}
+                </span>
+                <p>{{ pyllm_complete_result.json.completion | default('No completion available') }}</p>
+            </div>
+            <div class="test-result">
+                <h4>Models Retrieval Test</h4>
+                <span class="status-badge {% if pyllm_models_result.status == 200 %}status-pass{% else %}status-fail{% endif %}">
+                    {% if pyllm_models_result.status == 200 %}PASS{% else %}FAIL{% endif %}
+                </span>
+            </div>
+        </section>
+
+        <section class="component">
+            <h2>APILama Tests</h2>
+            <div class="test-result">
+                <h4>Code Execution Test</h4>
+                <span class="status-badge {% if apilama_execute_result.status == 200 %}status-pass{% else %}status-fail{% endif %}">
+                    {% if apilama_execute_result.status == 200 %}PASS{% else %}FAIL{% endif %}
+                </span>
+                <p>{{ apilama_execute_result.json.output | default('No output available') }}</p>
+            </div>
+            <div class="test-result">
+                <h4>Models Retrieval Test</h4>
+                <span class="status-badge {% if apilama_models_result.status == 200 %}status-pass{% else %}status-fail{% endif %}">
+                    {% if apilama_models_result.status == 200 %}PASS{% else %}FAIL{% endif %}
+                </span>
+            </div>
+            <div class="test-result">
+                <h4>Files Retrieval Test</h4>
+                <span class="status-badge {% if apilama_files_result.status == 200 %}status-pass{% else %}status-fail{% endif %}">
+                    {% if apilama_files_result.status == 200 %}PASS{% else %}FAIL{% endif %}
+                </span>
+            </div>
+        </section>
+
+        <section class="component">
+            <h2>WebLama Tests</h2>
+            <div class="test-result">
+                <h4>Health Check Test</h4>
+                <span class="status-badge {% if weblama_health_result.status == 200 %}status-pass{% else %}status-fail{% endif %}">
+                    {% if weblama_health_result.status == 200 %}PASS{% else %}FAIL{% endif %}
+                </span>
+            </div>
+            <div class="test-result">
+                <h4>Files Retrieval Test</h4>
+                <span class="status-badge {% if weblama_files_result.status == 200 %}status-pass{% else %}status-fail{% endif %}">
+                    {% if weblama_files_result.status == 200 %}PASS{% else %}FAIL{% endif %}
+                </span>
+            </div>
+        </section>
+
+        <section class="component">
+            <h2>Integration Tests</h2>
+            <div class="test-result">
+                <h4>APILama to PyBox Integration</h4>
+                <span class="status-badge {% if apilama_pybox_result.status == 200 %}status-pass{% else %}status-fail{% endif %}">
+                    {% if apilama_pybox_result.status == 200 %}PASS{% else %}FAIL{% endif %}
+                </span>
+                <p>{{ apilama_pybox_result.json.output | default('No output available') }}</p>
+            </div>
+            <div class="test-result">
+                <h4>APILama to PyLLM Integration</h4>
+                <span class="status-badge {% if apilama_pyllm_result.status == 200 %}status-pass{% else %}status-fail{% endif %}">
+                    {% if apilama_pyllm_result.status == 200 %}PASS{% else %}FAIL{% endif %}
+                </span>
+                <p>{{ apilama_pyllm_result.json.completion | default('No completion available') }}</p>
+            </div>
+            <div class="test-result">
+                <h4>WebLama to APILama Integration</h4>
+                <span class="status-badge {% if weblama_apilama_result.status == 200 %}status-pass{% else %}status-fail{% endif %}">
+                    {% if weblama_apilama_result.status == 200 %}PASS{% else %}status-skip{% endif %}
+                </span>
+                <p>{{ weblama_apilama_result.json.output | default('No output available') }}</p>
+            </div>
+        </section>
+
+        <footer>
+            <p>PyLama Ecosystem Test Report &copy; {{ ansible_date_time.year }}</p>
+        </footer>
+    </div>
+</body>
+</html>
