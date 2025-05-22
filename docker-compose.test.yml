@@ -1,0 +1,132 @@
+version: '3'
+
+services:
+  pylama-test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./tests:/app/tests
+      - ./test-reports:/app/test-reports
+      - ./ansible_tests:/app/ansible_tests
+    environment:
+      - PORT=5000
+      - HOST=0.0.0.0
+      - DEBUG=True
+      - PYBOX_URL=http://pybox-mock:8001
+      - PYLLM_URL=http://pyllm-mock:8002
+      - APILAMA_URL=http://apilama-mock:8080
+      - WEBLAMA_URL=http://weblama-mock:8081
+    depends_on:
+      - pybox-mock
+      - pyllm-mock
+      - apilama-mock
+      - weblama-mock
+    command: |
+      bash -c "python -m pytest tests/ -v --junitxml=/app/test-reports/test-results.xml"
+
+  pylama-app:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./tests:/app/tests
+      - ./test-reports:/app/test-reports
+      - ./ansible_tests:/app/ansible_tests
+    environment:
+      - PORT=5000
+      - HOST=0.0.0.0
+      - DEBUG=True
+      - PYBOX_URL=http://pybox-mock:8001
+      - PYLLM_URL=http://pyllm-mock:8002
+      - APILAMA_URL=http://apilama-mock:8080
+      - WEBLAMA_URL=http://weblama-mock:8081
+    depends_on:
+      - pybox-mock
+      - pyllm-mock
+      - apilama-mock
+      - weblama-mock
+    command: |
+      bash -c "python -m pylama.app --port 5000 --host 0.0.0.0"
+
+  apilama-mock:
+    build:
+      context: ../apilama
+      dockerfile: Dockerfile.test
+    ports:
+      - "8080:8080"
+    volumes:
+      - ../apilama/tests:/app/tests
+      - ../apilama/test-reports:/app/test-reports
+    environment:
+      - PORT=8080
+      - HOST=0.0.0.0
+      - DEBUG=True
+      - MOCK_MODE=true
+      - PYBOX_URL=http://pybox-mock:8001
+      - PYLLM_URL=http://pyllm-mock:8002
+    depends_on:
+      - pybox-mock
+      - pyllm-mock
+    command: |
+      bash -c "python -m apilama.app --port 8080 --host 0.0.0.0 --mock"
+
+  pybox-mock:
+    build:
+      context: ../pybox
+      dockerfile: Dockerfile.test
+    ports:
+      - "8001:8001"
+    volumes:
+      - ../pybox/tests:/app/tests
+      - ../pybox/test-reports:/app/test-reports
+    environment:
+      - PORT=8001
+      - HOST=0.0.0.0
+      - DEBUG=True
+      - MOCK_MODE=true
+    command: |
+      bash -c "python -m pybox.app --port 8001 --host 0.0.0.0 --mock"
+
+  pyllm-mock:
+    build:
+      context: ../pyllm
+      dockerfile: Dockerfile.test
+    ports:
+      - "8002:8002"
+    volumes:
+      - ../pyllm/tests:/app/tests
+      - ../pyllm/test-reports:/app/test-reports
+    environment:
+      - PORT=8002
+      - HOST=0.0.0.0
+      - DEBUG=True
+      - MOCK_MODE=true
+    command: |
+      bash -c "python -m pyllm.app --port 8002 --host 0.0.0.0 --mock"
+
+  weblama-mock:
+    build:
+      context: ../weblama
+      dockerfile: Dockerfile.test
+    ports:
+      - "8081:8081"
+    volumes:
+      - ../weblama/tests:/app/tests
+      - ../weblama/test-reports:/app/test-reports
+    environment:
+      - PORT=8081
+      - HOST=0.0.0.0
+      - DEBUG=True
+      - API_URL=http://apilama-mock:8080
+    depends_on:
+      - apilama-mock
+    command: |
+      bash -c "npm start"
+
+volumes:
+  test-reports:

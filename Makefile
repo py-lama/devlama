@@ -1,6 +1,6 @@
 # Makefile for PyLama
 
-.PHONY: all setup clean test lint format run help venv
+.PHONY: all setup clean test lint format run help venv docker-test docker-build docker-clean docker-integration docker-full-stack docker-ansible
 
 # Default values
 PORT ?= 8002
@@ -50,6 +50,35 @@ run-port: setup
 	@echo "Running PyLama API server on port $(PORT)..."
 	@. venv/bin/activate && uvicorn pylama.api:app --host $(HOST) --port $(PORT)
 
+# Docker testing targets
+docker-build:
+	@echo "Building Docker test images..."
+	@./run_docker_tests.sh --build
+
+docker-test: docker-build
+	@echo "Running tests in Docker..."
+	@./run_docker_tests.sh --run-tests
+
+docker-integration: docker-build
+	@echo "Running integration tests in Docker..."
+	@./run_docker_tests.sh --integration
+
+docker-full-stack: docker-build
+	@echo "Starting full PyLama ecosystem in Docker..."
+	@./run_docker_tests.sh --full-stack
+
+docker-ansible: docker-build
+	@echo "Running Ansible tests in Docker..."
+	@./run_docker_tests.sh --ansible-tests
+
+docker-interactive: docker-build
+	@echo "Starting interactive Docker test environment..."
+	@./run_docker_tests.sh --interactive
+
+docker-clean:
+	@echo "Cleaning Docker test environment..."
+	@./run_docker_tests.sh --clean
+
 # Help
 help:
 	@echo "PyLama Makefile"
@@ -62,4 +91,11 @@ help:
 	@echo "  format    - Format the code with black"
 	@echo "  run       - Run the API server"
 	@echo "  run-port PORT=8002 - Run the API server on a custom port"
+	@echo "  docker-build      - Build Docker test images"
+	@echo "  docker-test       - Run tests in Docker"
+	@echo "  docker-integration - Run integration tests in Docker"
+	@echo "  docker-full-stack  - Start full PyLama ecosystem in Docker"
+	@echo "  docker-ansible     - Run Ansible tests in Docker"
+	@echo "  docker-interactive - Start interactive Docker test environment"
+	@echo "  docker-clean      - Clean Docker test environment"
 	@echo "  help      - Show this help message"

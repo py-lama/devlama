@@ -1,0 +1,20 @@
+[local]
+localhost ansible_connection=local
+
+[pybox]
+localhost ansible_connection=local
+
+[pyllm]
+localhost ansible_connection=local
+
+[apilama]
+localhost ansible_connection=local
+
+[weblama]
+localhost ansible_connection=local
+
+[pylama:children]
+pybox
+pyllm
+apilama
+weblama

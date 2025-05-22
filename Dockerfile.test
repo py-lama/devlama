@@ -1,0 +1,62 @@
+# Test Dockerfile for PyLama
+
+FROM python:3.9-slim
+
+LABEL maintainer="PyLama Team <info@example.com>"
+LABEL version="1.0.0"
+LABEL description="Testing environment for PyLama ecosystem integration"
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PORT=5000 \
+    HOST=0.0.0.0 \
+    DEBUG=False \
+    PYBOX_URL=http://pybox-mock:8001 \
+    PYLLM_URL=http://pyllm-mock:8002 \
+    APILAMA_URL=http://apilama-mock:8080 \
+    WEBLAMA_URL=http://weblama-mock:8081
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    git \
+    build-essential \
+    python3-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first for better caching
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Install test dependencies
+RUN pip install --no-cache-dir \
+    pytest==7.3.1 \
+    pytest-mock==3.10.0 \
+    requests==2.28.2 \
+    flask==2.2.3 \
+    python-dotenv==1.0.0 \
+    ansible==6.7.0
+
+# Copy the package files
+COPY . .
+
+# Install the package in development mode
+RUN pip install --no-cache-dir -e .
+
+# Create directory for test reports
+RUN mkdir -p /app/test-reports
+
+# Expose the API port
+EXPOSE 5000
+
+# Health check
+HEALTHCHECK --interval=10s --timeout=5s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:${PORT}/health || exit 1
+
+# Default command to run tests
+CMD ["pytest", "tests/", "-v", "--junitxml=/app/test-reports/test-results.xml"]

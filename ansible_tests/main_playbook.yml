@@ -1,0 +1,98 @@
+---
+# Main Ansible playbook for testing the PyLama ecosystem
+
+- name: PyLama Ecosystem Tests
+  hosts: local
+  gather_facts: yes
+  vars:
+    pybox_url: "{{ lookup('env', 'PYBOX_URL') | default('http://localhost:8001', true) }}"
+    pyllm_url: "{{ lookup('env', 'PYLLM_URL') | default('http://localhost:8002', true) }}"
+    apilama_url: "{{ lookup('env', 'APILAMA_URL') | default('http://localhost:8080', true) }}"
+    weblama_url: "{{ lookup('env', 'WEBLAMA_URL') | default('http://localhost:8081', true) }}"
+    pylama_url: "{{ lookup('env', 'PYLAMA_URL') | default('http://localhost:5000', true) }}"
+    test_output_dir: "{{ playbook_dir }}/../test-reports"
+    cleanup_enabled: "{{ lookup('env', 'CLEANUP_ENABLED') | default('true', true) }}"
+    generate_report: "{{ lookup('env', 'GENERATE_REPORT') | default('true', true) }}"
+  
+  tasks:
+    - name: Create test output directory
+      file:
+        path: "{{ test_output_dir }}"
+        state: directory
+        mode: '0755'
+      
+    - name: Check PyBox health
+      uri:
+        url: "{{ pybox_url }}/health"
+        method: GET
+        status_code: 200
+      register: pybox_health
+      ignore_errors: yes
+      
+    - name: Check PyLLM health
+      uri:
+        url: "{{ pyllm_url }}/health"
+        method: GET
+        status_code: 200
+      register: pyllm_health
+      ignore_errors: yes
+      
+    - name: Check APILama health
+      uri:
+        url: "{{ apilama_url }}/health"
+        method: GET
+        status_code: 200
+      register: apilama_health
+      ignore_errors: yes
+      
+    - name: Check WebLama health
+      uri:
+        url: "{{ weblama_url }}/health"
+        method: GET
+        status_code: 200
+      register: weblama_health
+      ignore_errors: yes
+      
+    - name: Check PyLama health
+      uri:
+        url: "{{ pylama_url }}/health"
+        method: GET
+        status_code: 200
+      register: pylama_health
+      ignore_errors: yes
+      
+    - name: Display service health status
+      debug:
+        msg: |
+          PyBox: {{ 'OK' if pybox_health.status == 200 else 'FAIL' }}
+          PyLLM: {{ 'OK' if pyllm_health.status == 200 else 'FAIL' }}
+          APILama: {{ 'OK' if apilama_health.status == 200 else 'FAIL' }}
+          WebLama: {{ 'OK' if weblama_health.status == 200 else 'FAIL' }}
+          PyLama: {{ 'OK' if pylama_health.status == 200 else 'FAIL' }}
+
+# Include component-specific test playbooks
+- import_playbook: playbooks/pybox_tests.yml
+- import_playbook: playbooks/pyllm_tests.yml
+- import_playbook: playbooks/apilama_tests.yml
+- import_playbook: playbooks/weblama_tests.yml
+- import_playbook: playbooks/integration_tests.yml
+
+# Generate test report
+- name: Generate Test Report
+  hosts: local
+  gather_facts: no
+  vars:
+    test_output_dir: "{{ playbook_dir }}/../test-reports"
+    generate_report: "{{ lookup('env', 'GENERATE_REPORT') | default('true', true) }}"
+  
+  tasks:
+    - name: Generate HTML test report
+      template:
+        src: templates/report_template.html.j2
+        dest: "{{ test_output_dir }}/test_report.html"
+      when: generate_report | bool
+      
+    - name: Display report location
+      debug:
+        msg: "Test report generated at {{ test_output_dir }}/test_report.html"
+      when: generate_report | bool
