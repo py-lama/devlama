@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 
 import argparse
-import logging
 import sys
 from pathlib import Path
 import questionary
 import difflib
 
-# Set up logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)7s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-logger = logging.getLogger(__name__)
+# Initialize logging with PyLogs
+from pylama.ecosystem.logging_config import init_logging, get_logger
+
+# Initialize logging first, before any other imports
+init_logging()
+
+# Get a logger for this module
+logger = get_logger('cli')
 
 # Import main functionality
 from .pylama import (

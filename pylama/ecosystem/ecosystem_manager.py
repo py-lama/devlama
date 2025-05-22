@@ -8,16 +8,22 @@ This module contains functions for starting and stopping the entire PyLama ecosy
 
 import time
 import subprocess
-import logging
 import webbrowser
+
+# Initialize logging with PyLogs
+from pylama.ecosystem.logging_config import init_logging, get_logger
+
+# Initialize logging first, before any other imports
+init_logging()
+
+# Get a logger for this module
+logger = get_logger('ecosystem_manager')
 
 from .config import (ROOT_DIR, DEFAULT_HOST, DEFAULT_PORTS, ensure_logs_dir,
                  DEBUG_MODE, AUTO_ADJUST_PORTS, PORT_INCREMENT, API_URL,
                  DOCKER_NETWORK, DOCKER_IMAGE_PREFIX, create_example_env_file)
 from .port_utils import is_port_in_use, find_available_ports_for_all_services, check_service_availability
 from .service_utils import start_service, stop_service, get_ecosystem_status
-
-logger = logging.getLogger(__name__)
 
 
 def open_weblama_in_browser(host=None, port=None):

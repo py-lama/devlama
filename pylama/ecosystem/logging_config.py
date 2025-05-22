@@ -12,21 +12,21 @@ import sys
 import logging
 from pathlib import Path
 
-# Add the pylogs package to the path if it's not already installed
-pylogs_path = Path(__file__).parent.parent.parent.parent / 'pylogs'
-if pylogs_path.exists() and str(pylogs_path) not in sys.path:
-    sys.path.insert(0, str(pylogs_path))
+# Add the loglama package to the path if it's not already installed
+loglama_path = Path(__file__).parent.parent.parent.parent / 'loglama'
+if loglama_path.exists() and str(loglama_path) not in sys.path:
+    sys.path.insert(0, str(loglama_path))
 
 # Import PyLogs components
 try:
-    from pylogs.config.env_loader import load_env, get_env
-    from pylogs.utils import configure_logging, LogContext, capture_context
-    from pylogs.formatters import ColoredFormatter, JSONFormatter
-    from pylogs.handlers import SQLiteHandler, EnhancedRotatingFileHandler
-    PYLOGS_AVAILABLE = True
+    from loglama.config.env_loader import load_env, get_env
+    from loglama.utils import configure_logging, LogContext, capture_context
+    from loglama.formatters import ColoredFormatter, JSONFormatter
+    from loglama.handlers import SQLiteHandler, EnhancedRotatingFileHandler
+    LOGLAMA_AVAILABLE = True
 except ImportError as e:
     print(f"PyLogs import error: {e}")
-    PYLOGS_AVAILABLE = False
+    LOGLAMA_AVAILABLE = False
 
 # Set up basic logging as a fallback
 logging.basicConfig(
@@ -43,7 +43,7 @@ def init_logging():
     This function should be called at the very beginning of the application
     before any other imports or configurations are done.
     """
-    if not PYLOGS_AVAILABLE:
+    if not LOGLAMA_AVAILABLE:
         print("PyLogs package not available. Using default logging configuration.")
         return False
     
@@ -93,9 +93,9 @@ def get_logger(name=None):
     elif not name.startswith('pylama.'):
         name = f'pylama.{name}'
     
-    if PYLOGS_AVAILABLE:
-        from pylogs import get_logger as pylogs_get_logger
-        return pylogs_get_logger(name)
+    if LOGLAMA_AVAILABLE:
+        from loglama import get_logger as loglama_get_logger
+        return loglama_get_logger(name)
     else:
         return logging.getLogger(name)
 
@@ -112,7 +112,7 @@ def log_service_context(service_name=None, port=None, host=None):
     Returns:
         Context manager that adds service context to logs.
     """
-    if not PYLOGS_AVAILABLE:
+    if not LOGLAMA_AVAILABLE:
         # Return a dummy context manager if PyLogs is not available
         class DummyContext:
             def __enter__(self):

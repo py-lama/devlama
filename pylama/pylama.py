@@ -6,10 +6,17 @@ import sys
 import platform
 import tempfile
 from typing import List, Dict, Any, Tuple, Optional
-import logging
 import argparse
 from pathlib import Path
-from dotenv import load_dotenv
+
+# Initialize logging with PyLogs
+from pylama.ecosystem.logging_config import init_logging, get_logger
+
+# Initialize logging first, before any other imports
+init_logging()
+
+# Get a logger for this module
+logger = get_logger('pylama')
 
 # Import from the new packages
 import os
@@ -98,24 +105,8 @@ class DockerSandbox:
 PACKAGE_DIR = os.path.join(os.path.expanduser('~'), '.pylama')
 os.makedirs(PACKAGE_DIR, exist_ok=True)
 
-# Configure root logger
-log_file = os.path.join(PACKAGE_DIR, 'pylama.log')
-logger = logging.getLogger('pylama')
-logger.setLevel(logging.INFO)
-
-# Add file handler
-file_handler = logging.FileHandler(log_file)
-file_handler.setLevel(logging.INFO)
-file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
-logger.addHandler(file_handler)
-
-# Add console handler with colors
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
-logger.addHandler(console_handler)
-
-# Load environment variables
-load_dotenv()
+# Logger is already configured by PyLogs in the import section at the top of the file
+# Environment variables are already loaded by PyLogs in the logging_config.py module
 
 # Import local modules
 from .OllamaRunner import OllamaRunner
