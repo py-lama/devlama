@@ -6,53 +6,22 @@ Configuration for the PyLama ecosystem.
 This module contains constants and configuration-related functions for the PyLama ecosystem.
 """
 
+# Initialize logging first, before any other imports
+# This ensures environment variables are loaded before other libraries
+from pylama.ecosystem.logging_config import init_logging, get_logger
+
+# Initialize logging with PyLogs
+init_logging()
+
+# Now import other standard libraries
 import os
-import logging
 from pathlib import Path
 
-# Try to import dotenv for environment variable loading
-try:
-    from dotenv import load_dotenv
-except ImportError:
-    try:
-        from python_dotenv import load_dotenv
-    except ImportError:
-        # If dotenv is not available, define a dummy function
-        def load_dotenv(path=None):
-            logging.warning("python-dotenv package not found, environment variables from .env will not be loaded")
-            pass
-
-# Set up logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)7s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-logger = logging.getLogger(__name__)
+# Get the logger
+logger = get_logger('ecosystem.config')
 
 # Root directory of the PyLama project
 ROOT_DIR = Path(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))).resolve()
-
-# Load environment variables from .env file
-# Try multiple possible locations for the .env file
-env_paths = [
-    ROOT_DIR / '.env',                 # Project root .env
-    ROOT_DIR / 'pylama' / '.env',      # pylama subdirectory .env
-    Path(os.path.expanduser('~/.pylama/.env'))  # User home config
-]
-
-# Try to load from any available .env file
-env_loaded = False
-for env_path in env_paths:
-    if env_path.exists():
-        logger.info(f"Loading environment variables from {env_path}")
-        load_dotenv(env_path)
-        env_loaded = True
-        break
-
-if not env_loaded:
-    logger.warning(f"No .env file found in any of these locations: {[str(p) for p in env_paths]}")
-    logger.info(f"Using default configuration values")
 
 # Directory for logs
 LOGS_DIR = Path(os.environ.get('LOG_DIR', ROOT_DIR / "logs")).expanduser().resolve()
@@ -84,18 +53,21 @@ PORT_INCREMENT = int(os.environ.get('PORT_INCREMENT', 10))
 DOCKER_NETWORK = os.environ.get('DOCKER_NETWORK', 'pylama-network')
 DOCKER_IMAGE_PREFIX = os.environ.get('DOCKER_IMAGE_PREFIX', 'pylama')
 
-# Log the configuration
-logger.info(f"Configuration loaded successfully")
-logger.info(f"Host: {DEFAULT_HOST}")
-logger.info(f"Debug mode: {DEBUG_MODE}")
-logger.info(f"Ports: {DEFAULT_PORTS}")
-logger.info(f"Logs directory: {LOGS_DIR}")
-logger.info(f"Markdown directory: {MARKDOWN_DIR}")
-logger.info(f"API URL: {API_URL}")
-logger.info(f"Auto-adjust ports: {AUTO_ADJUST_PORTS}")
-logger.info(f"Port increment: {PORT_INCREMENT}")
-logger.info(f"Docker network: {DOCKER_NETWORK}")
-logger.info(f"Docker image prefix: {DOCKER_IMAGE_PREFIX}")
+# Log the configuration with structured context
+logger.info("PyLama configuration loaded", extra={
+    'context': {
+        'host': DEFAULT_HOST,
+        'debug_mode': DEBUG_MODE,
+        'ports': DEFAULT_PORTS,
+        'logs_dir': str(LOGS_DIR),
+        'markdown_dir': str(MARKDOWN_DIR),
+        'api_url': API_URL,
+        'auto_adjust_ports': AUTO_ADJUST_PORTS,
+        'port_increment': PORT_INCREMENT,
+        'docker_network': DOCKER_NETWORK,
+        'docker_image_prefix': DOCKER_IMAGE_PREFIX
+    }
+})
 
 
 def ensure_logs_dir():
