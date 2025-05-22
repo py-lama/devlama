@@ -255,6 +255,10 @@ def main():
     start_parser.add_argument("--apilama", action="store_true", help="Start APILama")
     start_parser.add_argument("--pylama", action="store_true", help="Start PyLama")
     start_parser.add_argument("--weblama", action="store_true", help="Start WebLama")
+    start_parser.add_argument("--open", action="store_true", help="Open WebLama in browser after starting")
+    start_parser.add_argument("--browser", action="store_true", help="Alias for --open, opens WebLama in browser")
+    start_parser.add_argument("--auto-adjust-ports", action="store_true", help="Automatically adjust ports if they are in use", default=True)
+    start_parser.add_argument("--no-auto-adjust-ports", action="store_false", dest="auto_adjust_ports", help="Do not automatically adjust ports if they are in use")
     
     # Stop command
     stop_parser = subparsers.add_parser("stop", help="Stop the PyLama ecosystem")
@@ -284,6 +288,11 @@ def main():
     logs_parser.add_argument("service", choices=["pybox", "pyllm", "shellama", "apilama", "pylama", "weblama"],
                            help="Service to view logs for")
     
+    # Open command
+    open_parser = subparsers.add_parser("open", help="Open WebLama in a web browser")
+    open_parser.add_argument("--port", type=int, help="Custom port to use (default: 9081)")
+    open_parser.add_argument("--host", type=str, help="Custom host to use (default: 127.0.0.1)")
+    
     # For backwards compatibility, add -i/--interactive flag to the main parser
     parser.add_argument("-i", "--interactive", action="store_true", help="Run in interactive mode")
     parser.add_argument("--mock", action="store_true", help="Use mock code generation and execution (for testing)")
@@ -293,7 +302,7 @@ def main():
     logger.info("Application started")
     
     # Handle ecosystem management commands
-    if args.command in ["start", "stop", "restart", "status", "logs"]:
+    if args.command in ["start", "stop", "restart", "status", "logs", "open"]:
         from .ecosystem import main as ecosystem_main
         # Re-parse the arguments for the ecosystem management command
         sys.argv[0] = "pylama-ecosystem"  # Change the program name for help messages

@@ -8,6 +8,87 @@ import time
 import logging
 import psutil
 from pathlib import Path
+import socket
+
+def is_port_in_use(host, port):
+    """Check if a port is in use."""
+    try:
+        # Check if port is in use using socket
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(1)
+            result = s.connect_ex((host, port))
+            return result == 0  # If result is 0, connection succeeded, port is in use
+    except Exception as e:
+        logger.error(f"Error checking if port {port} is in use: {e}")
+        return False  # Assume port is not in use if check fails
+
+def check_port_available(host, port):
+    """Check if a port is available."""
+    return not is_port_in_use(host, port)
+
+def check_service_availability(service, host, port):
+    """Check if a service is available via HTTP."""
+    import requests
+    url = f"http://{host}:{port}"
+    try:
+        response = requests.get(url, timeout=2)
+        logger.info(f"Service {service} is available at {url} with status code {response.status_code}")
+        return True
+    except requests.RequestException as e:
+        logger.warning(f"Service {service} is not available at {url}: {e}")
+        return False
+
+def find_available_port(base_port, host='127.0.0.1', increment=10):
+    """Find an available port by incrementing the base port by the specified increment until an available port is found."""
+    port = base_port
+    
+    # Try up to 10 increments (e.g., 9080, 9090, 9100, ...)
+    for _ in range(10):
+        if check_port_available(host, port):
+            return port
+        port += increment
+    
+    # If we couldn't find an available port, return None
+    logger.error(f"Could not find an available port starting from {base_port}")
+    return None
+
+def find_available_ports_for_all_services(ports_dict=None, host='127.0.0.1', increment=10):
+    """Find available ports for all services by incrementing all ports by the same amount."""
+    # Use provided ports_dict or get it from the global DEFAULT_PORTS later in the code
+    if ports_dict is None:
+        # This will be set to DEFAULT_PORTS when the function is called
+        ports_dict = {}
+    
+    # Check if any ports are in use
+    busy_ports = []
+    for service, port in ports_dict.items():
+        if is_port_in_use(host, port):
+            busy_ports.append((service, port))
+    
+    if not busy_ports:
+        # All ports are available, no need to change
+        return ports_dict.copy()
+    
+    # Some ports are busy, try incrementing all ports by the same amount
+    for i in range(1, 10):  # Try up to 9 increments
+        new_ports = {}
+        increment_amount = i * increment
+        all_available = True
+        
+        for service, port in ports_dict.items():
+            new_port = port + increment_amount
+            if not check_port_available(host, new_port):
+                all_available = False
+                break
+            new_ports[service] = new_port
+        
+        if all_available:
+            logger.info(f"Found available ports for all services by incrementing by {increment_amount}")
+            return new_ports
+    
+    # If we couldn't find available ports for all services, return None
+    logger.error("Could not find available ports for all services")
+    return None
 
 # Set up logging
 logging.basicConfig(
@@ -84,24 +165,8 @@ def start_service(service, service_dir, port, host):
     logger.info(f"Starting {service} on port {port}...")
     
     # Check if port is in use
-    try:
-        for proc in psutil.process_iter(['pid', 'name']):
-            try:
-                for conn in proc.connections(kind='inet'):
-                    if hasattr(conn, 'laddr') and hasattr(conn.laddr, 'port') and conn.laddr.port == port:
-                        logger.warning(f"Port {port} is already in use by PID {proc.pid}. {service} may not start correctly.")
-                        break
-            except (psutil.AccessDenied, psutil.NoSuchProcess, AttributeError):
-                pass
-    except ValueError:
-        # If connections attribute is not supported, use a simpler approach
-        logger.info(f"Checking if port {port} is in use (simplified method)...")
-        import socket
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        result = sock.connect_ex((host, port))
-        if result == 0:
-            logger.warning(f"Port {port} is already in use. {service} may not start correctly.")
-        sock.close()
+    if is_port_in_use(host, port):
+        logger.warning(f"Port {port} is already in use. {service} may not start correctly.")
     
     os.chdir(service_dir)
     
@@ -196,14 +261,63 @@ def stop_service(service):
         logger.warning(f"{service} is not running")
 
 
-def start_ecosystem(components=None, use_docker=False):
+def start_ecosystem(components=None, use_docker=False, open_browser=False, auto_adjust_ports=True):
     """Start the PyLama ecosystem."""
     ensure_logs_dir()
     
+    # Check if any ports are in use and stop Docker containers if needed
+    if auto_adjust_ports:
+        busy_ports = []
+        for service, port in DEFAULT_PORTS.items():
+            if is_port_in_use(DEFAULT_HOST, port):
+                busy_ports.append((service, port))
+        
+        if busy_ports:
+            logger.warning(f"The following ports are already in use: {busy_ports}")
+            
+            # Try to stop Docker containers if they might be using the ports
+            try:
+                logger.info("Stopping Docker containers that might be using the ports...")
+                subprocess.run(["docker-compose", "down"], cwd=ROOT_DIR, check=False)
+                time.sleep(2)  # Wait for containers to stop
+            except Exception as e:
+                logger.error(f"Error stopping Docker containers: {e}")
+            
+            # Check again after stopping Docker
+            still_busy = []
+            for service, port in busy_ports:
+                if is_port_in_use(DEFAULT_HOST, port):
+                    still_busy.append((service, port))
+            
+            if still_busy:
+                logger.warning(f"The following ports are still in use after stopping Docker: {still_busy}")
+                
+                # Find available ports for all services
+                new_ports = find_available_ports_for_all_services()
+                if new_ports:
+                    logger.info(f"Using new ports: {new_ports}")
+                    # Update ports dictionary with new values
+                    for service, port in new_ports.items():
+                        DEFAULT_PORTS[service] = port
+                else:
+                    logger.error("Could not find available ports. Some services may fail to start.")
+    
     if use_docker:
         logger.info("Starting PyLama ecosystem using Docker...")
+        # Update docker-compose.yml with new ports if needed
+        if auto_adjust_ports and 'new_ports' in locals() and new_ports:
+            # TODO: Update docker-compose.yml with new ports
+            pass
+        
         subprocess.run(["docker-compose", "up", "-d"], cwd=ROOT_DIR)
-        logger.info("Docker containers started. Access WebLama at http://localhost:9081")
+        logger.info(f"Docker containers started. Access WebLama at http://{DEFAULT_HOST}:{DEFAULT_PORTS['weblama']}")
+        
+        # Open browser if requested
+        if open_browser:
+            # Wait a moment for services to start
+            time.sleep(3)
+            open_weblama_in_browser()
+        
         return
     
     # Default to all components if none specified
@@ -235,6 +349,8 @@ def start_ecosystem(components=None, use_docker=False):
     
     # Start services in the correct order
     service_order = ["pybox", "pyllm", "shellama", "apilama", "pylama", "weblama"]
+    started_services = []
+    
     for service in service_order:
         if service not in components:
             continue
@@ -244,10 +360,47 @@ def start_ecosystem(components=None, use_docker=False):
             logger.error(f"Directory for {service} not found at {service_dir}")
             continue
         
-        start_service(service, service_dir, DEFAULT_PORTS[service], DEFAULT_HOST)
+        port = DEFAULT_PORTS[service]
+        start_service(service, service_dir, port, DEFAULT_HOST)
+        started_services.append(service)
         time.sleep(2)  # Wait for the service to start
     
+    # Check if services are actually available via HTTP for web services
+    web_services = ["apilama", "weblama"]
+    available_services = []
+    
+    # Wait a bit longer for services to fully initialize
+    time.sleep(3)
+    
+    for service in started_services:
+        if service in web_services:
+            port = DEFAULT_PORTS[service]
+            if check_service_availability(service, DEFAULT_HOST, port):
+                available_services.append(service)
+            else:
+                logger.warning(f"{service} was started but is not responding on port {port}")
+        else:
+            # For non-web services, just check if the process is running
+            status = get_ecosystem_status()
+            if service in status and status[service]["status"] == "running":
+                available_services.append(service)
+            else:
+                logger.warning(f"{service} was started but is not running")
+    
+    # Print summary
+    if available_services:
+        logger.info(f"Services available: {', '.join(available_services)}")
+    else:
+        logger.warning("No services are available")
+    
     logger.info(f"Selected services started. Access WebLama at http://{DEFAULT_HOST}:{DEFAULT_PORTS['weblama']}")
+    
+    # Open browser if requested and WebLama is among the started components
+    if open_browser and "weblama" in components and "weblama" in available_services:
+        # WebLama is available, open it in browser
+        open_weblama_in_browser()
+    elif open_browser and "weblama" in components:
+        logger.warning("WebLama is not available, cannot open in browser")
 
 
 def stop_ecosystem(components=None, use_docker=False):
@@ -279,64 +432,104 @@ def get_ecosystem_status():
     
     status = {}
     for service in DEFAULT_PORTS.keys():
+        port = DEFAULT_PORTS[service]
+        host = DEFAULT_HOST
         pid_file = LOGS_DIR / f"{service}.pid"
-        if pid_file.exists():
-            try:
-                with open(pid_file, "r") as f:
-                    pid = int(f.read().strip())
-                
-                # Check if the process is running
+        
+        # First check if the port is in use (service might be running even if PID file is stale)
+        port_in_use = is_port_in_use(host, port)
+        
+        if port_in_use:
+            # Port is in use, service is likely running
+            pid = None
+            if pid_file.exists():
                 try:
-                    # First try using psutil
-                    try:
-                        process = psutil.Process(pid)
-                        if process.is_running():
-                            status[service] = {"status": "running", "pid": pid}
-                        else:
-                            status[service] = {"status": "not running", "pid": pid, "note": "stale PID file"}
-                    except (psutil.NoSuchProcess, AttributeError):
-                        # Fallback to checking process existence using os.kill with signal 0
-                        # This just tests if the process exists without actually sending a signal
-                        try:
-                            os.kill(pid, 0)
-                            status[service] = {"status": "running", "pid": pid}
-                        except OSError:
-                            status[service] = {"status": "not running", "pid": pid, "note": "stale PID file"}
+                    with open(pid_file, "r") as f:
+                        pid = int(f.read().strip())
                 except Exception as e:
-                    logger.warning(f"Error checking process status for {service}: {e}")
-                    status[service] = {"status": "unknown", "pid": pid, "note": str(e)}
-            except Exception as e:
-                logger.warning(f"Error reading PID file for {service}: {e}")
-                status[service] = {"status": "unknown", "note": "invalid PID file"}
+                    logger.warning(f"Error reading PID file for {service}: {e}")
+            
+            if pid:
+                status[service] = {"status": "running", "pid": pid, "port": port}
+            else:
+                # Port is in use but we don't know the PID
+                status[service] = {"status": "running", "note": f"Port {port} is in use, but PID is unknown", "port": port}
         else:
-            status[service] = {"status": "not running"}
+            # Port is not in use, check if there's a PID file
+            if pid_file.exists():
+                try:
+                    with open(pid_file, "r") as f:
+                        pid = int(f.read().strip())
+                    
+                    # Check if the process with this PID exists
+                    try:
+                        # First try using psutil
+                        try:
+                            process = psutil.Process(pid)
+                            if process.is_running():
+                                # Process exists but port is not in use - might be starting up or wrong port
+                                status[service] = {"status": "starting", "pid": pid, "note": f"Process exists but port {port} is not in use"}
+                            else:
+                                status[service] = {"status": "not running", "pid": pid, "note": "stale PID file"}
+                        except (psutil.NoSuchProcess, AttributeError):
+                            # Fallback to checking process existence using os.kill with signal 0
+                            try:
+                                os.kill(pid, 0)
+                                # Process exists but port is not in use
+                                status[service] = {"status": "starting", "pid": pid, "note": f"Process exists but port {port} is not in use"}
+                            except OSError:
+                                status[service] = {"status": "not running", "pid": pid, "note": "stale PID file"}
+                    except Exception as e:
+                        logger.warning(f"Error checking process status for {service}: {e}")
+                        status[service] = {"status": "unknown", "pid": pid, "note": str(e)}
+                except Exception as e:
+                    logger.warning(f"Error reading PID file for {service}: {e}")
+                    status[service] = {"status": "unknown", "note": "invalid PID file"}
+            else:
+                status[service] = {"status": "not running"}
     
     return status
 
 
 def print_ecosystem_status():
     """Print the status of all services in the PyLama ecosystem."""
-    status = get_ecosystem_status()
-    
     logger.info("PyLama Ecosystem Status:")
-    for service, info in status.items():
-        status_str = info["status"]
-        if status_str == "running":
-            logger.info(f"{service}: Running (PID: {info['pid']})")
-        else:
-            note = info.get("note", "")
-            if note:
-                logger.warning(f"{service}: Not running ({note})")
-            else:
-                logger.warning(f"{service}: Not running")
     
-    # Check Docker status
+    status = get_ecosystem_status()
+    for service, info in status.items():
+        if info["status"] == "running":
+            if "pid" in info:
+                logger.info(f"{service}: Running (PID: {info['pid']})")
+            else:
+                logger.info(f"{service}: Running ({info.get('note', 'Port in use')})")
+        elif info["status"] == "starting":
+            logger.info(f"{service}: Starting (PID: {info['pid']}, {info.get('note', '')})")
+        elif info["status"] == "not running" and "note" in info:
+            logger.warning(f"{service}: Not running ({info['note']})")
+        elif info["status"] == "not running":
+            logger.info(f"{service}: Not running")
+        elif info["status"] == "unknown":
+            logger.warning(f"{service}: Status unknown ({info['note']})")
+        else:
+            logger.info(f"{service}: {info['status']} {info.get('note', '')}")
+    
+    # Print Docker container status
+    logger.info("\nDocker Container Status:")
     try:
-        subprocess.run(["docker", "info"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
-        logger.info("\nDocker Container Status:")
-        subprocess.run(["docker-compose", "ps"], cwd=ROOT_DIR)
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        pass
+        # Try to get Docker container status
+        result = subprocess.run(["docker", "ps", "--format", "table {{.Names}}\t{{.Image}}\t{{.Command}}\t{{.Service}}\t{{.CreatedAt}}\t{{.Status}}\t{{.Ports}}"], 
+                              capture_output=True, text=True, check=False)
+        if result.returncode == 0:
+            print(result.stdout)
+        else:
+            # Fallback to docker-compose ps
+            try:
+                compose_result = subprocess.run(["docker-compose", "ps"], cwd=ROOT_DIR, capture_output=True, text=True, check=False)
+                print(compose_result.stdout)
+            except Exception as compose_error:
+                logger.error(f"Error getting docker-compose status: {compose_error}")
+    except Exception as e:
+        logger.error(f"Error getting Docker container status: {e}")
 
 
 def view_service_logs(service):
@@ -363,6 +556,19 @@ def view_service_logs(service):
         logger.info("Stopped viewing logs")
 
 
+def open_weblama_in_browser():
+    """Open WebLama in the default web browser."""
+    import webbrowser
+    url = f"http://{DEFAULT_HOST}:{DEFAULT_PORTS['weblama']}"
+    logger.info(f"Opening WebLama in browser at {url}")
+    try:
+        webbrowser.open(url)
+        return True
+    except Exception as e:
+        logger.error(f"Error opening WebLama in browser: {e}")
+        return False
+
+
 def main():
     """Main function for the ecosystem management CLI."""
     import argparse
@@ -379,6 +585,8 @@ def main():
     start_parser.add_argument("--apilama", action="store_true", help="Start APILama")
     start_parser.add_argument("--pylama", action="store_true", help="Start PyLama")
     start_parser.add_argument("--weblama", action="store_true", help="Start WebLama")
+    start_parser.add_argument("--open", action="store_true", help="Open WebLama in browser after starting")
+    start_parser.add_argument("--browser", action="store_true", help="Alias for --open, opens WebLama in browser")
     
     # Stop command
     stop_parser = subparsers.add_parser("stop", help="Stop the PyLama ecosystem")
@@ -408,6 +616,11 @@ def main():
     logs_parser.add_argument("service", choices=["pybox", "pyllm", "shellama", "apilama", "pylama", "weblama"],
                            help="Service to view logs for")
     
+    # Open command
+    open_parser = subparsers.add_parser("open", help="Open WebLama in a web browser")
+    open_parser.add_argument("--port", type=int, help="Custom port to use (default: 9081)")
+    open_parser.add_argument("--host", type=str, help="Custom host to use (default: 127.0.0.1)")
+    
     args = parser.parse_args()
     
     if args.command == "start":
@@ -430,7 +643,11 @@ def main():
         if not components:
             components = None
         
-        start_ecosystem(components, args.docker)
+        # Check if browser should be opened
+        open_browser = args.open or args.browser
+        
+        # Start the ecosystem with port auto-adjustment if enabled
+        start_ecosystem(components, args.docker, open_browser, args.auto_adjust_ports)
     
     elif args.command == "stop":
         # Check if specific components are specified
@@ -483,6 +700,20 @@ def main():
     
     elif args.command == "logs":
         view_service_logs(args.service)
+    
+    elif args.command == "open":
+        # Use custom host/port if provided, otherwise use defaults
+        host = args.host if args.host is not None else DEFAULT_HOST
+        port = args.port if args.port is not None else DEFAULT_PORTS['weblama']
+        
+        # Open WebLama in browser with custom host/port if provided
+        url = f"http://{host}:{port}"
+        logger.info(f"Opening WebLama in browser at {url}")
+        try:
+            import webbrowser
+            webbrowser.open(url)
+        except Exception as e:
+            logger.error(f"Error opening WebLama in browser: {e}")
     
     else:
         parser.print_help()
