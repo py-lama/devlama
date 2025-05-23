@@ -2,7 +2,7 @@
 
 # PyLama - Python Code Generation with Ollama
 
-PyLama is a Python tool that leverages Ollama's language models to generate and execute Python code. It simplifies the process of writing and running Python scripts by handling dependency management and code execution automatically. With the template system, it generates higher quality, platform-aware code that's ready to run.
+PyLama is a Python tool that leverages Ollama's language models to generate and execute Python code. It simplifies the process of writing and running Python scripts by handling dependency management and code execution automatically. With the template system, it generates higher quality, platform-aware code that's ready to run. PyLama is part of the PyLama ecosystem and integrates with LogLama as the primary service for centralized logging and environment management.
 
 ## Features
 
@@ -14,6 +14,8 @@ PyLama is a Python tool that leverages Ollama's language models to generate and 
 - **Template System**: Generates code with awareness of platform, dependencies, and more
 - **Interactive Mode**: Provides an interactive CLI for model selection and code generation
 - **Code Execution**: Can execute generated code directly
+- **LogLama Integration**: Integrates with LogLama for centralized logging, environment management, and service orchestration
+- **Structured Logging**: All operations are logged with component context for better debugging and monitoring
 
 ## Requirements
 
