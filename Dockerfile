@@ -20,8 +20,11 @@ COPY . .
 # Install the package in development mode
 RUN pip install -e .
 
+# Create logs directory
+RUN mkdir -p /app/logs
+
 # Expose the API port
-EXPOSE 8002
+EXPOSE 8003
 
 # Command to run the API server
-CMD ["uvicorn", "pylama.api:app", "--host", "0.0.0.0", "--port", "8002"]
+CMD ["python", "-m", "pylama.api", "--host", "0.0.0.0", "--port", "8003"]

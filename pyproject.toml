@@ -1,31 +1,31 @@
 [build-system]
-requires = ["setuptools>=42", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
 
-[project]
+[tool.poetry]
 name = "pylama"
 version = "0.1.0"
 description = "Python code generation and execution using Ollama language models"
-authors = [{name = "Tom Sapletta", email = "info@softreck.dev"}]
-license = {text = "Apache-2.0"}
+authors = ["Tom Sapletta <info@softreck.dev>"]
+license = "Apache-2.0"
 readme = "README.md"
-requires-python = ">=3.8"
-dependencies = [
-    "requests>=2.31.0",
-    "python-dotenv>=1.0.0"
-]
 
-[project.optional-dependencies]
-dev = [
-    "pytest>=7.4.0",
-    "pytest-cov>=4.1.0",
-    "black>=23.7.0",
-    "isort>=5.12.0",
-    "flake8>=6.1.0",
-    "mypy>=1.5.1"
-]
+[tool.poetry.dependencies]
+python = ">=3.8"
+requests = ">=2.31.0"
+python-dotenv = ">=1.0.0"
+fastapi = "^0.103.1"
+uvicorn = "^0.23.2"
 
-[project.scripts]
+[tool.poetry.group.dev.dependencies]
+pytest = ">=7.4.0"
+pytest-cov = ">=4.1.0"
+black = ">=23.7.0"
+isort = ">=5.12.0"
+flake8 = ">=6.1.0"
+mypy = ">=1.5.1"
+
+[tool.poetry.scripts]
 pylama = "pylama.cli:main"
 
 [tool.pytest.ini_options]
