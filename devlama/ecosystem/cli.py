@@ -26,7 +26,7 @@ Main function for the ecosystem management CLI.
     # Start command
     start_parser = subparsers.add_parser("start", help="Start the DevLama ecosystem")
     start_parser.add_argument("--docker", action="store_true", help="Use Docker to start the ecosystem")
-    start_parser.add_argument("--pybox", action="store_true", help="Start PyBox")
+    start_parser.add_argument("--bexy", action="store_true", help="Start BEXY")
     start_parser.add_argument("--pyllm", action="store_true", help="Start PyLLM")
     start_parser.add_argument("--shellama", action="store_true", help="Start SheLLama")
     start_parser.add_argument("--apilama", action="store_true", help="Start APILama")
@@ -40,7 +40,7 @@ Main function for the ecosystem management CLI.
     # Stop command
     stop_parser = subparsers.add_parser("stop", help="Stop the DevLama ecosystem")
     stop_parser.add_argument("--docker", action="store_true", help="Use Docker to stop the ecosystem")
-    stop_parser.add_argument("--pybox", action="store_true", help="Stop PyBox")
+    stop_parser.add_argument("--bexy", action="store_true", help="Stop BEXY")
     stop_parser.add_argument("--pyllm", action="store_true", help="Stop PyLLM")
     stop_parser.add_argument("--shellama", action="store_true", help="Stop SheLLama")
     stop_parser.add_argument("--apilama", action="store_true", help="Stop APILama")
@@ -50,7 +50,7 @@ Main function for the ecosystem management CLI.
     # Restart command
     restart_parser = subparsers.add_parser("restart", help="Restart the DevLama ecosystem")
     restart_parser.add_argument("--docker", action="store_true", help="Use Docker to restart the ecosystem")
-    restart_parser.add_argument("--pybox", action="store_true", help="Restart PyBox")
+    restart_parser.add_argument("--bexy", action="store_true", help="Restart BEXY")
     restart_parser.add_argument("--pyllm", action="store_true", help="Restart PyLLM")
     restart_parser.add_argument("--shellama", action="store_true", help="Restart SheLLama")
     restart_parser.add_argument("--apilama", action="store_true", help="Restart APILama")
@@ -66,7 +66,7 @@ Main function for the ecosystem management CLI.
     
     # Logs command
     logs_parser = subparsers.add_parser("logs", help="View logs for a service")
-    logs_parser.add_argument("service", choices=["pybox", "pyllm", "shellama", "apilama", "devlama", "weblama", "all"],
+    logs_parser.add_argument("service", choices=["bexy", "pyllm", "shellama", "apilama", "devlama", "weblama", "all"],
                            help="Service to view logs for (use 'all' to view logs from all services)")
     logs_parser.add_argument("--level", choices=["debug", "info", "warning", "error", "critical"],
                            help="Filter logs by level")
@@ -78,7 +78,7 @@ Main function for the ecosystem management CLI.
     # Collect logs command
     collect_parser = subparsers.add_parser("collect-logs", help="Collect logs from services and import them into LogLama")
     collect_parser.add_argument("--services", nargs="+",
-                              choices=["pybox", "pyllm", "shellama", "apilama", "pylama", "weblama"],
+                              choices=["bexy", "pyllm", "shellama", "apilama", "pylama", "weblama"],
                               help="Services to collect logs from (default: all)")
     collect_parser.add_argument("--verbose", "-v", action="store_true",
                               help="Show verbose output")
@@ -90,7 +90,7 @@ Main function for the ecosystem management CLI.
     # Start log collector command
     start_collector_parser = collector_subparsers.add_parser("start", help="Start the log collector daemon")
     start_collector_parser.add_argument("--services", nargs="+",
-                                      choices=["pybox", "pyllm", "shellama", "apilama", "devlama", "weblama"],
+                                      choices=["bexy", "pyllm", "shellama", "apilama", "devlama", "weblama"],
                                       help="Services to collect logs from (default: all)")
     start_collector_parser.add_argument("--interval", "-i", type=int, default=300,
                                       help="Collection interval in seconds (default: 300)")
@@ -117,8 +117,8 @@ Main function for the ecosystem management CLI.
     if args.command == "start":
         # Check if specific components are specified
         components = []
-        if args.pybox:
-            components.append("pybox")
+        if args.bexy:
+            components.append("bexy")
         if args.pyllm:
             components.append("pyllm")
         if args.shellama:
@@ -143,8 +143,8 @@ Main function for the ecosystem management CLI.
     elif args.command == "stop":
         # Check if specific components are specified
         components = []
-        if args.pybox:
-            components.append("pybox")
+        if args.bexy:
+            components.append("bexy")
         if args.pyllm:
             components.append("pyllm")
         if args.shellama:
@@ -165,8 +165,8 @@ Main function for the ecosystem management CLI.
     elif args.command == "restart":
         # Check if specific components are specified
         components = []
-        if args.pybox:
-            components.append("pybox")
+        if args.bexy:
+            components.append("bexy")
         if args.pyllm:
             components.append("pyllm")
         if args.shellama:

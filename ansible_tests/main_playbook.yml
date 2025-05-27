@@ -5,7 +5,7 @@
   hosts: local
   gather_facts: yes
   vars:
-    pybox_url: "{{ lookup('env', 'PYBOX_URL') | default('http://localhost:8001', true) }}"
+    bexy_url: "{{ lookup('env', 'BEXY_URL') | default('http://localhost:8001', true) }}"
     pyllm_url: "{{ lookup('env', 'PYLLM_URL') | default('http://localhost:8002', true) }}"
     apilama_url: "{{ lookup('env', 'APILAMA_URL') | default('http://localhost:8080', true) }}"
     weblama_url: "{{ lookup('env', 'WEBLAMA_URL') | default('http://localhost:8081', true) }}"
@@ -21,12 +21,12 @@
         state: directory
         mode: '0755'
       
-    - name: Check PyBox health
+    - name: Check BEXY health
       uri:
-        url: "{{ pybox_url }}/health"
+        url: "{{ bexy_url }}/health"
         method: GET
         status_code: 200
-      register: pybox_health
+      register: bexy_health
       ignore_errors: yes
       
     - name: Check PyLLM health
@@ -64,14 +64,14 @@
     - name: Display service health status
       debug:
         msg: |
-          PyBox: {{ 'OK' if pybox_health.status == 200 else 'FAIL' }}
+          BEXY: {{ 'OK' if bexy_health.status == 200 else 'FAIL' }}
           PyLLM: {{ 'OK' if pyllm_health.status == 200 else 'FAIL' }}
           APILama: {{ 'OK' if apilama_health.status == 200 else 'FAIL' }}
           WebLama: {{ 'OK' if weblama_health.status == 200 else 'FAIL' }}
           PyLama: {{ 'OK' if pylama_health.status == 200 else 'FAIL' }}
 
 # Include component-specific test playbooks
-- import_playbook: playbooks/pybox_tests.yml
+- import_playbook: playbooks/bexy_tests.yml
 - import_playbook: playbooks/pyllm_tests.yml
 - import_playbook: playbooks/apilama_tests.yml
 - import_playbook: playbooks/weblama_tests.yml

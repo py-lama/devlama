@@ -1,54 +1,54 @@
 ---
-# PyBox component tests
+# BEXY component tests
 
-- name: PyBox Tests
+- name: BEXY Tests
   hosts: local
   gather_facts: no
   vars:
-    pybox_url: "{{ lookup('env', 'PYBOX_URL') | default('http://localhost:8001', true) }}"
+    bexy_url: "{{ lookup('env', 'BEXY_URL') | default('http://localhost:8001', true) }}"
     test_output_dir: "{{ playbook_dir }}/../test-reports"
   
   tasks:
-    - name: Test PyBox code execution
+    - name: Test BEXY code execution
       uri:
-        url: "{{ pybox_url }}/api/execute"
+        url: "{{ bexy_url }}/api/execute"
         method: POST
         body_format: json
         body:
-          code: "print('Hello from PyBox!')"
+          code: "print('Hello from BEXY!')"
           language: "python"
         status_code: 200
-      register: pybox_execute_result
+      register: bexy_execute_result
       
-    - name: Verify PyBox execution result
+    - name: Verify BEXY execution result
       assert:
         that:
-          - pybox_execute_result.status == 200
-          - pybox_execute_result.json.output is defined
-          - "'Hello from PyBox!' in pybox_execute_result.json.output"
-        fail_msg: "PyBox code execution failed"
-        success_msg: "PyBox code execution successful"
+          - bexy_execute_result.status == 200
+          - bexy_execute_result.json.output is defined
+          - "'Hello from BEXY!' in bexy_execute_result.json.output"
+        fail_msg: "BEXY code execution failed"
+        success_msg: "BEXY code execution successful"
       
-    - name: Test PyBox history endpoint
+    - name: Test BEXY history endpoint
       uri:
-        url: "{{ pybox_url }}/api/history"
+        url: "{{ bexy_url }}/api/history"
         method: GET
         status_code: 200
-      register: pybox_history_result
+      register: bexy_history_result
       
-    - name: Verify PyBox history result
+    - name: Verify BEXY history result
       assert:
         that:
-          - pybox_history_result.status == 200
-          - pybox_history_result.json is defined
-        fail_msg: "PyBox history retrieval failed"
-        success_msg: "PyBox history retrieval successful"
+          - bexy_history_result.status == 200
+          - bexy_history_result.json is defined
+        fail_msg: "BEXY history retrieval failed"
+        success_msg: "BEXY history retrieval successful"
       
-    - name: Save PyBox test results
+    - name: Save BEXY test results
       copy:
-        content: "{{ pybox_execute_result | to_nice_json }}"
-        dest: "{{ test_output_dir }}/pybox_test_results.json"
+        content: "{{ bexy_execute_result | to_nice_json }}"
+        dest: "{{ test_output_dir }}/bexy_test_results.json"
       
-    - name: Display PyBox test summary
+    - name: Display BEXY test summary
       debug:
-        msg: "PyBox tests completed successfully"
+        msg: "BEXY tests completed successfully"

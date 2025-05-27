@@ -1,7 +1,7 @@
 [local]
 localhost ansible_connection=local
 
-[pybox]
+[bexy]
 localhost ansible_connection=local
 
 [pyllm]
@@ -14,7 +14,7 @@ localhost ansible_connection=local
 localhost ansible_connection=local
 
 [pylama:children]
-pybox
+bexy
 pyllm
 apilama
 weblama

@@ -20,7 +20,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("devlama-diagnose")
 
-# Ensure we can import from pybox
+# Ensure we can import from bexy
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
@@ -29,19 +29,19 @@ if parent_dir not in sys.path:
 from devlama.devlama import generate_code
 from devlama.OllamaRunner import OllamaRunner
 
-# Import PyBox directly
+# Import BEXY directly
 try:
-    from pybox.pybox import PythonSandbox
-    logger.info("Successfully imported PyBox")
+    from bexy.bexy import PythonSandbox
+    logger.info("Successfully imported BEXY")
 except ImportError:
-    logger.error("Failed to import PyBox directly. Trying alternative import method...")
+    logger.error("Failed to import BEXY directly. Trying alternative import method...")
     try:
-        from devlama.pybox_wrapper import PythonSandbox
-        logger.info("Successfully imported PyBox through wrapper")
+        from devlama.bexy_wrapper import PythonSandbox
+        logger.info("Successfully imported BEXY through wrapper")
     except ImportError:
-        logger.error("Failed to import PyBox through wrapper. Using fallback implementation.")
+        logger.error("Failed to import BEXY through wrapper. Using fallback implementation.")
         
-        # Fallback implementation if PyBox is not available
+        # Fallback implementation if BEXY is not available
         class PythonSandbox:
             """Fallback implementation of PythonSandbox."""
             def __init__(self):
@@ -109,8 +109,8 @@ def add_main_for_web_server(code, example_name):
     return code
 
 
-def execute_code_with_pybox(code, example_name=None):
-    """Execute code using PyBox sandbox."""
+def execute_code_with_bexy(code, example_name=None):
+    """Execute code using BEXY sandbox."""
     # Add main function for web server examples if needed
     if example_name:
         code = add_main_for_web_server(code, example_name)
@@ -121,7 +121,7 @@ def execute_code_with_pybox(code, example_name=None):
     # Execute the code in the sandbox using run_code method
     result = sandbox.run_code(code)
     
-    # Convert PyBox result format to match PyLama's execute_code format
+    # Convert BEXY result format to match PyLama's execute_code format
     return {
         "output": result.get("stdout", ""),
         "error": result.get("stderr", "") if not result.get("success", True) else None
@@ -160,9 +160,9 @@ def run_diagnostic():
                 results.append((example_name, False, "No code generated"))
                 continue
             
-            # Execute code using PyBox
-            print("Executing code with PyBox...")
-            execution_result = execute_code_with_pybox(code, example_name=example_name.stem if hasattr(example_name, 'stem') else example_name)
+            # Execute code using BEXY
+            print("Executing code with BEXY...")
+            execution_result = execute_code_with_bexy(code, example_name=example_name.stem if hasattr(example_name, 'stem') else example_name)
             
             if execution_result.get("error"):
                 print(f"\u274c Failed: Execution error: {execution_result['error']}")

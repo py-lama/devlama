@@ -4,7 +4,7 @@
 Markdown Code Block Executor
 
 This script extracts Python code blocks from a Markdown file,
-executes them using PyBox, and uses PyLLM to fix any issues.
+executes them using BEXY, and uses PyLLM to fix any issues.
 """
 
 import os
@@ -16,8 +16,8 @@ from pathlib import Path
 # Add the parent directory to sys.path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Import PyBox and PyLLM modules
-from devlama.pybox_wrapper import PythonSandbox
+# Import BEXY and PyLLM modules
+from devlama.bexy_wrapper import PythonSandbox
 from devlama.OllamaRunner import OllamaRunner
 
 # Configure logging
@@ -49,8 +49,8 @@ def extract_python_code_blocks(markdown_content):
     return code_blocks
 
 
-def execute_code_with_pybox(code):
-    """Execute code using PyBox sandbox.
+def execute_code_with_bexy(code):
+    """Execute code using BEXY sandbox.
     
     Args:
         code (str): The Python code to execute.
@@ -197,7 +197,7 @@ def main(markdown_file):
                     break
         
         # Execute the code
-        result = execute_code_with_pybox(code_block)
+        result = execute_code_with_bexy(code_block)
         
         if result['success'] and not is_logic_error:
             logger.info(f"Code block {i+1} executed successfully")
@@ -226,7 +226,7 @@ def main(markdown_file):
             print(fixed_code)
             
             # Execute the fixed code to verify
-            fixed_result = execute_code_with_pybox(fixed_code)
+            fixed_result = execute_code_with_bexy(fixed_code)
             if fixed_result['success']:
                 logger.info(f"Fixed code block {i+1} executed successfully")
                 print(f"\n--- Fixed Output ---")

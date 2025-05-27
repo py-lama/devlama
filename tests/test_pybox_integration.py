@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Tests for the PyBox integration with DevLama.
+Tests for the BEXY integration with DevLama.
 """
 
 import os
@@ -12,16 +12,16 @@ from unittest.mock import patch, MagicMock
 # Add the parent directory to sys.path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Import PyBox wrapper and related modules
-from devlama.pybox_wrapper import PythonSandbox, DockerSandbox
-from pybox.code_analyzer import CodeAnalyzer
-from pybox.dependency_manager import DependencyManager
+# Import BEXY wrapper and related modules
+from devlama.bexy_wrapper import PythonSandbox, DockerSandbox
+from bexy.code_analyzer import CodeAnalyzer
+from bexy.dependency_manager import DependencyManager
 
 
 @pytest.fixture
 def mock_code_analyzer():
     """Mock the CodeAnalyzer class."""
-    with patch('pybox.code_analyzer.CodeAnalyzer') as mock:
+    with patch('bexy.code_analyzer.CodeAnalyzer') as mock:
         analyzer_instance = MagicMock()
         analyzer_instance.analyze_code.return_value = {
             'imports': {'http': 'standard_library', 'requests': 'third_party'},
@@ -41,7 +41,7 @@ def mock_code_analyzer():
 @pytest.fixture
 def mock_dependency_manager():
     """Mock the DependencyManager class."""
-    with patch('pybox.dependency_manager.DependencyManager') as mock:
+    with patch('bexy.dependency_manager.DependencyManager') as mock:
         manager_instance = MagicMock()
         manager_instance.analyze_dependencies.return_value = {
             'imports': {'http': 'standard_library', 'requests': 'third_party'},
@@ -69,8 +69,8 @@ def mock_subprocess():
 
 def test_python_sandbox_initialization():
     """Test that PythonSandbox initializes correctly."""
-    with patch('pylama.pybox_wrapper.importlib.util.spec_from_file_location') as mock_spec:
-        with patch('pylama.pybox_wrapper.importlib.util.module_from_spec') as mock_module:
+    with patch('pylama.bexy_wrapper.importlib.util.spec_from_file_location') as mock_spec:
+        with patch('pylama.bexy_wrapper.importlib.util.module_from_spec') as mock_module:
             # Setup mocks
             spec_mock = MagicMock()
             module_mock = MagicMock()
@@ -127,8 +127,8 @@ def test_python_sandbox_run_code_with_syntax_error(mock_dependency_manager):
 
 def test_docker_sandbox_initialization():
     """Test that DockerSandbox initializes correctly."""
-    with patch('pylama.pybox_wrapper.importlib.util.spec_from_file_location') as mock_spec:
-        with patch('pylama.pybox_wrapper.importlib.util.module_from_spec') as mock_module:
+    with patch('pylama.bexy_wrapper.importlib.util.spec_from_file_location') as mock_spec:
+        with patch('pylama.bexy_wrapper.importlib.util.module_from_spec') as mock_module:
             # Setup mocks
             spec_mock = MagicMock()
             module_mock = MagicMock()
@@ -145,7 +145,7 @@ def test_docker_sandbox_initialization():
 def test_code_analyzer_improvements(mock_code_analyzer):
     """Test the improvements to the code analyzer for handling submodules."""
     # Import the code analyzer directly
-    from pybox.code_analyzer import CodeAnalyzer
+    from bexy.code_analyzer import CodeAnalyzer
     
     # Create a code analyzer instance
     analyzer = CodeAnalyzer()
@@ -177,7 +177,7 @@ def test_code_analyzer_improvements(mock_code_analyzer):
 def test_dependency_manager_improvements(mock_dependency_manager):
     """Test the improvements to the dependency manager for handling submodules."""
     # Import the dependency manager directly
-    from pybox.dependency_manager import DependencyManager
+    from bexy.dependency_manager import DependencyManager
     
     # Create a dependency manager instance
     manager = DependencyManager()

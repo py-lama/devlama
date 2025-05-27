@@ -38,8 +38,8 @@ Start a service.
     subprocess.run(["pip", "install", "-e", "."], check=False)
     
     # Start the service
-    if service == "pybox":
-        cmd = ["python", "-m", "pybox", "serve", "--port", str(port)]
+    if service == "bexy":
+        cmd = ["python", "-m", "bexy", "serve", "--port", str(port)]
     elif service == "pyllm":
         cmd = ["python", "-m", "pyllm", "serve", "--port", str(port)]
     elif service == "shellama":

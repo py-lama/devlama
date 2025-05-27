@@ -5,7 +5,7 @@
   hosts: local
   gather_facts: no
   vars:
-    pybox_url: "{{ lookup('env', 'PYBOX_URL') | default('http://localhost:8001', true) }}"
+    bexy_url: "{{ lookup('env', 'BEXY_URL') | default('http://localhost:8001', true) }}"
     pyllm_url: "{{ lookup('env', 'PYLLM_URL') | default('http://localhost:8002', true) }}"
     apilama_url: "{{ lookup('env', 'APILAMA_URL') | default('http://localhost:8080', true) }}"
     weblama_url: "{{ lookup('env', 'WEBLAMA_URL') | default('http://localhost:8081', true) }}"
@@ -13,25 +13,25 @@
     test_output_dir: "{{ playbook_dir }}/../test-reports"
   
   tasks:
-    - name: Test APILama to PyBox integration
+    - name: Test APILama to BEXY integration
       uri:
         url: "{{ apilama_url }}/api/execute"
         method: POST
         body_format: json
         body:
-          code: "print('Testing APILama to PyBox integration')"
+          code: "print('Testing APILama to BEXY integration')"
           language: "python"
         status_code: 200
-      register: apilama_pybox_result
+      register: apilama_bexy_result
       
-    - name: Verify APILama to PyBox integration
+    - name: Verify APILama to BEXY integration
       assert:
         that:
-          - apilama_pybox_result.status == 200
-          - apilama_pybox_result.json.output is defined
-          - "'Testing APILama to PyBox integration' in apilama_pybox_result.json.output"
-        fail_msg: "APILama to PyBox integration failed"
-        success_msg: "APILama to PyBox integration successful"
+          - apilama_bexy_result.status == 200
+          - apilama_bexy_result.json.output is defined
+          - "'Testing APILama to BEXY integration' in apilama_bexy_result.json.output"
+        fail_msg: "APILama to BEXY integration failed"
+        success_msg: "APILama to BEXY integration successful"
       
     - name: Test APILama to PyLLM integration
       uri:
@@ -78,7 +78,7 @@
       copy:
         content: |
           {
-            "apilama_pybox": {{ apilama_pybox_result | to_json }},
+            "apilama_bexy": {{ apilama_bexy_result | to_json }},
             "apilama_pyllm": {{ apilama_pyllm_result | to_json }},
             "weblama_apilama": {{ weblama_apilama_result | to_json }}
           }

@@ -1,4 +1,4 @@
-- stworz przykladowy mermaid z kilkoma codeblocks w roznych jezykach i te z python wyrenderuj, uruchom z apomoca pybox i pokaz czy pyllm pomoze w naprawie jesli cos nie dziala w markdow codeblock sourcecode,
+- stworz przykladowy mermaid z kilkoma codeblocks w roznych jezykach i te z python wyrenderuj, uruchom z apomoca bexy i pokaz czy pyllm pomoze w naprawie jesli cos nie dziala w markdow codeblock sourcecode,
 jesli pyllm pomogl naprawic, to zaktualizuj niedzialajacy pyhton sourceode w markdown
 
 - PACKAGE_DIR i inne sciezki powinny byc pobeirane z .env

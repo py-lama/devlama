@@ -110,7 +110,7 @@
         <section class="summary">
             <h2>Test Summary</h2>
             <p>
-                <strong>PyBox:</strong> <span class="{% if pybox_health.status == 200 %}success{% else %}failure{% endif %}">{% if pybox_health.status == 200 %}PASS{% else %}FAIL{% endif %}</span><br>
+                <strong>BEXY:</strong> <span class="{% if bexy_health.status == 200 %}success{% else %}failure{% endif %}">{% if bexy_health.status == 200 %}PASS{% else %}FAIL{% endif %}</span><br>
                 <strong>PyLLM:</strong> <span class="{% if pyllm_health.status == 200 %}success{% else %}failure{% endif %}">{% if pyllm_health.status == 200 %}PASS{% else %}FAIL{% endif %}</span><br>
                 <strong>APILama:</strong> <span class="{% if apilama_health.status == 200 %}success{% else %}failure{% endif %}">{% if apilama_health.status == 200 %}PASS{% else %}FAIL{% endif %}</span><br>
                 <strong>WebLama:</strong> <span class="{% if weblama_health.status == 200 %}success{% else %}failure{% endif %}">{% if weblama_health.status == 200 %}PASS{% else %}FAIL{% endif %}</span><br>
@@ -119,18 +119,18 @@
         </section>
 
         <section class="component">
-            <h2>PyBox Tests</h2>
+            <h2>BEXY Tests</h2>
             <div class="test-result">
                 <h4>Code Execution Test</h4>
-                <span class="status-badge {% if pybox_execute_result.status == 200 %}status-pass{% else %}status-fail{% endif %}">
-                    {% if pybox_execute_result.status == 200 %}PASS{% else %}FAIL{% endif %}
+                <span class="status-badge {% if bexy_execute_result.status == 200 %}status-pass{% else %}status-fail{% endif %}">
+                    {% if bexy_execute_result.status == 200 %}PASS{% else %}FAIL{% endif %}
                 </span>
-                <p>{{ pybox_execute_result.json.output | default('No output available') }}</p>
+                <p>{{ bexy_execute_result.json.output | default('No output available') }}</p>
             </div>
             <div class="test-result">
                 <h4>History Retrieval Test</h4>
-                <span class="status-badge {% if pybox_history_result.status == 200 %}status-pass{% else %}status-fail{% endif %}">
-                    {% if pybox_history_result.status == 200 %}PASS{% else %}FAIL{% endif %}
+                <span class="status-badge {% if bexy_history_result.status == 200 %}status-pass{% else %}status-fail{% endif %}">
+                    {% if bexy_history_result.status == 200 %}PASS{% else %}FAIL{% endif %}
                 </span>
             </div>
         </section>
@@ -194,11 +194,11 @@
         <section class="component">
             <h2>Integration Tests</h2>
             <div class="test-result">
-                <h4>APILama to PyBox Integration</h4>
-                <span class="status-badge {% if apilama_pybox_result.status == 200 %}status-pass{% else %}status-fail{% endif %}">
-                    {% if apilama_pybox_result.status == 200 %}PASS{% else %}FAIL{% endif %}
+                <h4>APILama to BEXY Integration</h4>
+                <span class="status-badge {% if apilama_bexy_result.status == 200 %}status-pass{% else %}status-fail{% endif %}">
+                    {% if apilama_bexy_result.status == 200 %}PASS{% else %}FAIL{% endif %}
                 </span>
-                <p>{{ apilama_pybox_result.json.output | default('No output available') }}</p>
+                <p>{{ apilama_bexy_result.json.output | default('No output available') }}</p>
             </div>
             <div class="test-result">
                 <h4>APILama to PyLLM Integration</h4>

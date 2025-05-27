@@ -271,7 +271,7 @@ pylama --model tinyllama:latest "your prompt"
 
 This repository contains a microservices-based architecture for the PyLama ecosystem, consisting of the following components:
 
-- **PyBox**: Python code execution sandbox
+- **BEXY**: Python code execution sandbox
 - **PyLLM**: LLM operations service
 - **PyLama**: Ollama management service
 - **SheLLama**: Shell and filesystem operations service
@@ -293,7 +293,7 @@ The PyLama ecosystem is built around a central orchestration service (PyLama) th
                         |
                         v
 +------------+     +------------+     +---------------+     +------------+
-|   PyBox    |     |   PyLLM    |<--->|   PyLama      |<--->| SheLLama   |
+|   BEXY    |     |   PyLLM    |<--->|   PyLama      |<--->| SheLLama   |
 |  (Sandbox) |<--->|   (LLM)    |     | (Orchestrator)|     |  (Shell)   |
 +------------+     +------------+     +---------------+     +------------+
       ^                  ^                  ^                  ^
@@ -320,7 +320,7 @@ The PyLama ecosystem is built around a central orchestration service (PyLama) th
 
 ## Services
 
-### PyBox (Port 8000)
+### BEXY (Port 8000)
 
 Python code execution sandbox service that provides:
 - Code execution in isolated environments
@@ -439,9 +439,9 @@ For development purposes, you can set up each component individually.
    pip install -e .
    ```
 
-   #### PyBox (Sandbox)
+   #### BEXY (Sandbox)
    ```bash
-   cd pybox
+   cd bexy
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    pip install -e .
@@ -465,11 +465,11 @@ For development purposes, you can set up each component individually.
 
 If you're not using Docker, start the services in the following order:
 
-1. **PyBox** (Sandbox):
+1. **BEXY** (Sandbox):
    ```bash
-   cd pybox
+   cd bexy
    source venv/bin/activate  # On Windows: venv\Scripts\activate
-   python -m pybox.app --port 8000 --host 127.0.0.1
+   python -m bexy.app --port 8000 --host 127.0.0.1
    ```
 
 2. **PyLLM** (LLM Operations):
@@ -521,10 +521,10 @@ GET /api/pylama/health
 POST /api/pylama/execute
 ```
 
-#### PyBox Endpoints
+#### BEXY Endpoints
 ```
-GET /api/pybox/health
-POST /api/pybox/execute
+GET /api/bexy/health
+POST /api/bexy/execute
 ```
 
 #### PyLLM Endpoints
@@ -620,7 +620,7 @@ The PyLama ecosystem includes a comprehensive Docker testing infrastructure for 
 
 ### Docker Test Files
 
-Each component (PyLama, PyBox, PyLLM, APILama, WebLama) includes the following Docker testing files:
+Each component (PyLama, BEXY, PyLLM, APILama, WebLama) includes the following Docker testing files:
 
 - **Dockerfile.test**: Defines the test environment with all necessary dependencies
 - **docker-compose.test.yml**: Configures the test services with proper networking and dependencies
@@ -680,7 +680,7 @@ PyLama is built on a modular architecture with three main components:
 ```
 +----------------+     +----------------+     +----------------+
 |                |     |                |     |                |
-|     PyLama     |---->|     PyLLM     |     |     PyBox      |
+|     PyLama     |---->|     PyLLM     |     |     BEXY      |
 |                |     |                |     |                |
 +----------------+     +----------------+     +----------------+
         |                                            ^
@@ -693,7 +693,7 @@ PyLama is built on a modular architecture with three main components:
 ```mermaid
 graph TD
     A[PyLama] -->|Uses for code generation| B[PyLLM]
-    A -->|Uses for code execution| C[PyBox]
+    A -->|Uses for code execution| C[BEXY]
     B -->|Connects to| D[Ollama API]
     D -->|Generated Code| B
     B -->|Code| A
@@ -707,14 +707,14 @@ graph TD
 1. **PyLama Package** - Main application
    - Provides CLI interface for code generation
    - Manages templates for different code generation scenarios
-   - Coordinates between PyLLM and PyBox
+   - Coordinates between PyLLM and BEXY
 
 2. **PyLLM Package** - LLM integration
    - Handles communication with Ollama API
    - Manages model selection and configuration
    - Processes prompts and extracts code from responses
 
-3. **PyBox Package** - Sandbox for code execution
+3. **BEXY Package** - Sandbox for code execution
    - Provides safe execution environments (Python and Docker)
    - Manages dependencies for generated code
    - Analyzes code for security and performance
@@ -754,7 +754,7 @@ sequenceDiagram
     participant Core as pylama.py
     participant Templates as templates.py
     participant Ollama as OllamaRunner.py
-    participant PyBox as PyBox Package
+    participant BEXY as BEXY Package
     participant PyLLM as PyLLM Package
     
     User->>CLI: pylama "create web server"
@@ -767,8 +767,8 @@ sequenceDiagram
     Ollama->>PyLLM: query_model(prompt)
     PyLLM-->>Ollama: generated_code
     Ollama-->>Core: generated_code
-    Core->>PyBox: execute_code(code)
-    PyBox-->>Core: execution_result
+    Core->>BEXY: execute_code(code)
+    BEXY-->>Core: execution_result
     Core-->>CLI: execution_result
     CLI-->>User: Display result
 ```
@@ -806,10 +806,10 @@ PyLama uses a sophisticated dependency management system:
 
 2. **External Package Dependencies**:
    - **PyLLM**: Used for model management and LLM integration
-   - **PyBox**: Used for code execution and sandbox functionality
+   - **BEXY**: Used for code execution and sandbox functionality
 
 3. **Dynamic Import System**:
-   - PyLama uses dynamic imports to locate and use PyLLM and PyBox
+   - PyLama uses dynamic imports to locate and use PyLLM and BEXY
    - The system first tries to find packages in the standard Python path
    - If not found, it looks for them in the parent directory (development mode)
    - This approach allows flexibility in both development and production environments
@@ -820,20 +820,20 @@ PyLama can be installed in two ways:
 
 #### 1. Development Mode
 
-For development, all three packages (PyLama, PyLLM, PyBox) should be installed in development mode:
+For development, all three packages (PyLama, PyLLM, BEXY) should be installed in development mode:
 
 ```bash
 # Clone the repositories
 git clone https://github.com/py-lama/pylama.git
 git clone https://github.com/py-lama/pyllm.git
-git clone https://github.com/py-lama/pybox.git
+git clone https://github.com/py-lama/bexy.git
 
 # Install in development mode
 cd py-lama/pylama
 pip install -e .
 cd ../../pyllm
 pip install -e .
-cd ../pybox
+cd ../bexy
 pip install -e .
 ```
 
@@ -847,7 +847,7 @@ For end users, PyLama can be installed directly from PyPI:
 pip install pylama
 ```
 
-This will install PyLama along with its dependencies, including PyLLM and PyBox.
+This will install PyLama along with its dependencies, including PyLLM and BEXY.
 
 ## Examples
 
@@ -933,8 +933,8 @@ This will:
 
 2. Install the packages in development mode:
    ```bash
-   # Install the PyBox package
-   cd pybox
+   # Install the BEXY package
+   cd bexy
    pip install -e .
    
    # Install the Pyllm package
@@ -948,7 +948,7 @@ This will:
 
    > **Note:** If you encounter issues with Poetry, you can install directly with pip:
    > ```bash
-   > pip install -e ../pybox
+   > pip install -e ../bexy
    > pip install -e ../pyllm
    > pip install -e .
    > ```
@@ -973,7 +973,7 @@ sequenceDiagram
     participant PyLama
     participant Pyllm
     participant Ollama
-    participant PyBox
+    participant BEXY
     
     User->>PyLama: Enter prompt
     PyLama->>Pyllm: Request code generation
@@ -982,11 +982,11 @@ sequenceDiagram
     Pyllm->>PyLama: Return processed code
     PyLama->>User: Display generated code
     User->>PyLama: Request code execution
-    PyLama->>PyBox: Send code for execution
-    PyBox->>PyBox: Check dependencies
-    PyBox->>PyBox: Create sandbox environment
-    PyBox->>PyBox: Execute code safely
-    PyBox->>PyLama: Return execution results
+    PyLama->>BEXY: Send code for execution
+    BEXY->>BEXY: Check dependencies
+    BEXY->>BEXY: Create sandbox environment
+    BEXY->>BEXY: Execute code safely
+    BEXY->>PyLama: Return execution results
     PyLama->>User: Display results
 ```
 

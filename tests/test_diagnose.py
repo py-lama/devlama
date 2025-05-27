@@ -17,7 +17,7 @@ from diagnose import (
     get_example_content,
     get_example_prompt,
     add_main_for_web_server,
-    execute_code_with_pybox,
+    execute_code_with_bexy,
     run_diagnostic
 )
 
@@ -48,8 +48,8 @@ def mock_example_content():
 
 
 @pytest.fixture
-def mock_pybox():
-    """Mock the PyBox sandbox."""
+def mock_bexy():
+    """Mock the BEXY sandbox."""
     with patch('diagnose.PythonSandbox') as mock:
         sandbox_instance = MagicMock()
         sandbox_instance.run_code.return_value = {
@@ -96,14 +96,14 @@ def test_add_main_for_web_server():
     assert result == code  # Should not modify non-web_server examples
 
 
-def test_execute_code_with_pybox(mock_pybox):
-    """Test that execute_code_with_pybox correctly executes code using PyBox."""
+def test_execute_code_with_bexy(mock_bexy):
+    """Test that execute_code_with_bexy correctly executes code using BEXY."""
     code = "print('Test')\n"
-    result = execute_code_with_pybox(code)
+    result = execute_code_with_bexy(code)
     
-    # Check that PyBox was called correctly
-    mock_pybox.assert_called_once()
-    mock_pybox.return_value.run_code.assert_called_once_with(code)
+    # Check that BEXY was called correctly
+    mock_bexy.assert_called_once()
+    mock_bexy.return_value.run_code.assert_called_once_with(code)
     
     # Check the result format
     assert 'output' in result
@@ -112,18 +112,18 @@ def test_execute_code_with_pybox(mock_pybox):
     assert result['error'] is None
 
 
-def test_execute_code_with_pybox_for_web_server(mock_pybox):
-    """Test that execute_code_with_pybox handles web server examples correctly."""
+def test_execute_code_with_bexy_for_web_server(mock_bexy):
+    """Test that execute_code_with_bexy handles web server examples correctly."""
     code = "class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):\n    pass\n"
-    result = execute_code_with_pybox(code, example_name='web_server')
+    result = execute_code_with_bexy(code, example_name='web_server')
     
-    # Check that PyBox was called with modified code
-    mock_pybox.assert_called_once()
-    called_code = mock_pybox.return_value.run_code.call_args[0][0]
+    # Check that BEXY was called with modified code
+    mock_bexy.assert_called_once()
+    called_code = mock_bexy.return_value.run_code.call_args[0][0]
     assert "if __name__ == '__main__'" in called_code
 
 
-@patch('diagnose.execute_code_with_pybox')
+@patch('diagnose.execute_code_with_bexy')
 @patch('diagnose.generate_code')
 @patch('diagnose.print')
 def test_run_diagnostic(mock_print, mock_generate, mock_execute, mock_examples_dir, mock_example_content):
@@ -131,7 +131,7 @@ def test_run_diagnostic(mock_print, mock_generate, mock_execute, mock_examples_d
     # Mock the generate_code function
     mock_generate.return_value = "print('Generated code')\n"
     
-    # Mock the execute_code_with_pybox function
+    # Mock the execute_code_with_bexy function
     mock_execute.return_value = {'output': 'Test output', 'error': None}
     
     # Run the diagnostic

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Wrapper for pybox functionality to handle import issues.
+Wrapper for bexy functionality to handle import issues.
 
-This module provides a clean interface to the pybox package classes
+This module provides a clean interface to the bexy package classes
 regardless of how the package is installed or structured.
 """
 
@@ -12,19 +12,19 @@ import sys
 import importlib.util
 from typing import Dict, Any
 
-# Add parent directory to sys.path to find pybox package
+# Add parent directory to sys.path to find bexy package
 parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
-# Check if pybox/pybox/python_sandbox.py exists and import directly
-python_sandbox_path = os.path.join(parent_dir, 'pybox', 'pybox', 'python_sandbox.py')
-docker_sandbox_path = os.path.join(parent_dir, 'pybox', 'pybox', 'docker_sandbox.py')
+# Check if bexy/bexy/python_sandbox.py exists and import directly
+python_sandbox_path = os.path.join(parent_dir, 'bexy', 'bexy', 'python_sandbox.py')
+docker_sandbox_path = os.path.join(parent_dir, 'bexy', 'bexy', 'docker_sandbox.py')
 
 # Import PythonSandbox
 if os.path.exists(python_sandbox_path):
     # Import directly from the file
-    spec = importlib.util.spec_from_file_location("pybox.python_sandbox", python_sandbox_path)
+    spec = importlib.util.spec_from_file_location("bexy.python_sandbox", python_sandbox_path)
     python_sandbox_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(python_sandbox_module)
     
@@ -47,7 +47,7 @@ else:
 # Import DockerSandbox
 if os.path.exists(docker_sandbox_path):
     # Import directly from the file
-    spec = importlib.util.spec_from_file_location("pybox.docker_sandbox", docker_sandbox_path)
+    spec = importlib.util.spec_from_file_location("bexy.docker_sandbox", docker_sandbox_path)
     docker_sandbox_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(docker_sandbox_module)
     
