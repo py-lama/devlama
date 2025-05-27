@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
-# Simple wrapper script to run PyLama
+# Simple wrapper script to run DevLama
 import sys
-from pylama.cli import main
+from devlama.cli import main
 
 if __name__ == "__main__":
     sys.exit(main())

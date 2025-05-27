@@ -1,12 +1,12 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from pylama.cli import main
+from devlama.cli import main
 
 
 @pytest.fixture
 def mock_check_ollama():
     """Mock the check_ollama function to return a version."""
-    with patch('pylama.pylama.check_ollama') as mock:
+    with patch('devlama.devlama.check_ollama') as mock:
         mock.return_value = "0.1.0"
         yield mock
 
@@ -89,7 +89,7 @@ def test_main_with_model(mock_check_ollama, mock_ollama_runner, mock_execute_cod
             main()
     
     # Check that OllamaRunner was initialized with the correct model
-    from pylama.cli import OllamaRunner
+    from devlama.cli import OllamaRunner
     OllamaRunner.assert_called_once()
     args, kwargs = OllamaRunner.call_args
     assert kwargs.get('model') == 'codellama:7b'

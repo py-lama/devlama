@@ -2,7 +2,7 @@ import sys
 import pytest
 from unittest.mock import patch
 from io import StringIO
-from pylama.cli import interactive_mode
+from devlama.cli import interactive_mode
 
 def run_interactive_mode_with_inputs(inputs):
     """

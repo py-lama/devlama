@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from pylama.pylama import check_ollama, generate_code, save_code_to_file, execute_code
+from devlama.devlama import check_ollama, generate_code, save_code_to_file, execute_code
 
 
 @pytest.fixture
@@ -17,7 +17,7 @@ def mock_subprocess_run():
 @pytest.fixture
 def mock_ollama_runner():
     """Mock OllamaRunner to simulate code generation."""
-    with patch('pylama.pylama.OllamaRunner') as mock:
+    with patch('devlama.devlama.OllamaRunner') as mock:
         runner_instance = MagicMock()
         runner_instance.generate.return_value = "Generated response with code"
         runner_instance.extract_code.return_value = "print('Hello, World!')"
