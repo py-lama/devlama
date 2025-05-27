@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 """
-PyLama Ecosystem Management Module.
+DevLama Ecosystem Management Module.
 
-This package provides functionality for managing the PyLama ecosystem,
+This package provides functionality for managing the DevLama ecosystem,
 including starting, stopping, and monitoring services.
 """
 
