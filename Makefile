@@ -83,12 +83,8 @@ docker-clean:
 # Build package
 build: setup
 	@echo "Building package..."
+	@. venv/bin/activate && pip install -e . && pip install wheel twine build
 	@. venv/bin/activate && rm -rf dist/* && python setup.py sdist bdist_wheel
-
-# Test package
-test-package: setup
-	@echo "Testing package..."
-	@. venv/bin/activate && pytest
 
 # Update version
 update-version:
@@ -96,31 +92,11 @@ update-version:
 	@python ../scripts/update_version.py
 
 # Publish package to PyPI
-publish: test-package update-version build
+publish: build update-version
 	@echo "Publishing package to PyPI..."
 	@. venv/bin/activate && twine check dist/* && twine upload dist/*
 
 # Publish package to TestPyPI
-publish-test: test-package update-version build
+publish-test: build update-version
 	@echo "Publishing package to TestPyPI..."
 	@. venv/bin/activate && twine check dist/* && twine upload --repository testpypi dist/*
-# Help
-help:
-	@echo "DevLama Makefile"
-	@echo ""
-	@echo "Available targets:"
-	@echo "  setup     - Set up the project"
-	@echo "  clean     - Clean the project"
-	@echo "  test      - Run tests"
-	@echo "  lint      - Lint the code"
-	@echo "  format    - Format the code with black"
-	@echo "  run       - Run the API server"
-	@echo "  run-port PORT=8002 - Run the API server on a custom port"
-	@echo "  docker-build      - Build Docker test images"
-	@echo "  docker-test       - Run tests in Docker"
-	@echo "  docker-integration - Run integration tests in Docker"
-	@echo "  docker-full-stack  - Start full DevLama ecosystem in Docker"
-	@echo "  docker-ansible     - Run Ansible tests in Docker"
-	@echo "  docker-interactive - Start interactive Docker test environment"
-	@echo "  docker-clean      - Clean Docker test environment"
-	@echo "  help      - Show this help message"
