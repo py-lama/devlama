@@ -17,13 +17,13 @@ print_header() {
 }
 
 show_help() {
-    echo -e "${YELLOW}PyLama Docker Testing Environment${NC}"
+    echo -e "${YELLOW}DevLama Docker Testing Environment${NC}"
     echo -e "\nUsage: $0 [options]\n"
     echo -e "Options:"
     echo -e "  --build\t\tBuild Docker images before starting"
     echo -e "  --run-tests\t\tRun all tests automatically after starting"
     echo -e "  --interactive\t\tStart in interactive mode (don't run tests automatically)"
-    echo -e "  --full-stack\t\tStart all services in the PyLama ecosystem"
+    echo -e "  --full-stack\t\tStart all services in the DevLama ecosystem"
     echo -e "  --integration\t\tRun integration tests with all services"
     echo -e "  --ansible-tests\t\tRun Ansible tests"
     echo -e "  --stop\t\tStop and remove containers"

@@ -54,7 +54,7 @@ def init_logging():
     log_level = get_env('PYLAMA_LOG_LEVEL', 'INFO')
     log_dir = get_env('PYLAMA_LOG_DIR', os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'logs'))
     db_enabled = get_env('PYLAMA_DB_LOGGING', 'true').lower() in ('true', 'yes', '1')
-    db_path = get_env('PYLAMA_DB_PATH', os.path.join(log_dir, 'pylama.db'))
+    db_path = get_env('DEVLAMA_DB_PATH', os.path.join(log_dir, 'devlama.db'))
     json_format = get_env('PYLAMA_JSON_LOGS', 'false').lower() in ('true', 'yes', '1')
     
     # Ensure log directory exists
@@ -73,11 +73,11 @@ def init_logging():
     
     # Configure logging
     logger = configure_logging(
-        name='pylama',
+        name='devlama',
         level=log_level,
         console=True,
         file=True,
-        file_path=os.path.join(log_dir, 'pylama.log'),
+        file_path=os.path.join(log_dir, 'devlama.log'),
         database=db_enabled,
         db_path=db_path,
         json=json_format,
@@ -94,15 +94,15 @@ def get_logger(name=None):
     Get a logger instance.
     
     Args:
-        name (str, optional): Name of the logger. Defaults to 'pylama'.
+        name (str, optional): Name of the logger. Defaults to 'devlama'.
         
     Returns:
         Logger: A configured logger instance.
     """
     if not name:
-        name = 'pylama'
-    elif not name.startswith('pylama.'):
-        name = f'pylama.{name}'
+        name = 'devlama'
+    elif not name.startswith('devlama.'):
+        name = f'devlama.{name}'
     
     if LOGLAMA_AVAILABLE:
         from loglama import get_logger as loglama_get_logger
@@ -153,7 +153,7 @@ def log_service_operation(service, operation, success=True, error=None):
         success (bool, optional): Whether the operation was successful. Defaults to True.
         error (str, optional): The error message if the operation failed. Defaults to None.
     """
-    logger = get_logger(f'pylama.services.{service}')
+    logger = get_logger(f'devlama.services.{service}')
     
     if success:
         logger.info(f'{service} {operation} successful')

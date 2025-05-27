@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 """
-PyLama Diagnostic Tool
+DevLama Diagnostic Tool
 
-This script runs PyLama in diagnose mode, where all examples are executed and tested.
+This script runs DevLama in diagnose mode, where all examples are executed and tested.
 It helps verify that the code generation and execution pipeline is working correctly.
 """
 
@@ -18,16 +18,16 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)7s - %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
-logger = logging.getLogger("pylama-diagnose")
+logger = logging.getLogger("devlama-diagnose")
 
 # Ensure we can import from pybox
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
-# Import PyLama functionality
-from pylama.pylama import generate_code
-from pylama.OllamaRunner import OllamaRunner
+# Import DevLama functionality
+from devlama.devlama import generate_code
+from devlama.OllamaRunner import OllamaRunner
 
 # Import PyBox directly
 try:
@@ -36,7 +36,7 @@ try:
 except ImportError:
     logger.error("Failed to import PyBox directly. Trying alternative import method...")
     try:
-        from pylama.pybox_wrapper import PythonSandbox
+        from devlama.pybox_wrapper import PythonSandbox
         logger.info("Successfully imported PyBox through wrapper")
     except ImportError:
         logger.error("Failed to import PyBox through wrapper. Using fallback implementation.")

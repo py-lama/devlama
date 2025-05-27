@@ -1,10 +1,10 @@
-# Test Dockerfile for PyLama
+# Test Dockerfile for DevLama
 
 FROM python:3.9-slim
 
 LABEL maintainer="Tom Sapletta <info@example.com>"
 LABEL version="1.0.0"
-LABEL description="Testing environment for PyLama ecosystem integration"
+LABEL description="Testing environment for DevLama ecosystem integration"
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \

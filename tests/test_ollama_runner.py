@@ -11,13 +11,13 @@ import pytest
 from unittest.mock import patch, MagicMock, mock_open
 
 # Import OllamaRunner
-from pylama.OllamaRunner import OllamaRunner
+from devlama.OllamaRunner import OllamaRunner
 
 
 @pytest.fixture
 def mock_requests():
     """Mock the requests module."""
-    with patch('pylama.OllamaRunner.requests') as mock:
+    with patch('devlama.OllamaRunner.requests') as mock:
         response_mock = MagicMock()
         response_mock.json.return_value = {"version": "v0.1.0"}
         mock.get.return_value = response_mock

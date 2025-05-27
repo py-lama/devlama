@@ -18,8 +18,8 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import PyBox and PyLLM modules
-from pylama.pybox_wrapper import PythonSandbox
-from pylama.OllamaRunner import OllamaRunner
+from devlama.pybox_wrapper import PythonSandbox
+from devlama.OllamaRunner import OllamaRunner
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

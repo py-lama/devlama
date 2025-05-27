@@ -1,4 +1,4 @@
-# Makefile for PyLama
+# Makefile for DevLama
 
 .PHONY: all setup clean test lint format run help venv docker-test docker-build docker-clean docker-integration docker-full-stack docker-ansible
 
@@ -15,40 +15,40 @@ venv:
 
 # Setup project
 setup: venv
-	@echo "Setting up PyLama..."
+	@echo "Setting up DevLama..."
 	@. venv/bin/activate && pip install -e .
 
 # Clean project
 clean:
-	@echo "Cleaning PyLama..."
+	@echo "Cleaning DevLama..."
 	find . -type d -name __pycache__ -exec rm -rf {} +
 	find . -type d -name *.egg-info -exec rm -rf {} +
 	find . -type d -name .pytest_cache -exec rm -rf {} +
 
 # Run tests
 test: setup
-	@echo "Testing PyLama..."
+	@echo "Testing DevLama..."
 	@. venv/bin/activate && python -m unittest discover
 
 # Lint code
 lint: setup
-	@echo "Linting PyLama..."
-	@. venv/bin/activate && flake8 pylama
+	@echo "Linting DevLama..."
+	@. venv/bin/activate && flake8 devlama
 
 # Format code
 format: setup
-	@echo "Formatting PyLama..."
-	@. venv/bin/activate && black pylama
+	@echo "Formatting DevLama..."
+	@. venv/bin/activate && black devlama
 
 # Run the API server
 run: setup
-	@echo "Running PyLama API server on port $(PORT)..."
-	@. venv/bin/activate && uvicorn pylama.api:app --host $(HOST) --port $(PORT)
+	@echo "Running DevLama API server on port $(PORT)..."
+	@. venv/bin/activate && uvicorn devlama.api:app --host $(HOST) --port $(PORT)
 
 # Run with custom port (for backward compatibility)
 run-port: setup
-	@echo "Running PyLama API server on port $(PORT)..."
-	@. venv/bin/activate && uvicorn pylama.api:app --host $(HOST) --port $(PORT)
+	@echo "Running DevLama API server on port $(PORT)..."
+	@. venv/bin/activate && uvicorn devlama.api:app --host $(HOST) --port $(PORT)
 
 # Docker testing targets
 docker-build:
@@ -64,7 +64,7 @@ docker-integration: docker-build
 	@./run_docker_tests.sh --integration
 
 docker-full-stack: docker-build
-	@echo "Starting full PyLama ecosystem in Docker..."
+	@echo "Starting full DevLama ecosystem in Docker..."
 	@./run_docker_tests.sh --full-stack
 
 docker-ansible: docker-build
@@ -81,7 +81,7 @@ docker-clean:
 
 # Help
 help:
-	@echo "PyLama Makefile"
+	@echo "DevLama Makefile"
 	@echo ""
 	@echo "Available targets:"
 	@echo "  setup     - Set up the project"
@@ -94,7 +94,7 @@ help:
 	@echo "  docker-build      - Build Docker test images"
 	@echo "  docker-test       - Run tests in Docker"
 	@echo "  docker-integration - Run integration tests in Docker"
-	@echo "  docker-full-stack  - Start full PyLama ecosystem in Docker"
+	@echo "  docker-full-stack  - Start full DevLama ecosystem in Docker"
 	@echo "  docker-ansible     - Run Ansible tests in Docker"
 	@echo "  docker-interactive - Start interactive Docker test environment"
 	@echo "  docker-clean      - Clean Docker test environment"

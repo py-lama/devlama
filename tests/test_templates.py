@@ -1,5 +1,5 @@
 import pytest
-from pylama.templates import get_template
+from devlama.templates import get_template
 
 
 def test_get_template_basic():

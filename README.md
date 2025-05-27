@@ -1,8 +1,8 @@
 ![obraz](pylama-logo.png)
 
-# PyLama - Python Code Generation with Ollama
+# DevLama - Python Code Generation with Ollama
 
-PyLama is a Python tool that leverages Ollama's language models to generate and execute Python code. It simplifies the process of writing and running Python scripts by handling dependency management and code execution automatically. With the template system, it generates higher quality, platform-aware code that's ready to run. PyLama is part of the PyLama ecosystem and integrates with LogLama as the primary service for centralized logging and environment management.
+DevLama is a Python tool that leverages Ollama's language models to generate and execute Python code. It simplifies the process of writing and running Python scripts by handling dependency management and code execution automatically. With the template system, it generates higher quality, platform-aware code that's ready to run. DevLama is part of the PyLama ecosystem and integrates with LogLama as the primary service for centralized logging and environment management.
 
 ## Features
 
@@ -27,8 +27,8 @@ PyLama is a Python tool that leverages Ollama's language models to generate and 
 
 ```bash
 # Clone the repository
-git clone https://github.com/py-lama/pylama.git
-cd pylama
+git clone https://github.com/py-lama/devlama.git
+cd devlama
 
 # Create a virtual environment (recommended)
 python -m venv venv

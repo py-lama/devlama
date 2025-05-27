@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Tests for the PyBox integration with PyLama.
+Tests for the PyBox integration with DevLama.
 """
 
 import os
@@ -13,7 +13,7 @@ from unittest.mock import patch, MagicMock
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import PyBox wrapper and related modules
-from pylama.pybox_wrapper import PythonSandbox, DockerSandbox
+from devlama.pybox_wrapper import PythonSandbox, DockerSandbox
 from pybox.code_analyzer import CodeAnalyzer
 from pybox.dependency_manager import DependencyManager
 

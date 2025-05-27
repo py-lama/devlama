@@ -27,4 +27,4 @@ RUN mkdir -p /app/logs
 EXPOSE 8003
 
 # Command to run the API server
-CMD ["python", "-m", "pylama.api", "--host", "0.0.0.0", "--port", "8003"]
+CMD ["python", "-m", "devlama.api", "--host", "0.0.0.0", "--port", "8003"]

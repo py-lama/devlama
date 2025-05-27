@@ -46,8 +46,8 @@ Start a service.
         cmd = ["python", "-m", "shellama", "serve", "--port", str(port)]
     elif service == "apilama":
         cmd = ["python", "-m", "apilama.app", "--port", str(port), "--host", host]
-    elif service == "pylama":
-        cmd = ["python", "-m", "pylama", "serve", "--port", str(port)]
+    elif service == "devlama":
+        cmd = ["python", "-m", "devlama", "serve", "--port", str(port)]
     elif service == "weblama":
         # For WebLama, we need to set the API_URL environment variable
         # to point to the APILama service

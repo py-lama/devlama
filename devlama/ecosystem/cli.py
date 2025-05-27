@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Command-line interface for the PyLama ecosystem.
+Command-line interface for the DevLama ecosystem.
 
 This module provides the command-line interface for managing the PyLama ecosystem.
 """
@@ -30,7 +30,7 @@ Main function for the ecosystem management CLI.
     start_parser.add_argument("--pyllm", action="store_true", help="Start PyLLM")
     start_parser.add_argument("--shellama", action="store_true", help="Start SheLLama")
     start_parser.add_argument("--apilama", action="store_true", help="Start APILama")
-    start_parser.add_argument("--pylama", action="store_true", help="Start PyLama")
+    start_parser.add_argument("--devlama", action="store_true", help="Start DevLama")
     start_parser.add_argument("--weblama", action="store_true", help="Start WebLama")
     start_parser.add_argument("--open", action="store_true", help="Open WebLama in browser after starting")
     start_parser.add_argument("--browser", action="store_true", help="Alias for --open, opens WebLama in browser")
@@ -44,7 +44,7 @@ Main function for the ecosystem management CLI.
     stop_parser.add_argument("--pyllm", action="store_true", help="Stop PyLLM")
     stop_parser.add_argument("--shellama", action="store_true", help="Stop SheLLama")
     stop_parser.add_argument("--apilama", action="store_true", help="Stop APILama")
-    stop_parser.add_argument("--pylama", action="store_true", help="Stop PyLama")
+    stop_parser.add_argument("--devlama", action="store_true", help="Stop DevLama")
     stop_parser.add_argument("--weblama", action="store_true", help="Stop WebLama")
     
     # Restart command
@@ -54,7 +54,7 @@ Main function for the ecosystem management CLI.
     restart_parser.add_argument("--pyllm", action="store_true", help="Restart PyLLM")
     restart_parser.add_argument("--shellama", action="store_true", help="Restart SheLLama")
     restart_parser.add_argument("--apilama", action="store_true", help="Restart APILama")
-    restart_parser.add_argument("--pylama", action="store_true", help="Restart PyLama")
+    restart_parser.add_argument("--devlama", action="store_true", help="Restart DevLama")
     restart_parser.add_argument("--weblama", action="store_true", help="Restart WebLama")
     restart_parser.add_argument("--open", action="store_true", help="Open WebLama in browser after restarting")
     restart_parser.add_argument("--browser", action="store_true", help="Alias for --open, opens WebLama in browser")
@@ -66,7 +66,7 @@ Main function for the ecosystem management CLI.
     
     # Logs command
     logs_parser = subparsers.add_parser("logs", help="View logs for a service")
-    logs_parser.add_argument("service", choices=["pybox", "pyllm", "shellama", "apilama", "pylama", "weblama", "all"],
+    logs_parser.add_argument("service", choices=["pybox", "pyllm", "shellama", "apilama", "devlama", "weblama", "all"],
                            help="Service to view logs for (use 'all' to view logs from all services)")
     logs_parser.add_argument("--level", choices=["debug", "info", "warning", "error", "critical"],
                            help="Filter logs by level")
@@ -90,7 +90,7 @@ Main function for the ecosystem management CLI.
     # Start log collector command
     start_collector_parser = collector_subparsers.add_parser("start", help="Start the log collector daemon")
     start_collector_parser.add_argument("--services", nargs="+",
-                                      choices=["pybox", "pyllm", "shellama", "apilama", "pylama", "weblama"],
+                                      choices=["pybox", "pyllm", "shellama", "apilama", "devlama", "weblama"],
                                       help="Services to collect logs from (default: all)")
     start_collector_parser.add_argument("--interval", "-i", type=int, default=300,
                                       help="Collection interval in seconds (default: 300)")
@@ -151,7 +151,7 @@ Main function for the ecosystem management CLI.
             components.append("shellama")
         if args.apilama:
             components.append("apilama")
-        if args.pylama:
+        if args.devlama:
             components.append("pylama")
         if args.weblama:
             components.append("weblama")

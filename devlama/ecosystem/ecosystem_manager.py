@@ -146,7 +146,7 @@ Args:
         components = DEFAULT_PORTS.keys()
     
     # Start services in the correct order
-    service_order = ["pybox", "pyllm", "shellama", "apilama", "pylama", "weblama"]
+    service_order = ["pybox", "pyllm", "shellama", "apilama", "devlama", "weblama"]
     started_services = []
     
     for service in service_order:
@@ -216,7 +216,7 @@ Stop the PyLama ecosystem.
         components = DEFAULT_PORTS.keys()
     
     # Stop services in reverse order
-    service_order = ["weblama", "pylama", "apilama", "shellama", "pyllm", "pybox"]
+    service_order = ["weblama", "devlama", "apilama", "shellama", "pyllm", "pybox"]
     for service in service_order:
         if service not in components:
             continue
