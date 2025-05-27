@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import List, Dict, Optional, Union, Any
 
 # Initialize logging with PyLogs
-from pylama.ecosystem.logging_config import init_logging, get_logger
+from devlama.ecosystem.logging_config import init_logging, get_logger
 
 # Initialize logging first, before any other imports
 init_logging()

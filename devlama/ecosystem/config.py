@@ -8,7 +8,7 @@ This module contains constants and configuration-related functions for the PyLam
 
 # Initialize logging first, before any other imports
 # This ensures environment variables are loaded before other libraries
-from pylama.ecosystem.logging_config import init_logging, get_logger
+from devlama.ecosystem.logging_config import init_logging, get_logger
 
 # Initialize logging with PyLogs
 init_logging()

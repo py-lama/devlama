@@ -3,7 +3,7 @@ requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
-name = "pylama"
+name = "devlama"
 version = "0.1.0"
 description = "Python code generation and execution using Ollama language models"
 authors = ["Tom Sapletta <info@softreck.dev>"]
@@ -26,12 +26,12 @@ flake8 = ">=6.1.0"
 mypy = ">=1.5.1"
 
 [tool.poetry.scripts]
-pylama = "pylama.cli:main"
+devlama = "devlama.cli:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = "test_*.py"
-addopts = "--cov=pylama --cov-report=term-missing"
+addopts = "--cov=devlama --cov-report=term-missing"
 
 [tool.black]
 line-length = 88

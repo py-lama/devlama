@@ -13,7 +13,7 @@ from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
 
-from pylama.OllamaRunner import OllamaRunner
+from devlama.OllamaRunner import OllamaRunner
 
 # Create FastAPI app
 app = FastAPI(

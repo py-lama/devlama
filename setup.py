@@ -5,9 +5,9 @@ from setuptools import setup
 
 setup(
     # Package metadata and dependencies are specified in pyproject.toml
-    packages=['pylama'],
+    packages=['devlama'],
     package_data={
-        'pylama': ['py.typed'],
+        'devlama': ['py.typed'],
     },
     include_package_data=True,
 )
