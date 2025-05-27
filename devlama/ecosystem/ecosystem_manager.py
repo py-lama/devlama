@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 """
-Ecosystem manager for the PyLama ecosystem.
+Ecosystem manager for the DevLama ecosystem.
 
-This module contains functions for starting and stopping the entire PyLama ecosystem.
+This module contains functions for starting and stopping the entire DevLama ecosystem.
 """
 
 import time
@@ -45,7 +45,7 @@ Open WebLama in the default web browser.
 
 def initialize_configuration():
     """
-Initialize the PyLama ecosystem configuration.
+Initialize the DevLama ecosystem configuration.
 
 This function ensures that all necessary directories exist and configuration files are available.
     """
@@ -67,7 +67,7 @@ This function ensures that all necessary directories exist and configuration fil
 
 def start_ecosystem(components=None, use_docker=False, open_browser=False, auto_adjust_ports=None):
     """
-Start the PyLama ecosystem.
+Start the DevLama ecosystem.
 
 Args:
     components: List of components to start. If None, starts all components.
@@ -124,7 +124,7 @@ Args:
                     logger.error("Could not find available ports. Some services may fail to start.")
     
     if use_docker:
-        logger.info("Starting PyLama ecosystem using Docker...")
+        logger.info("Starting DevLama ecosystem using Docker...")
         # Update docker-compose.yml with new ports if needed
         if auto_adjust_ports and 'new_ports' in locals() and new_ports:
             # TODO: Update docker-compose.yml with new ports
@@ -203,10 +203,10 @@ Args:
 
 def stop_ecosystem(components=None, use_docker=False):
     """
-Stop the PyLama ecosystem.
+Stop the DevLama ecosystem.
     """
     if use_docker:
-        logger.info("Stopping PyLama ecosystem using Docker...")
+        logger.info("Stopping DevLama ecosystem using Docker...")
         subprocess.run(["docker-compose", "down"], cwd=ROOT_DIR)
         logger.info("Docker containers stopped")
         return

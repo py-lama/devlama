@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 """
-Log management for the PyLama ecosystem.
+Log management for the DevLama ecosystem.
 
-This module contains functions for collecting and viewing logs from all PyLama components.
+This module contains functions for collecting and viewing logs from all DevLama components.
 """
 
 import os
@@ -55,7 +55,7 @@ def find_loglama():
 
 def collect_logs(components: Optional[List[str]] = None, verbose: bool = False) -> Dict[str, int]:
     """
-    Collect logs from PyLama components and import them into LogLama.
+    Collect logs from DevLama components and import them into LogLama.
     
     Args:
         components: List of components to collect logs from. If None, collects from all components.
@@ -104,7 +104,7 @@ def collect_logs(components: Optional[List[str]] = None, verbose: bool = False) 
 def start_log_collector(components: Optional[List[str]] = None, interval: int = 300, 
                        verbose: bool = False, background: bool = True) -> bool:
     """
-    Start the LogLama log collector for PyLama components.
+    Start the LogLama log collector for DevLama components.
     
     Args:
         components: List of components to collect logs from. If None, collects from all components.

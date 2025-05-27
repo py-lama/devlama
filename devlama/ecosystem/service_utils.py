@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Service utilities for the PyLama ecosystem.
+Service utilities for the DevLama ecosystem.
 
 This module contains functions for starting, stopping, and monitoring services.
 """
@@ -144,7 +144,7 @@ Stop a service.
 
 def get_ecosystem_status():
     """
-Get the status of all services in the PyLama ecosystem.
+Get the status of all services in the DevLama ecosystem.
     """
     ensure_logs_dir()
     
@@ -211,9 +211,9 @@ Get the status of all services in the PyLama ecosystem.
 
 def print_ecosystem_status():
     """
-Print the status of all services in the PyLama ecosystem.
+Print the status of all services in the DevLama ecosystem.
     """
-    logger.info("PyLama Ecosystem Status:")
+    logger.info("DevLama Ecosystem Status:")
     
     status = get_ecosystem_status()
     for service, info in status.items():

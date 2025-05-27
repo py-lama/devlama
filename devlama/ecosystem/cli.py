@@ -3,7 +3,7 @@
 """
 Command-line interface for the DevLama ecosystem.
 
-This module provides the command-line interface for managing the PyLama ecosystem.
+This module provides the command-line interface for managing the DevLama ecosystem.
 """
 
 import argparse
@@ -20,11 +20,11 @@ def main():
     """
 Main function for the ecosystem management CLI.
     """
-    parser = argparse.ArgumentParser(description="PyLama Ecosystem Management")
+    parser = argparse.ArgumentParser(description="DevLama Ecosystem Management")
     subparsers = parser.add_subparsers(dest="command", help="Command to execute")
     
     # Start command
-    start_parser = subparsers.add_parser("start", help="Start the PyLama ecosystem")
+    start_parser = subparsers.add_parser("start", help="Start the DevLama ecosystem")
     start_parser.add_argument("--docker", action="store_true", help="Use Docker to start the ecosystem")
     start_parser.add_argument("--pybox", action="store_true", help="Start PyBox")
     start_parser.add_argument("--pyllm", action="store_true", help="Start PyLLM")
@@ -38,7 +38,7 @@ Main function for the ecosystem management CLI.
     start_parser.add_argument("--no-auto-adjust-ports", action="store_false", dest="auto_adjust_ports", help="Do not automatically adjust ports if they are in use")
     
     # Stop command
-    stop_parser = subparsers.add_parser("stop", help="Stop the PyLama ecosystem")
+    stop_parser = subparsers.add_parser("stop", help="Stop the DevLama ecosystem")
     stop_parser.add_argument("--docker", action="store_true", help="Use Docker to stop the ecosystem")
     stop_parser.add_argument("--pybox", action="store_true", help="Stop PyBox")
     stop_parser.add_argument("--pyllm", action="store_true", help="Stop PyLLM")
@@ -48,7 +48,7 @@ Main function for the ecosystem management CLI.
     stop_parser.add_argument("--weblama", action="store_true", help="Stop WebLama")
     
     # Restart command
-    restart_parser = subparsers.add_parser("restart", help="Restart the PyLama ecosystem")
+    restart_parser = subparsers.add_parser("restart", help="Restart the DevLama ecosystem")
     restart_parser.add_argument("--docker", action="store_true", help="Use Docker to restart the ecosystem")
     restart_parser.add_argument("--pybox", action="store_true", help="Restart PyBox")
     restart_parser.add_argument("--pyllm", action="store_true", help="Restart PyLLM")
@@ -62,7 +62,7 @@ Main function for the ecosystem management CLI.
     restart_parser.add_argument("--no-auto-adjust-ports", action="store_false", dest="auto_adjust_ports", help="Do not automatically adjust ports if they are in use")
     
     # Status command
-    subparsers.add_parser("status", help="Show the status of the PyLama ecosystem")
+    subparsers.add_parser("status", help="Show the status of the DevLama ecosystem")
     
     # Logs command
     logs_parser = subparsers.add_parser("logs", help="View logs for a service")
@@ -152,7 +152,7 @@ Main function for the ecosystem management CLI.
         if args.apilama:
             components.append("apilama")
         if args.devlama:
-            components.append("pylama")
+            components.append("devlama")
         if args.weblama:
             components.append("weblama")
         
@@ -173,8 +173,8 @@ Main function for the ecosystem management CLI.
             components.append("shellama")
         if args.apilama:
             components.append("apilama")
-        if args.pylama:
-            components.append("pylama")
+        if args.devlama:
+            components.append("devlama")
         if args.weblama:
             components.append("weblama")
         
@@ -231,7 +231,7 @@ Main function for the ecosystem management CLI.
             if success:
                 if not args.foreground:
                     print("Log collector started successfully in the background.")
-                    print("Logs are being collected from all PyLama components.")
+                    print("Logs are being collected from all DevLama components.")
             else:
                 print("Failed to start log collector. Make sure LogLama is installed and configured properly.")
         

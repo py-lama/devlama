@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Port utilities for the PyLama ecosystem.
+Port utilities for the DevLama ecosystem.
 
 This module contains functions for checking port availability and finding available ports.
 """

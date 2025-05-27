@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 """
-PyLama Logging Configuration
+DevLama Logging Configuration
 
-This module configures logging for PyLama using the PyLogs package.
+This module configures logging for DevLama using the PyLogs package.
 It ensures that environment variables are loaded before any other libraries.
 """
 
@@ -38,7 +38,7 @@ logging.basicConfig(
 
 def init_logging():
     """
-    Initialize logging for PyLama using PyLogs.
+    Initialize logging for DevLama using PyLogs.
     
     This function should be called at the very beginning of the application
     before any other imports or configurations are done.
@@ -85,7 +85,7 @@ def init_logging():
     )
     
     # Log initialization
-    logger.info('PyLama logging initialized with PyLogs')
+    logger.info('DevLama logging initialized with PyLogs')
     return True
 
 
