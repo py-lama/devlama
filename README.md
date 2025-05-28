@@ -2,7 +2,60 @@
 
 # DevLama - Python Code Generation with Ollama
 
+> **IMPORTANT NOTICE**: DevLama functionality has been migrated to the `getllm` package. Please use `getllm` instead of `devlama` for all code generation and model management tasks. See the [getllm README](/getllm/README.md) for more information.
+
 DevLama is a Python tool that leverages Ollama's language models to generate and execute Python code. It simplifies the process of writing and running Python scripts by handling dependency management and code execution automatically. With the template system, it generates higher quality, platform-aware code that's ready to run. DevLama is part of the PyLama ecosystem and integrates with LogLama as the primary service for centralized logging and environment management.
+
+## PyLama Ecosystem
+
+DevLama is part of the PyLama ecosystem, which includes the following related projects:
+
+| Project | Description | Repository Link |
+|---------|-------------|----------------|
+| **GetLLM** | LLM model management and code generation (replaces DevLama) | [/getllm](/getllm) |
+| **LogLama** | Centralized logging, environment management, and service orchestration | [/loglama](/loglama) |
+| **APILama** | API service for code generation and LLM operations | [/apilama](/apilama) |
+| **BEXY** | Sandbox environment for executing generated code | [/bexy](/bexy) |
+| **JSLama** | JavaScript code generation with LLM | [/jslama](/jslama) |
+| **JSBox** | JavaScript sandbox for executing generated JS code | [/jsbox](/jsbox) |
+| **SheLLama** | Shell command generation and execution | [/shellama](/shellama) |
+| **WebLama** | Web application generation and deployment | [/weblama](/weblama) |
+
+## DevLama Command Usage
+
+The `devlama` command is the primary interface for generating Python code using LLM models. Below are the main commands and options available.
+
+> **IMPORTANT**: The `devlama` functionality has been migrated to the `getllm` package. All commands shown below should now be used with `getllm` instead of `devlama`.
+
+### Basic Command Structure
+
+```bash
+devlama [options] "your prompt here"
+```
+
+### Command Options
+
+| Option | Description |
+|--------|-------------|
+| `-r, --run` | Execute the generated code after creation |
+| `-s, --save` | Save the generated code to a file |
+| `-m, --model MODEL` | Specify which Ollama model to use |
+| `-t, --template TYPE` | Specify the code template type |
+| `-d, --dependencies LIST` | Specify allowed dependencies |
+| `--mock` | Use mock mode (no Ollama required) |
+| `-i, --interactive` | Start interactive mode |
+
+### Template Types
+
+| Template | Description |
+|----------|-------------|
+| `basic` | Simple code generation without extra features |
+| `platform_aware` | Generates code with platform-specific optimizations |
+| `dependency_aware` | Manages dependencies automatically |
+| `testable` | Includes test cases with the generated code |
+| `secure` | Focuses on security best practices |
+| `performance` | Optimizes for performance |
+| `pep8` | Follows PEP 8 style guidelines |
 
 ## Features
 
@@ -42,7 +95,9 @@ pip install -e .  # This is important! Always install in development mode before
 
 ## Usage
 
-### Basic Usage
+### Command Examples
+
+> **IMPORTANT**: The following commands should now be used with `getllm` instead of `devlama`.
 
 ```bash
 # Generate code using the default model
@@ -66,6 +121,8 @@ devlama --model SpeakLeash/bielik-1.5b-v3.0-instruct-gguf "print hello world"
 
 ### Interactive Mode
 
+> **IMPORTANT**: The following commands should now be used with `getllm` instead of `devlama`.
+
 ```bash
 # Start interactive mode
 devlama -i
@@ -74,9 +131,37 @@ devlama -i
 devlama -i --mock
 ```
 
-## Ollama Integration
+In interactive mode, you can:
+- Select models from a list
+- Generate code with custom prompts
+- Execute generated code
+- Save code to files
+- Update the model list
 
-PyLama integrates with Ollama to provide high-quality code generation. By default, it will:
+### New Features in GetLLM
+
+The `getllm` package includes new features not available in `devlama`, such as Hugging Face model search:
+
+```bash
+# Search for models on Hugging Face
+getllm --search bielik
+
+# Update models list from Hugging Face
+getllm --update-hf
+```
+
+## Project Relationships
+
+DevLama works with other components in the PyLama ecosystem:
+
+- **GetLLM**: Provides the LLM model management backend (DevLama has been migrated to GetLLM)
+- **LogLama**: Handles logging, environment management, and service orchestration
+- **BEXY**: Executes the generated code in a sandbox environment
+- **APILama**: Provides API access to code generation functionality
+
+## Ollama Model Integration
+
+The `devlama` command integrates with Ollama to provide high-quality code generation. When you run a command, it will:
 
 1. Connect to the Ollama server running on `localhost:11434`
 2. Check if the requested model is available
@@ -86,7 +171,7 @@ PyLama integrates with Ollama to provide high-quality code generation. By defaul
 6. Fall back to alternative models if needed
 7. Display a progress spinner with elapsed time during code generation
 
-### Setting Up Ollama
+### Setting Up Ollama for DevLama
 
 ```bash
 # Install Ollama (if not already installed)
@@ -98,6 +183,27 @@ ollama serve
 # Pull recommended models for code generation
 ollama pull codellama:7b
 ollama pull phi3:latest
+```
+
+### Model Management Commands
+
+> **IMPORTANT**: The following commands should now be used with `getllm` instead of `devlama`.
+
+```bash
+# List available models
+devlama list
+
+# Install a model
+devlama install codellama:7b
+
+# Set default model
+devlama set-default codellama:7b
+
+# Show default model
+devlama default
+
+# Update models list from Ollama
+devlama update
 ```
 
 ### Automatic Model Installation
@@ -1136,9 +1242,40 @@ Poniżej orientacyjne wymagania sprzętowe dla różnych rozmiarów modeli:
 
 ## FAQ
 
-- **Q: Do I need to install anything before running `models.py`?**
-  - A: No, the script will auto-create a venv and install dependencies if needed.
 - **Q: How do I update the model list?**
-  - A: Run `models.py` and press `u` in the menu.
-- **Q: How do I run code with sandbox.py?**
-  - A: See the usage example above. Dependencies are managed automatically.
+  - A: Run `devlama update` to update the model list from Ollama.
+
+- **Q: How do I select a different model?**
+  - A: Use `devlama --model MODEL_NAME` or set a default with `devlama set-default MODEL_NAME`.
+
+- **Q: How do I save the generated code to a file?**
+  - A: Use the `-s` or `--save` flag: `devlama -s "create a function to calculate fibonacci numbers"`.
+
+- **Q: How do I run the generated code?**
+  - A: Use the `-r` or `--run` flag: `devlama -r "create a function to calculate fibonacci numbers"`.
+
+- **Q: How do I use a specific template?**
+  - A: Use the `-t` or `--template` flag: `devlama -t dependency_aware "create a web server with Flask"`.
+
+- **Q: How do I specify allowed dependencies?**
+  - A: Use the `-d` or `--dependencies` flag: `devlama -d "flask,requests" -t dependency_aware "create a web server"`.
+
+## Migration to GetLLM
+
+The functionality of DevLama has been migrated to the GetLLM package. To migrate:
+
+1. Use `getllm` instead of `devlama` for all commands
+2. All command options remain the same
+3. GetLLM provides additional features like Hugging Face model search
+
+Example migration:
+
+```bash
+# Old command
+devlama --model codellama:7b "create a binary search tree implementation"
+
+# New command
+getllm --model codellama:7b "create a binary search tree implementation"
+```
+
+See the [GetLLM README](/getllm/README.md) for more information on the new features.
