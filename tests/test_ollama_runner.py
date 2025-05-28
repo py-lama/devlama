@@ -27,7 +27,7 @@ def mock_requests():
 @pytest.fixture
 def mock_subprocess():
     """Mock the subprocess module."""
-    with patch('pylama.OllamaRunner.subprocess') as mock:
+    with patch('devlama.OllamaRunner.subprocess') as mock:
         process_mock = MagicMock()
         process_mock.returncode = 0
         process_mock.stdout = "ollama 0.1.0"
@@ -161,7 +161,7 @@ def test_ollama_runner_run_code_with_debug():
     # Create a temporary file path that exists
     with patch('os.path.exists', return_value=True):
         # Mock subprocess.run
-        with patch('pylama.OllamaRunner.subprocess.run') as mock_run:
+        with patch('devlama.OllamaRunner.subprocess.run') as mock_run:
             process_mock = MagicMock()
             process_mock.returncode = 0
             process_mock.stdout = "Hello, World!"

@@ -114,7 +114,7 @@
                 <strong>PyLLM:</strong> <span class="{% if getllm_health.status == 200 %}success{% else %}failure{% endif %}">{% if getllm_health.status == 200 %}PASS{% else %}FAIL{% endif %}</span><br>
                 <strong>APILama:</strong> <span class="{% if apilama_health.status == 200 %}success{% else %}failure{% endif %}">{% if apilama_health.status == 200 %}PASS{% else %}FAIL{% endif %}</span><br>
                 <strong>WebLama:</strong> <span class="{% if weblama_health.status == 200 %}success{% else %}failure{% endif %}">{% if weblama_health.status == 200 %}PASS{% else %}FAIL{% endif %}</span><br>
-                <strong>PyLama:</strong> <span class="{% if pylama_health.status == 200 %}success{% else %}failure{% endif %}">{% if pylama_health.status == 200 %}PASS{% else %}FAIL{% endif %}</span>
+                <strong>PyLama:</strong> <span class="{% if devlama_health.status == 200 %}success{% else %}failure{% endif %}">{% if devlama_health.status == 200 %}PASS{% else %}FAIL{% endif %}</span>
             </p>
         </section>
 

@@ -69,8 +69,8 @@ def mock_subprocess():
 
 def test_python_sandbox_initialization():
     """Test that PythonSandbox initializes correctly."""
-    with patch('pylama.bexy_wrapper.importlib.util.spec_from_file_location') as mock_spec:
-        with patch('pylama.bexy_wrapper.importlib.util.module_from_spec') as mock_module:
+    with patch('devlama.bexy_wrapper.importlib.util.spec_from_file_location') as mock_spec:
+        with patch('devlama.bexy_wrapper.importlib.util.module_from_spec') as mock_module:
             # Setup mocks
             spec_mock = MagicMock()
             module_mock = MagicMock()
@@ -127,8 +127,8 @@ def test_python_sandbox_run_code_with_syntax_error(mock_dependency_manager):
 
 def test_docker_sandbox_initialization():
     """Test that DockerSandbox initializes correctly."""
-    with patch('pylama.bexy_wrapper.importlib.util.spec_from_file_location') as mock_spec:
-        with patch('pylama.bexy_wrapper.importlib.util.module_from_spec') as mock_module:
+    with patch('devlama.bexy_wrapper.importlib.util.spec_from_file_location') as mock_spec:
+        with patch('devlama.bexy_wrapper.importlib.util.module_from_spec') as mock_module:
             # Setup mocks
             spec_mock = MagicMock()
             module_mock = MagicMock()

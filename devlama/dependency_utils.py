@@ -13,7 +13,7 @@ from typing import List, Tuple
 
 from .DependencyManager import DependencyManager
 
-logger = logging.getLogger('pylama.dependency_utils')
+logger = logging.getLogger('devlama.dependency_utils')
 
 
 def check_dependencies(modules: List[str]) -> Tuple[List[str], List[str]]:

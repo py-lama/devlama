@@ -119,7 +119,7 @@ fi
 # Start the full stack of services
 if [ "$FULL_STACK" = true ]; then
     print_header "Starting full PyLama ecosystem"
-    docker-compose -f docker-compose.test.yml up -d bexy-mock getllm-mock apilama-mock weblama-mock pylama-app
+    docker-compose -f docker-compose.test.yml up -d bexy-mock getllm-mock apilama-mock weblama-mock devlama-app
     
     # Wait for the services to be ready
     echo -e "${YELLOW}Waiting for services to start...${NC}"
@@ -147,21 +147,21 @@ fi
 # Run integration tests if requested
 if [ "$INTEGRATION" = true ]; then
     print_header "Running PyLama integration tests"
-    docker-compose -f docker-compose.test.yml up bexy-mock getllm-mock apilama-mock weblama-mock pylama-test
+    docker-compose -f docker-compose.test.yml up bexy-mock getllm-mock apilama-mock weblama-mock devlama-test
     exit 0
 fi
 
 # Run Ansible tests if requested
 if [ "$ANSIBLE_TESTS" = true ]; then
     print_header "Running PyLama Ansible tests"
-    docker-compose -f docker-compose.test.yml run --rm pylama-test bash -c "cd /app/ansible_tests && ansible-playbook -i inventory/local main_playbook.yml"
+    docker-compose -f docker-compose.test.yml run --rm devlama-test bash -c "cd /app/ansible_tests && ansible-playbook -i inventory/local main_playbook.yml"
     exit 0
 fi
 
 # Run tests if requested
 if [ "$RUN_TESTS" = true ]; then
     print_header "Running PyLama tests"
-    docker-compose -f docker-compose.test.yml up pylama-test
+    docker-compose -f docker-compose.test.yml up devlama-test
     exit 0
 fi
 
@@ -170,11 +170,11 @@ if [ "$INTERACTIVE" = true ] || [ "$RUN_TESTS" = false -a "$FULL_STACK" = false 
     print_header "Starting interactive mode"
     echo -e "${YELLOW}Available commands:${NC}"
     echo -e "  ${GREEN}python -m pytest tests/ -v${NC} - Run all tests"
-    echo -e "  ${GREEN}python -m pylama.app --port 5000 --host 0.0.0.0${NC} - Start the PyLama service"
+    echo -e "  ${GREEN}python -m devlama.app --port 5000 --host 0.0.0.0${NC} - Start the PyLama service"
     echo -e "  ${GREEN}cd /app/ansible_tests && ansible-playbook -i inventory/local main_playbook.yml${NC} - Run Ansible tests"
     echo -e "\n${YELLOW}Type 'exit' to exit the container${NC}\n"
     
-    docker-compose -f docker-compose.test.yml run --rm pylama-test bash
+    docker-compose -f docker-compose.test.yml run --rm devlama-test bash
 fi
 
 echo -e "\n${YELLOW}To stop the containers, run:${NC} $0 --stop"

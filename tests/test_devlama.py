@@ -28,7 +28,7 @@ def mock_ollama_runner():
 @pytest.fixture
 def mock_python_sandbox():
     """Mock PythonSandbox to simulate code execution."""
-    with patch('pylama.pylama.PythonSandbox') as mock:
+    with patch('devlama.devlama.PythonSandbox') as mock:
         sandbox_instance = MagicMock()
         sandbox_instance.run.return_value = {"output": "Hello, World!", "error": None}
         mock.return_value = sandbox_instance
@@ -95,7 +95,7 @@ def test_execute_code(mock_python_sandbox):
 
 def test_execute_code_with_docker():
     """Test that execute_code uses DockerSandbox when use_docker is True."""
-    with patch('pylama.pylama.DockerSandbox') as mock_docker_sandbox:
+    with patch('devlama.devlama.DockerSandbox') as mock_docker_sandbox:
         docker_instance = MagicMock()
         docker_instance.run.return_value = {"output": "Hello from Docker!", "error": None}
         mock_docker_sandbox.return_value = docker_instance

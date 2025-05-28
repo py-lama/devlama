@@ -7,7 +7,7 @@ This guide provides detailed instructions for manually installing and configurin
 PyLama now supports automatic installation of SpeakLeash/bielik models. Simply run:
 
 ```bash
-pylama --model SpeakLeash/bielik-1.5b-v3.0-instruct-gguf "print hello world"
+devlama --model SpeakLeash/bielik-1.5b-v3.0-instruct-gguf "print hello world"
 ```
 
 This will:
@@ -101,7 +101,7 @@ ollama list | grep bielik
 Now you can use the custom model with PyLama:
 
 ```bash
-pylama --model bielik-custom "print hello world"
+devlama --model bielik-custom "print hello world"
 ```
 
 ## Alternative Installation Method: Hugging Face CLI
@@ -142,7 +142,7 @@ Create or edit the `.env` file in your PyLama directory:
 
 ```bash
 # Create or edit the .env file
-cat > /home/tom/github/py-lama/pylama/.env << 'EOF'
+cat > /home/tom/github/py-lama/devlama/.env << 'EOF'
 OLLAMA_MODEL=bielik-custom
 OLLAMA_FALLBACK_MODELS=bielik-custom,phi:2.7b,tinyllama:latest
 OLLAMA_AUTO_SELECT_MODEL=true
@@ -239,4 +239,4 @@ If PyLama is downloading the model again even though you've already installed it
 
 - [Ollama Documentation](https://github.com/ollama/ollama/blob/main/docs/modelfile.md)
 - [SpeakLeash Models on Hugging Face](https://huggingface.co/speakleash)
-- [PyLama GitHub Repository](https://github.com/py-lama/pylama)
+- [PyLama GitHub Repository](https://github.com/py-lama/devlama)

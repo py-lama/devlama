@@ -10,16 +10,16 @@ import re
 import importlib
 from importlib import metadata
 
-# Create .pylama directory if it doesn't exist
-PACKAGE_DIR = os.path.join(os.path.expanduser('~'), '.pylama')
+# Create .devlama directory if it doesn't exist
+PACKAGE_DIR = os.path.join(os.path.expanduser('~'), '.devlama')
 os.makedirs(PACKAGE_DIR, exist_ok=True)
 
 # Configure logger for DependencyManager
-logger = logging.getLogger('pylama.dependency')
+logger = logging.getLogger('devlama.dependency')
 logger.setLevel(logging.INFO)
 
 # Create file handler for DependencyManager logs
-dep_log_file = os.path.join(PACKAGE_DIR, 'pylama_dependency.log')
+dep_log_file = os.path.join(PACKAGE_DIR, 'devlama_dependency.log')
 file_handler = logging.FileHandler(dep_log_file)
 file_formatter = logging.Formatter(
     '%(asctime)s - %(name)s - %(levelname)s - %(message)s',

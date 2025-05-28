@@ -51,11 +51,11 @@ def init_logging():
     load_env(verbose=True)
     
     # Get logging configuration from environment variables
-    log_level = get_env('PYLAMA_LOG_LEVEL', 'INFO')
-    log_dir = get_env('PYLAMA_LOG_DIR', os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'logs'))
-    db_enabled = get_env('PYLAMA_DB_LOGGING', 'true').lower() in ('true', 'yes', '1')
+    log_level = get_env('DEVLAMA_LOG_LEVEL', 'INFO')
+    log_dir = get_env('DEVLAMA_LOG_DIR', os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'logs'))
+    db_enabled = get_env('DEVLAMA_DB_LOGGING', 'true').lower() in ('true', 'yes', '1')
     db_path = get_env('DEVLAMA_DB_PATH', os.path.join(log_dir, 'devlama.db'))
-    json_format = get_env('PYLAMA_JSON_LOGS', 'false').lower() in ('true', 'yes', '1')
+    json_format = get_env('DEVLAMA_JSON_LOGS', 'false').lower() in ('true', 'yes', '1')
     
     # Ensure log directory exists
     os.makedirs(log_dir, exist_ok=True)

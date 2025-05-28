@@ -4,7 +4,7 @@
 
 - name: Test Query Operations - Basic Query
   uri:
-    url: "{{ pylama_base_url }}/query"
+    url: "{{ devlama_base_url }}/query"
     method: POST
     body_format: json
     body:
@@ -22,7 +22,7 @@
 
 - name: Test Query Operations - Query with System Prompt
   uri:
-    url: "{{ pylama_base_url }}/query"
+    url: "{{ devlama_base_url }}/query"
     method: POST
     body_format: json
     body:
@@ -41,7 +41,7 @@
 
 - name: Test Query Operations - Query with Max Tokens
   uri:
-    url: "{{ pylama_base_url }}/query"
+    url: "{{ devlama_base_url }}/query"
     method: POST
     body_format: json
     body:
@@ -60,7 +60,7 @@
 
 - name: Test Query Operations - Error Handling (Invalid Model)
   uri:
-    url: "{{ pylama_base_url }}/query"
+    url: "{{ devlama_base_url }}/query"
     method: POST
     body_format: json
     body:

@@ -16,7 +16,7 @@ init_logging()
 logger = get_logger('cli')
 
 # Import main functionality
-from .pylama import (
+from .devlama import (
     check_ollama,
     save_code_to_file,
     execute_code,
@@ -253,7 +253,7 @@ def main():
     start_parser.add_argument("--getllm", action="store_true", help="Start PyLLM")
     start_parser.add_argument("--shellama", action="store_true", help="Start SheLLama")
     start_parser.add_argument("--apilama", action="store_true", help="Start APILama")
-    start_parser.add_argument("--pylama", action="store_true", help="Start PyLama")
+    start_parser.add_argument("--devlama", action="store_true", help="Start PyLama")
     start_parser.add_argument("--weblama", action="store_true", help="Start WebLama")
     start_parser.add_argument("--open", action="store_true", help="Open WebLama in browser after starting")
     start_parser.add_argument("--browser", action="store_true", help="Alias for --open, opens WebLama in browser")
@@ -267,7 +267,7 @@ def main():
     stop_parser.add_argument("--getllm", action="store_true", help="Stop PyLLM")
     stop_parser.add_argument("--shellama", action="store_true", help="Stop SheLLama")
     stop_parser.add_argument("--apilama", action="store_true", help="Stop APILama")
-    stop_parser.add_argument("--pylama", action="store_true", help="Stop PyLama")
+    stop_parser.add_argument("--devlama", action="store_true", help="Stop PyLama")
     stop_parser.add_argument("--weblama", action="store_true", help="Stop WebLama")
     
     # Restart command
@@ -277,7 +277,7 @@ def main():
     restart_parser.add_argument("--getllm", action="store_true", help="Restart PyLLM")
     restart_parser.add_argument("--shellama", action="store_true", help="Restart SheLLama")
     restart_parser.add_argument("--apilama", action="store_true", help="Restart APILama")
-    restart_parser.add_argument("--pylama", action="store_true", help="Restart PyLama")
+    restart_parser.add_argument("--devlama", action="store_true", help="Restart PyLama")
     restart_parser.add_argument("--weblama", action="store_true", help="Restart WebLama")
     
     # Status command
@@ -285,7 +285,7 @@ def main():
     
     # Logs command
     logs_parser = subparsers.add_parser("logs", help="View logs for a service")
-    logs_parser.add_argument("service", choices=["bexy", "getllm", "shellama", "apilama", "pylama", "weblama", "all"],
+    logs_parser.add_argument("service", choices=["bexy", "getllm", "shellama", "apilama", "devlama", "weblama", "all"],
                            help="Service to view logs for (use 'all' to view logs from all services)")
     logs_parser.add_argument("--level", choices=["debug", "info", "warning", "error", "critical"],
                            help="Filter logs by level")
@@ -302,7 +302,7 @@ def main():
     # Collect logs command
     collect_parser = subparsers.add_parser("collect-logs", help="Collect logs from services and import them into LogLama")
     collect_parser.add_argument("--services", nargs="+",
-                              choices=["bexy", "getllm", "shellama", "apilama", "pylama", "weblama"],
+                              choices=["bexy", "getllm", "shellama", "apilama", "devlama", "weblama"],
                               help="Services to collect logs from (default: all)")
     collect_parser.add_argument("--verbose", "-v", action="store_true",
                               help="Show verbose output")
@@ -314,7 +314,7 @@ def main():
     # Start log collector command
     start_collector_parser = collector_subparsers.add_parser("start", help="Start the log collector daemon")
     start_collector_parser.add_argument("--services", nargs="+",
-                                      choices=["bexy", "getllm", "shellama", "apilama", "pylama", "weblama"],
+                                      choices=["bexy", "getllm", "shellama", "apilama", "devlama", "weblama"],
                                       help="Services to collect logs from (default: all)")
     start_collector_parser.add_argument("--interval", "-i", type=int, default=300,
                                       help="Collection interval in seconds (default: 300)")
@@ -341,7 +341,7 @@ def main():
     if args.command in ["start", "stop", "restart", "status", "logs", "open", "collect-logs", "log-collector"]:
         from .ecosystem import main as ecosystem_main
         # Re-parse the arguments for the ecosystem management command
-        sys.argv[0] = "pylama-ecosystem"  # Change the program name for help messages
+        sys.argv[0] = "devlama-ecosystem"  # Change the program name for help messages
         return ecosystem_main()
     
     # Handle interactive mode (both with -i flag and with 'interactive' command)

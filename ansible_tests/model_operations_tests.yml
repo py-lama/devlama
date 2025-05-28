@@ -4,7 +4,7 @@
 
 - name: Test Model Operations - List Models
   uri:
-    url: "{{ pylama_base_url }}/models"
+    url: "{{ devlama_base_url }}/models"
     method: GET
     return_content: yes
     status_code: 200
@@ -17,7 +17,7 @@
 
 - name: Test Model Operations - Pull Model
   uri:
-    url: "{{ pylama_base_url }}/models/pull"
+    url: "{{ devlama_base_url }}/models/pull"
     method: POST
     body_format: json
     body:
@@ -32,7 +32,7 @@
 
 - name: Verify Model Was Pulled
   uri:
-    url: "{{ pylama_base_url }}/models"
+    url: "{{ devlama_base_url }}/models"
     method: GET
     return_content: yes
     status_code: 200

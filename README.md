@@ -1,4 +1,4 @@
-![obraz](pylama-logo.png)
+![obraz](devlama-logo.png)
 
 # DevLama - Python Code Generation with Ollama
 
@@ -46,32 +46,32 @@ pip install -e .  # This is important! Always install in development mode before
 
 ```bash
 # Generate code using the default model
-pylama "create a function to calculate fibonacci numbers"
+devlama "create a function to calculate fibonacci numbers"
 
 # Generate and run code
-pylama -r "create a web server with Flask"
+devlama -r "create a web server with Flask"
 
 # Save generated code to a file
-pylama -s "create a script to download files from URLs"
+devlama -s "create a script to download files from URLs"
 
 # Use a specific model
-pylama --model codellama:7b "create a binary search tree implementation"
+devlama --model codellama:7b "create a binary search tree implementation"
 
 # Use mock mode (no Ollama required)
-pylama --mock "print hello world"
+devlama --mock "print hello world"
 
 # Use a model that will be automatically installed if not available
-pylama --model SpeakLeash/bielik-1.5b-v3.0-instruct-gguf "print hello world"
+devlama --model SpeakLeash/bielik-1.5b-v3.0-instruct-gguf "print hello world"
 ```
 
 ### Interactive Mode
 
 ```bash
 # Start interactive mode
-pylama -i
+devlama -i
 
 # Start interactive mode with mock implementation
-pylama -i --mock
+devlama -i --mock
 ```
 
 ## Ollama Integration
@@ -106,7 +106,7 @@ PyLama can automatically install models when requested:
 
 ```bash
 # This will automatically download and install the model if not available
-pylama --model SpeakLeash/bielik-1.5b-v3.0-instruct-gguf "print hello world"
+devlama --model SpeakLeash/bielik-1.5b-v3.0-instruct-gguf "print hello world"
 ```
 
 #### SpeakLeash/Bielik Models
@@ -224,7 +224,7 @@ If you notice that PyLama is downloading the same model multiple times:
 PyLama includes a mock mode that doesn't require Ollama to be installed or running. This is useful for testing or when you don't have access to Ollama.
 
 ```bash
-pylama --mock "print hello world"
+devlama --mock "print hello world"
 ```
 
 In mock mode, PyLama will return pre-defined code examples based on the prompt.
@@ -262,7 +262,7 @@ ollama serve
 If Ollama is running but still timing out, the model might be too large for your system. Try using a smaller model:
 
 ```bash
-pylama --model tinyllama:latest "your prompt"
+devlama --model tinyllama:latest "your prompt"
 ```
 
 ## PyLama Microservices Architecture
@@ -380,7 +380,7 @@ The easiest way to run the entire PyLama ecosystem is using Docker Compose, whic
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/py-lama/pylama.git
+   git clone https://github.com/py-lama/devlama.git
    cd py-lama
    ```
 
@@ -409,7 +409,7 @@ For development purposes, you can set up each component individually.
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/py-lama/pylama.git
+   git clone https://github.com/py-lama/devlama.git
    cd py-lama
    ```
 
@@ -417,7 +417,7 @@ For development purposes, you can set up each component individually.
 
    #### PyLama (Central Orchestration Service)
    ```bash
-   cd pylama
+   cd devlama
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    pip install -e .
@@ -489,9 +489,9 @@ If you're not using Docker, start the services in the following order:
 
 4. **PyLama** (Central Orchestration):
    ```bash
-   cd pylama
+   cd devlama
    source venv/bin/activate  # On Windows: venv\Scripts\activate
-   python -m pylama.app --port 8003 --host 127.0.0.1
+   python -m devlama.app --port 8003 --host 127.0.0.1
    ```
    PyLama coordinates all other services and provides a unified interface.
 
@@ -517,8 +517,8 @@ Returns the health status of the APILama service.
 
 #### PyLama Endpoints
 ```
-GET /api/pylama/health
-POST /api/pylama/execute
+GET /api/devlama/health
+POST /api/devlama/execute
 ```
 
 #### BEXY Endpoints
@@ -722,11 +722,11 @@ graph TD
 ### Directory Structure
 
 ```
-pylama/
-├── pylama/              # Main package directory
+devlama/
+├── devlama/              # Main package directory
 │   ├── __init__.py     # Package initialization
 │   ├── cli.py          # Command-line interface
-│   ├── pylama.py       # Core functionality
+│   ├── devlama.py       # Core functionality
 │   ├── OllamaRunner.py # Ollama API integration
 │   ├── templates.py    # Template management
 │   ├── dependency_utils.py # Dependency utilities
@@ -740,7 +740,7 @@ pylama/
 │   ├── __init__.py
 │   ├── test_templates.py
 │   ├── test_cli.py
-│   └── test_pylama.py
+│   └── test_devlama.py
 ├── pyproject.toml      # Project configuration
 └── setup.py            # Installation script
 ```
@@ -751,13 +751,13 @@ pylama/
 sequenceDiagram
     participant User
     participant CLI as cli.py
-    participant Core as pylama.py
+    participant Core as devlama.py
     participant Templates as templates.py
     participant Ollama as OllamaRunner.py
     participant BEXY as BEXY Package
     participant PyLLM as PyLLM Package
     
-    User->>CLI: pylama "create web server"
+    User->>CLI: devlama "create web server"
     CLI->>Core: generate_code(prompt)
     Core->>Templates: get_template(prompt)
     Templates-->>Core: formatted_prompt
@@ -775,7 +775,7 @@ sequenceDiagram
 
 ### Implementation Details
 
-#### PyLama Core (pylama.py)
+#### PyLama Core (devlama.py)
 
 The core module coordinates all functionality:
 
@@ -824,12 +824,12 @@ For development, all three packages (PyLama, PyLLM, BEXY) should be installed in
 
 ```bash
 # Clone the repositories
-git clone https://github.com/py-lama/pylama.git
+git clone https://github.com/py-lama/devlama.git
 git clone https://github.com/py-lama/getllm.git
 git clone https://github.com/py-lama/bexy.git
 
 # Install in development mode
-cd py-lama/pylama
+cd py-lama/devlama
 pip install -e .
 cd ../../getllm
 pip install -e .
@@ -844,7 +844,7 @@ This setup allows changes in any package to be immediately available to the othe
 For end users, PyLama can be installed directly from PyPI:
 
 ```bash
-pip install pylama
+pip install devlama
 ```
 
 This will install PyLama along with its dependencies, including PyLLM and BEXY.
@@ -853,10 +853,10 @@ This will install PyLama along with its dependencies, including PyLLM and BEXY.
 
 ```bash
 # After installation
-pylama "create a simple hello world program"
+devlama "create a simple hello world program"
 
 # Or run directly from the source directory
-python -m pylama.cli "create a simple hello world program"
+python -m devlama.cli "create a simple hello world program"
 ```
 
 This will generate a Python script that prints "Hello, World!" and execute it.
@@ -864,7 +864,7 @@ This will generate a Python script that prints "Hello, World!" and execute it.
 ### Interactive Mode
 
 ```bash
-pylama -i
+devlama -i
 ```
 
 This launches PyLama in interactive mode, allowing you to:
@@ -876,7 +876,7 @@ This launches PyLama in interactive mode, allowing you to:
 ### Specifying a Template
 
 ```bash
-pylama -t dependency_aware -d "requests,beautifulsoup4" "create a web scraper for news headlines"
+devlama -t dependency_aware -d "requests,beautifulsoup4" "create a web scraper for news headlines"
 ```
 
 This will generate a web scraper using the specified dependencies.
@@ -884,7 +884,7 @@ This will generate a web scraper using the specified dependencies.
 ### Additional Options
 
 ```bash
-pylama -m "codellama:7b" -t testable -s -r "create a function to calculate fibonacci numbers"
+devlama -m "codellama:7b" -t testable -s -r "create a function to calculate fibonacci numbers"
 ```
 
 This will:
@@ -927,8 +927,8 @@ This will:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/py-lama/pylama.git
-   cd pylama
+   git clone https://github.com/py-lama/devlama.git
+   cd devlama
    ```
 
 2. Install the packages in development mode:
@@ -942,7 +942,7 @@ This will:
    pip install -e .
    
    # Install the main PyLama application
-   cd ../pylama
+   cd ../devlama
    pip install -e .
    ```
 

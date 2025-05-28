@@ -6,7 +6,7 @@
   hosts: localhost
   gather_facts: false
   vars:
-    pylama_base_url: "{{ lookup('env', 'PYLAMA_URL') | default('http://localhost:8002', true) }}"
+    devlama_base_url: "{{ lookup('env', 'DEVLAMA_URL') | default('http://localhost:8002', true) }}"
     test_model: "llama3"
     test_prompt: "What is artificial intelligence?"
   
@@ -14,7 +14,7 @@
     # Health Check Tests
     - name: Test Health Check Endpoint
       uri:
-        url: "{{ pylama_base_url }}/health"
+        url: "{{ devlama_base_url }}/health"
         method: GET
         return_content: yes
         status_code: 200

@@ -25,14 +25,14 @@ def mock_ollama_runner():
     mock_runner.query_ollama.side_effect = mock_query_ollama
     mock_runner.check_model_availability.return_value = True
     
-    with patch('pylama.cli.OllamaRunner', return_value=mock_runner) as mock_class:
+    with patch('devlama.cli.OllamaRunner', return_value=mock_runner) as mock_class:
         yield mock_runner
 
 
 @pytest.fixture
 def mock_execute_code():
     """Mock the execute_code function to return a successful result."""
-    with patch('pylama.cli.execute_code') as mock:
+    with patch('devlama.cli.execute_code') as mock:
         mock.return_value = {"output": "Hello, World!", "error": None}
         yield mock
 
@@ -40,7 +40,7 @@ def mock_execute_code():
 @pytest.fixture
 def mock_save_code_to_file():
     """Mock the save_code_to_file function to return a file path."""
-    with patch('pylama.cli.save_code_to_file') as mock:
+    with patch('devlama.cli.save_code_to_file') as mock:
         mock.return_value = "/tmp/generated_script.py"
         yield mock
 
@@ -48,7 +48,7 @@ def mock_save_code_to_file():
 def test_main_help(capsys):
     """Test that the help message is displayed when help flag is provided."""
     with pytest.raises(SystemExit):
-        with patch('sys.argv', ['pylama', '--help']):
+        with patch('sys.argv', ['devlama', '--help']):
             main()
     
     captured = capsys.readouterr()
@@ -58,7 +58,7 @@ def test_main_help(capsys):
 
 def test_main_generate_code(mock_check_ollama, mock_ollama_runner, mock_execute_code, mock_save_code_to_file):
     """Test that the main function generates code with the given prompt."""
-    with patch('sys.argv', ['pylama', 'create', 'a', 'hello', 'world', 'program']):
+    with patch('sys.argv', ['devlama', 'create', 'a', 'hello', 'world', 'program']):
         with patch('builtins.print') as mock_print:
             main()
     
@@ -71,7 +71,7 @@ def test_main_generate_code(mock_check_ollama, mock_ollama_runner, mock_execute_
 
 def test_main_with_template(mock_check_ollama, mock_ollama_runner, mock_execute_code, mock_save_code_to_file):
     """Test that the main function uses the specified template."""
-    with patch('sys.argv', ['pylama', '-t', 'secure', 'create', 'a', 'login', 'form']):
+    with patch('sys.argv', ['devlama', '-t', 'secure', 'create', 'a', 'login', 'form']):
         with patch('builtins.print') as mock_print:
             main()
     
@@ -84,7 +84,7 @@ def test_main_with_template(mock_check_ollama, mock_ollama_runner, mock_execute_
 
 def test_main_with_model(mock_check_ollama, mock_ollama_runner, mock_execute_code, mock_save_code_to_file):
     """Test that the main function uses the specified model."""
-    with patch('sys.argv', ['pylama', '--model', 'codellama:7b', 'create', 'a', 'hello', 'world', 'program']):
+    with patch('sys.argv', ['devlama', '--model', 'codellama:7b', 'create', 'a', 'hello', 'world', 'program']):
         with patch('builtins.print') as mock_print:
             main()
     
@@ -101,7 +101,7 @@ def test_main_with_save_option(mock_check_ollama, mock_ollama_runner, mock_save_
     # Set up the mock to return a specific code
     mock_ollama_runner.query_ollama.return_value = "print('Hello, World!')"
     
-    with patch('sys.argv', ['pylama', '-s', 'create', 'a', 'hello', 'world', 'program']):
+    with patch('sys.argv', ['devlama', '-s', 'create', 'a', 'hello', 'world', 'program']):
         with patch('builtins.print') as mock_print:
             main()
     
@@ -114,7 +114,7 @@ def test_main_with_run_option(mock_check_ollama, mock_ollama_runner, mock_execut
     # Set up the mock to return a specific code
     mock_ollama_runner.query_ollama.return_value = "print('Hello, World!')"
     
-    with patch('sys.argv', ['pylama', '-r', 'create', 'a', 'hello', 'world', 'program']):
+    with patch('sys.argv', ['devlama', '-r', 'create', 'a', 'hello', 'world', 'program']):
         with patch('builtins.print') as mock_print:
             main()
     

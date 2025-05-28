@@ -16,7 +16,7 @@ from devlama.ecosystem.logging_config import init_logging, get_logger
 init_logging()
 
 # Get a logger for this module
-logger = get_logger('pylama')
+logger = get_logger('devlama')
 
 # Import from the new packages
 import os
@@ -101,8 +101,8 @@ class DockerSandbox:
         # For now, just use the PythonSandbox implementation
         return PythonSandbox().run(code)
 
-# Create .pylama directory
-PACKAGE_DIR = os.path.join(os.path.expanduser('~'), '.pylama')
+# Create .devlama directory
+PACKAGE_DIR = os.path.join(os.path.expanduser('~'), '.devlama')
 os.makedirs(PACKAGE_DIR, exist_ok=True)
 
 # Logger is already configured by PyLogs in the import section at the top of the file

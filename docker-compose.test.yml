@@ -51,7 +51,7 @@ services:
       - apilama-mock
       - weblama-mock
     command: |
-      bash -c "python -m pylama.app --port 5000 --host 0.0.0.0"
+      bash -c "python -m devlama.app --port 5000 --host 0.0.0.0"
 
   apilama-mock:
     build:

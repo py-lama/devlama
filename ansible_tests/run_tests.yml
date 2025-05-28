@@ -6,4 +6,4 @@
   gather_facts: false
   tasks:
     - name: Run PyLama API Tests
-      include_tasks: pylama_test_playbook.yml
+      include_tasks: devlama_test_playbook.yml

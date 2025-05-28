@@ -78,7 +78,7 @@ Main function for the ecosystem management CLI.
     # Collect logs command
     collect_parser = subparsers.add_parser("collect-logs", help="Collect logs from services and import them into LogLama")
     collect_parser.add_argument("--services", nargs="+",
-                              choices=["bexy", "getllm", "shellama", "apilama", "pylama", "weblama"],
+                              choices=["bexy", "getllm", "shellama", "apilama", "devlama", "weblama"],
                               help="Services to collect logs from (default: all)")
     collect_parser.add_argument("--verbose", "-v", action="store_true",
                               help="Show verbose output")
@@ -125,8 +125,8 @@ Main function for the ecosystem management CLI.
             components.append("shellama")
         if args.apilama:
             components.append("apilama")
-        if args.pylama:
-            components.append("pylama")
+        if args.devlama:
+            components.append("devlama")
         if args.weblama:
             components.append("weblama")
         

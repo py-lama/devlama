@@ -57,7 +57,7 @@ except ImportError:
 
 def get_example_files():
     """Get all example files from the examples directory."""
-    examples_dir = Path(__file__).parent / "pylama" / "examples"
+    examples_dir = Path(__file__).parent / "devlama" / "examples"
     return list(examples_dir.glob("*.py"))
 
 
