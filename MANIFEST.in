@@ -1,0 +1,18 @@
+include README.md
+include LICENSE
+include setup.py
+include pyproject.toml
+include requirements.txt
+include .env.example
+include example.pypirc
+include Dockerfile*
+include Makefile
+include tox.ini
+include slides.svg
+include run_docker_tests.sh
+include .nojekyll
+include .gitignore
+include _config.yml
+recursive-include devlama *
+recursive-include tests *
+recursive-include scripts *
