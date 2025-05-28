@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "devlama"
-version = "0.1.10"
+version = "0.1.11"
 description = "Python code generation and execution using Ollama language models"
 authors = [ "John Doe <john.doe@example.com>", "Jane Doe <jane.doe@example.com>",]
 license = "Apache-2.0"
