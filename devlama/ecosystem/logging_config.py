@@ -3,7 +3,7 @@
 """
 DevLama Logging Configuration
 
-This module configures logging for DevLama using the PyLogs package.
+This module configures logging for DevLama using the LogLama package.
 It ensures that environment variables are loaded before any other libraries.
 """
 
@@ -17,7 +17,7 @@ loglama_path = Path(__file__).parent.parent.parent.parent / 'loglama'
 if loglama_path.exists() and str(loglama_path) not in sys.path:
     sys.path.insert(0, str(loglama_path))
 
-# Import PyLogs components
+# Import LogLama components
 try:
     from loglama.config.env_loader import load_env, get_env
     from loglama.utils import configure_logging, LogContext, capture_context
@@ -25,7 +25,7 @@ try:
     from loglama.handlers import SQLiteHandler, EnhancedRotatingFileHandler
     LOGLAMA_AVAILABLE = True
 except ImportError as e:
-    print(f"PyLogs import error: {e}")
+    print(f"LogLama import error: {e}")
     LOGLAMA_AVAILABLE = False
 
 # Set up basic logging as a fallback
@@ -38,13 +38,13 @@ logging.basicConfig(
 
 def init_logging():
     """
-    Initialize logging for DevLama using PyLogs.
+    Initialize logging for DevLama using LogLama.
     
     This function should be called at the very beginning of the application
     before any other imports or configurations are done.
     """
     if not LOGLAMA_AVAILABLE:
-        print("PyLogs package not available. Using default logging configuration.")
+        print("LogLama package not available. Using default logging configuration.")
         return False
     
     # Load environment variables from .env files
@@ -85,7 +85,7 @@ def init_logging():
     )
     
     # Log initialization
-    logger.info('DevLama logging initialized with PyLogs')
+    logger.info('DevLama logging initialized with LogLama')
     return True
 
 
@@ -124,7 +124,7 @@ def log_service_context(service_name=None, port=None, host=None):
         Context manager that adds service context to logs.
     """
     if not LOGLAMA_AVAILABLE:
-        # Return a dummy context manager if PyLogs is not available
+        # Return a dummy context manager if LogLama is not available
         class DummyContext:
             def __enter__(self):
                 return self

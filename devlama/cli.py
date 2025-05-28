@@ -6,7 +6,7 @@ from pathlib import Path
 import questionary
 import difflib
 
-# Initialize logging with PyLogs
+# Initialize logging with LogLama
 from devlama.ecosystem.logging_config import init_logging, get_logger
 
 # Initialize logging first, before any other imports

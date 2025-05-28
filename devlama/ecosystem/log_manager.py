@@ -13,7 +13,7 @@ import logging
 from pathlib import Path
 from typing import List, Dict, Optional, Union, Any
 
-# Initialize logging with PyLogs
+# Initialize logging with LogLama
 from devlama.ecosystem.logging_config import init_logging, get_logger
 
 # Initialize logging first, before any other imports

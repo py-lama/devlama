@@ -9,7 +9,7 @@ from typing import List, Dict, Any, Tuple, Optional
 import argparse
 from pathlib import Path
 
-# Initialize logging with PyLogs
+# Initialize logging with LogLama
 from devlama.ecosystem.logging_config import init_logging, get_logger
 
 # Initialize logging first, before any other imports
@@ -105,8 +105,8 @@ class DockerSandbox:
 PACKAGE_DIR = os.path.join(os.path.expanduser('~'), '.devlama')
 os.makedirs(PACKAGE_DIR, exist_ok=True)
 
-# Logger is already configured by PyLogs in the import section at the top of the file
-# Environment variables are already loaded by PyLogs in the logging_config.py module
+# Logger is already configured by LogLama in the import section at the top of the file
+# Environment variables are already loaded by LogLama in the logging_config.py module
 
 # Import local modules
 from .OllamaRunner import OllamaRunner

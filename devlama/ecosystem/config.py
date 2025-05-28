@@ -10,7 +10,7 @@ This module contains constants and configuration-related functions for the DevLa
 # This ensures environment variables are loaded before other libraries
 from devlama.ecosystem.logging_config import init_logging, get_logger
 
-# Initialize logging with PyLogs
+# Initialize logging with LogLama
 init_logging()
 
 # Now import other standard libraries
