@@ -6,7 +6,7 @@
   gather_facts: no
   vars:
     bexy_url: "{{ lookup('env', 'BEXY_URL') | default('http://localhost:8001', true) }}"
-    pyllm_url: "{{ lookup('env', 'PYLLM_URL') | default('http://localhost:8002', true) }}"
+    getllm_url: "{{ lookup('env', 'GETLLM_URL') | default('http://localhost:8002', true) }}"
     apilama_url: "{{ lookup('env', 'APILAMA_URL') | default('http://localhost:8080', true) }}"
     weblama_url: "{{ lookup('env', 'WEBLAMA_URL') | default('http://localhost:8081', true) }}"
     pylama_url: "{{ lookup('env', 'PYLAMA_URL') | default('http://localhost:5000', true) }}"
@@ -42,13 +42,13 @@
           prompt: "Testing APILama to PyLLM integration"
           max_tokens: 50
         status_code: 200
-      register: apilama_pyllm_result
+      register: apilama_getllm_result
       
     - name: Verify APILama to PyLLM integration
       assert:
         that:
-          - apilama_pyllm_result.status == 200
-          - apilama_pyllm_result.json.completion is defined
+          - apilama_getllm_result.status == 200
+          - apilama_getllm_result.json.completion is defined
         fail_msg: "APILama to PyLLM integration failed"
         success_msg: "APILama to PyLLM integration successful"
       
@@ -79,7 +79,7 @@
         content: |
           {
             "apilama_bexy": {{ apilama_bexy_result | to_json }},
-            "apilama_pyllm": {{ apilama_pyllm_result | to_json }},
+            "apilama_getllm": {{ apilama_getllm_result | to_json }},
             "weblama_apilama": {{ weblama_apilama_result | to_json }}
           }
         dest: "{{ test_output_dir }}/integration_test_results.json"

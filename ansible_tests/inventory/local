@@ -4,7 +4,7 @@ localhost ansible_connection=local
 [bexy]
 localhost ansible_connection=local
 
-[pyllm]
+[getllm]
 localhost ansible_connection=local
 
 [apilama]
@@ -15,6 +15,6 @@ localhost ansible_connection=local
 
 [pylama:children]
 bexy
-pyllm
+getllm
 apilama
 weblama

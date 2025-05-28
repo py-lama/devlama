@@ -67,7 +67,7 @@ def execute_code_with_bexy(code):
     return result
 
 
-def fix_code_with_pyllm(code, error_message, is_logic_error=False):
+def fix_code_with_getllm(code, error_message, is_logic_error=False):
     """Fix code using PyLLM.
     
     Args:
@@ -220,7 +220,7 @@ def main(markdown_file):
             
             # Fix the code using PyLLM
             logger.info(f"Attempting to fix code block {i+1} using PyLLM...")
-            fixed_code = fix_code_with_pyllm(code_block, error_message, is_logic_error)
+            fixed_code = fix_code_with_getllm(code_block, error_message, is_logic_error)
             
             print(f"\n--- Fixed Code ---")
             print(fixed_code)

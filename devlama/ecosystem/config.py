@@ -34,7 +34,7 @@ DEBUG_MODE = os.environ.get('DEBUG', 'False').lower() in ('true', '1', 't', 'yes
 # Service ports - load from environment variables with fallbacks
 DEFAULT_PORTS = {
     "bexy": int(os.environ.get('BEXY_PORT', 9000)),
-    "pyllm": int(os.environ.get('PYLLM_PORT', 9001)),
+    "getllm": int(os.environ.get('GETLLM_PORT', 9001)),
     "shellama": int(os.environ.get('SHELLAMA_PORT', 9002)),
     "devlama": int(os.environ.get('DEVLAMA_PORT', 9003)),
     "apilama": int(os.environ.get('APILAMA_PORT', 9080)),
@@ -98,7 +98,7 @@ DEBUG=False
 
 # Service Ports
 BEXY_PORT=9000
-PYLLM_PORT=9001
+GETLLM_PORT=9001
 SHELLAMA_PORT=9002
 PYLAMA_PORT=9003
 APILAMA_PORT=9080

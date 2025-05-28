@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Wrapper for pyllm functionality to handle import issues.
+Wrapper for getllm functionality to handle import issues.
 
-This module provides a clean interface to the pyllm package functions
+This module provides a clean interface to the getllm package functions
 regardless of how the package is installed or structured.
 """
 
@@ -12,16 +12,16 @@ import sys
 import importlib.util
 from typing import List, Optional, Dict, Any
 
-# Add parent directory to sys.path to find pyllm package
+# Add parent directory to sys.path to find getllm package
 parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
-# Check if pyllm/pyllm/models.py exists and import directly
-models_path = os.path.join(parent_dir, 'pyllm', 'pyllm', 'models.py')
+# Check if getllm/getllm/models.py exists and import directly
+models_path = os.path.join(parent_dir, 'getllm', 'getllm', 'models.py')
 if os.path.exists(models_path):
     # Import directly from the file
-    spec = importlib.util.spec_from_file_location("pyllm.models", models_path)
+    spec = importlib.util.spec_from_file_location("getllm.models", models_path)
     models_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(models_module)
     

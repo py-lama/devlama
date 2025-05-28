@@ -141,7 +141,7 @@ def fix_logic_error(code):
     return '\n'.join(fixed_lines)
 
 
-def fix_code_with_pyllm(code, error_message, is_logic_error=False):
+def fix_code_with_getllm(code, error_message, is_logic_error=False):
     """Fix code using PyLLM as a fallback.
     
     Args:
@@ -312,7 +312,7 @@ def main(markdown_file):
             # If our simple fixes didn't work, use PyLLM as a fallback
             if fixed_code == code_block:
                 logger.info(f"Attempting to fix code block {i+1} using PyLLM...")
-                fixed_code = fix_code_with_pyllm(code_block, error_message, is_logic_error)
+                fixed_code = fix_code_with_getllm(code_block, error_message, is_logic_error)
             
             print(f"\n--- Fixed Code ---")
             print(fixed_code)

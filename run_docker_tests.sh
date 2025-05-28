@@ -119,7 +119,7 @@ fi
 # Start the full stack of services
 if [ "$FULL_STACK" = true ]; then
     print_header "Starting full PyLama ecosystem"
-    docker-compose -f docker-compose.test.yml up -d bexy-mock pyllm-mock apilama-mock weblama-mock pylama-app
+    docker-compose -f docker-compose.test.yml up -d bexy-mock getllm-mock apilama-mock weblama-mock pylama-app
     
     # Wait for the services to be ready
     echo -e "${YELLOW}Waiting for services to start...${NC}"
@@ -147,7 +147,7 @@ fi
 # Run integration tests if requested
 if [ "$INTEGRATION" = true ]; then
     print_header "Running PyLama integration tests"
-    docker-compose -f docker-compose.test.yml up bexy-mock pyllm-mock apilama-mock weblama-mock pylama-test
+    docker-compose -f docker-compose.test.yml up bexy-mock getllm-mock apilama-mock weblama-mock pylama-test
     exit 0
 fi
 

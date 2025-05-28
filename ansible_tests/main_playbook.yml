@@ -6,7 +6,7 @@
   gather_facts: yes
   vars:
     bexy_url: "{{ lookup('env', 'BEXY_URL') | default('http://localhost:8001', true) }}"
-    pyllm_url: "{{ lookup('env', 'PYLLM_URL') | default('http://localhost:8002', true) }}"
+    getllm_url: "{{ lookup('env', 'GETLLM_URL') | default('http://localhost:8002', true) }}"
     apilama_url: "{{ lookup('env', 'APILAMA_URL') | default('http://localhost:8080', true) }}"
     weblama_url: "{{ lookup('env', 'WEBLAMA_URL') | default('http://localhost:8081', true) }}"
     pylama_url: "{{ lookup('env', 'PYLAMA_URL') | default('http://localhost:5000', true) }}"
@@ -31,10 +31,10 @@
       
     - name: Check PyLLM health
       uri:
-        url: "{{ pyllm_url }}/health"
+        url: "{{ getllm_url }}/health"
         method: GET
         status_code: 200
-      register: pyllm_health
+      register: getllm_health
       ignore_errors: yes
       
     - name: Check APILama health
@@ -65,14 +65,14 @@
       debug:
         msg: |
           BEXY: {{ 'OK' if bexy_health.status == 200 else 'FAIL' }}
-          PyLLM: {{ 'OK' if pyllm_health.status == 200 else 'FAIL' }}
+          PyLLM: {{ 'OK' if getllm_health.status == 200 else 'FAIL' }}
           APILama: {{ 'OK' if apilama_health.status == 200 else 'FAIL' }}
           WebLama: {{ 'OK' if weblama_health.status == 200 else 'FAIL' }}
           PyLama: {{ 'OK' if pylama_health.status == 200 else 'FAIL' }}
 
 # Include component-specific test playbooks
 - import_playbook: playbooks/bexy_tests.yml
-- import_playbook: playbooks/pyllm_tests.yml
+- import_playbook: playbooks/getllm_tests.yml
 - import_playbook: playbooks/apilama_tests.yml
 - import_playbook: playbooks/weblama_tests.yml
 - import_playbook: playbooks/integration_tests.yml

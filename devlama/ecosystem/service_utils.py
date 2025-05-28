@@ -40,8 +40,8 @@ Start a service.
     # Start the service
     if service == "bexy":
         cmd = ["python", "-m", "bexy", "serve", "--port", str(port)]
-    elif service == "pyllm":
-        cmd = ["python", "-m", "pyllm", "serve", "--port", str(port)]
+    elif service == "getllm":
+        cmd = ["python", "-m", "getllm", "serve", "--port", str(port)]
     elif service == "shellama":
         cmd = ["python", "-m", "shellama", "serve", "--port", str(port)]
     elif service == "apilama":

@@ -449,7 +449,7 @@ For development purposes, you can set up each component individually.
 
    #### PyLLM (LLM Operations)
    ```bash
-   cd pyllm
+   cd getllm
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    pip install -e .
@@ -474,9 +474,9 @@ If you're not using Docker, start the services in the following order:
 
 2. **PyLLM** (LLM Operations):
    ```bash
-   cd pyllm
+   cd getllm
    source venv/bin/activate  # On Windows: venv\Scripts\activate
-   python -m pyllm.app --port 8001 --host 127.0.0.1
+   python -m getllm.app --port 8001 --host 127.0.0.1
    ```
 
 3. **APILama** (API Gateway):
@@ -529,8 +529,8 @@ POST /api/bexy/execute
 
 #### PyLLM Endpoints
 ```
-GET /api/pyllm/health
-POST /api/pyllm/generate
+GET /api/getllm/health
+POST /api/getllm/generate
 ```
 
 #### SheLLama Endpoints
@@ -825,13 +825,13 @@ For development, all three packages (PyLama, PyLLM, BEXY) should be installed in
 ```bash
 # Clone the repositories
 git clone https://github.com/py-lama/pylama.git
-git clone https://github.com/py-lama/pyllm.git
+git clone https://github.com/py-lama/getllm.git
 git clone https://github.com/py-lama/bexy.git
 
 # Install in development mode
 cd py-lama/pylama
 pip install -e .
-cd ../../pyllm
+cd ../../getllm
 pip install -e .
 cd ../bexy
 pip install -e .
@@ -937,8 +937,8 @@ This will:
    cd bexy
    pip install -e .
    
-   # Install the Pyllm package
-   cd ../pyllm
+   # Install the getLLM package
+   cd ../getllm
    pip install -e .
    
    # Install the main PyLama application
@@ -949,7 +949,7 @@ This will:
    > **Note:** If you encounter issues with Poetry, you can install directly with pip:
    > ```bash
    > pip install -e ../bexy
-   > pip install -e ../pyllm
+   > pip install -e ../getllm
    > pip install -e .
    > ```
 
@@ -971,15 +971,15 @@ This will:
 sequenceDiagram
     participant User
     participant PyLama
-    participant Pyllm
+    participant getLLM
     participant Ollama
     participant BEXY
     
     User->>PyLama: Enter prompt
-    PyLama->>Pyllm: Request code generation
-    Pyllm->>Ollama: Send prompt with template
-    Ollama->>Pyllm: Return generated code
-    Pyllm->>PyLama: Return processed code
+    PyLama->>getLLM: Request code generation
+    getLLM->>Ollama: Send prompt with template
+    Ollama->>getLLM: Return generated code
+    getLLM->>PyLama: Return processed code
     PyLama->>User: Display generated code
     User->>PyLama: Request code execution
     PyLama->>BEXY: Send code for execution

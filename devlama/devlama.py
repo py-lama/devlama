@@ -22,7 +22,7 @@ logger = get_logger('pylama')
 import os
 import sys
 
-# Add parent directory to sys.path to find bexy and pyllm packages
+# Add parent directory to sys.path to find bexy and getllm packages
 parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)

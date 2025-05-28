@@ -13,7 +13,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     HOST=0.0.0.0 \
     DEBUG=False \
     BEXY_URL=http://bexy-mock:8001 \
-    PYLLM_URL=http://pyllm-mock:8002 \
+    GETLLM_URL=http://getllm-mock:8002 \
     APILAMA_URL=http://apilama-mock:8080 \
     WEBLAMA_URL=http://weblama-mock:8081
 

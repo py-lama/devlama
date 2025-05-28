@@ -111,7 +111,7 @@
             <h2>Test Summary</h2>
             <p>
                 <strong>BEXY:</strong> <span class="{% if bexy_health.status == 200 %}success{% else %}failure{% endif %}">{% if bexy_health.status == 200 %}PASS{% else %}FAIL{% endif %}</span><br>
-                <strong>PyLLM:</strong> <span class="{% if pyllm_health.status == 200 %}success{% else %}failure{% endif %}">{% if pyllm_health.status == 200 %}PASS{% else %}FAIL{% endif %}</span><br>
+                <strong>PyLLM:</strong> <span class="{% if getllm_health.status == 200 %}success{% else %}failure{% endif %}">{% if getllm_health.status == 200 %}PASS{% else %}FAIL{% endif %}</span><br>
                 <strong>APILama:</strong> <span class="{% if apilama_health.status == 200 %}success{% else %}failure{% endif %}">{% if apilama_health.status == 200 %}PASS{% else %}FAIL{% endif %}</span><br>
                 <strong>WebLama:</strong> <span class="{% if weblama_health.status == 200 %}success{% else %}failure{% endif %}">{% if weblama_health.status == 200 %}PASS{% else %}FAIL{% endif %}</span><br>
                 <strong>PyLama:</strong> <span class="{% if pylama_health.status == 200 %}success{% else %}failure{% endif %}">{% if pylama_health.status == 200 %}PASS{% else %}FAIL{% endif %}</span>
@@ -139,15 +139,15 @@
             <h2>PyLLM Tests</h2>
             <div class="test-result">
                 <h4>Completion Test</h4>
-                <span class="status-badge {% if pyllm_complete_result.status == 200 %}status-pass{% else %}status-fail{% endif %}">
-                    {% if pyllm_complete_result.status == 200 %}PASS{% else %}FAIL{% endif %}
+                <span class="status-badge {% if getllm_complete_result.status == 200 %}status-pass{% else %}status-fail{% endif %}">
+                    {% if getllm_complete_result.status == 200 %}PASS{% else %}FAIL{% endif %}
                 </span>
-                <p>{{ pyllm_complete_result.json.completion | default('No completion available') }}</p>
+                <p>{{ getllm_complete_result.json.completion | default('No completion available') }}</p>
             </div>
             <div class="test-result">
                 <h4>Models Retrieval Test</h4>
-                <span class="status-badge {% if pyllm_models_result.status == 200 %}status-pass{% else %}status-fail{% endif %}">
-                    {% if pyllm_models_result.status == 200 %}PASS{% else %}FAIL{% endif %}
+                <span class="status-badge {% if getllm_models_result.status == 200 %}status-pass{% else %}status-fail{% endif %}">
+                    {% if getllm_models_result.status == 200 %}PASS{% else %}FAIL{% endif %}
                 </span>
             </div>
         </section>
@@ -202,10 +202,10 @@
             </div>
             <div class="test-result">
                 <h4>APILama to PyLLM Integration</h4>
-                <span class="status-badge {% if apilama_pyllm_result.status == 200 %}status-pass{% else %}status-fail{% endif %}">
-                    {% if apilama_pyllm_result.status == 200 %}PASS{% else %}FAIL{% endif %}
+                <span class="status-badge {% if apilama_getllm_result.status == 200 %}status-pass{% else %}status-fail{% endif %}">
+                    {% if apilama_getllm_result.status == 200 %}PASS{% else %}FAIL{% endif %}
                 </span>
-                <p>{{ apilama_pyllm_result.json.completion | default('No completion available') }}</p>
+                <p>{{ apilama_getllm_result.json.completion | default('No completion available') }}</p>
             </div>
             <div class="test-result">
                 <h4>WebLama to APILama Integration</h4>
