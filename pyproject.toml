@@ -4,29 +4,13 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "devlama"
-version = "0.1.16"
+version = "0.1.17"
 description = "Python code generation and execution using Ollama language models"
-authors = ["John Doe <john.doe@example.com>", "Jane Doe <jane.doe@example.com>"]
+authors = [ "John Doe <john.doe@example.com>", "Jane Doe <jane.doe@example.com>",]
 license = "Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/py-lama/devlama"
-classifiers = [
-    "Development Status :: 3 - Alpha",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: Apache Software License",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Topic :: Software Development :: Code Generators",
-    "Topic :: Software Development :: Libraries :: Python Modules",
-]
-
-[project.urls]
-Homepage = "https://github.com/py-lama/devlama"
-Documentation = "https://py-lama.github.io/devlama/"
-Repository = "https://github.com/py-lama/devlama"
-Changelog = "https://github.com/py-lama/devlama/blob/main/CHANGELOG.md"
-Tracker = "https://github.com/py-lama/devlama/issues"
-Download = "https://pypi.org/project/devlama/"
+classifiers = [ "Development Status :: 3 - Alpha", "Intended Audience :: Developers", "License :: OSI Approved :: Apache Software License", "Programming Language :: Python :: 3", "Programming Language :: Python :: 3.8", "Topic :: Software Development :: Code Generators", "Topic :: Software Development :: Libraries :: Python Modules",]
 
 [tool.black]
 line-length = 88
@@ -36,6 +20,14 @@ include = "\\.pyi?$"
 [tool.isort]
 profile = "black"
 line_length = 88
+
+[project.urls]
+Homepage = "https://github.com/py-lama/devlama"
+Documentation = "https://py-lama.github.io/devlama/"
+Repository = "https://github.com/py-lama/devlama"
+Changelog = "https://github.com/py-lama/devlama/blob/main/CHANGELOG.md"
+Tracker = "https://github.com/py-lama/devlama/issues"
+Download = "https://pypi.org/project/devlama/"
 
 [tool.poetry.dependencies]
 python = ">=3.8"
